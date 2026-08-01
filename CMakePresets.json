@@ -1,0 +1,42 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "Debug (GCC)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS_DEBUG": "-O0 -g3",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug-clang",
+      "displayName": "Debug (Clang)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang"
+      }
+    },
+    {
+      "name": "release-unity",
+      "displayName": "Release (unity build)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_FLAGS_RELEASE": "-O2 -DNDEBUG",
+        "CMAKE_UNITY_BUILD": "ON",
+        "CMAKE_UNITY_BUILD_BATCH_SIZE": "0"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug", "displayName": "Debug (GCC)", "configurePreset": "debug" },
+    { "name": "debug-clang", "displayName": "Debug (Clang)", "configurePreset": "debug-clang" },
+    { "name": "release-unity", "displayName": "Release (unity build)", "configurePreset": "release-unity" }
+  ]
+}
