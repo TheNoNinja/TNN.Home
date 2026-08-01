@@ -8,6 +8,8 @@
 #define MQTT_PUBLISH     3
 #define MQTT_DISCONNECT  14
 
+#define MQTT_VARINT_MAX  268435455
+
 typedef struct MqttWriter MqttWriter;
 struct MqttWriter
 {

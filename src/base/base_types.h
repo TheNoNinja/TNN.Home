@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define UNUSED(x) ((void)x)
+#define UNUSED(x) ((void)(x))
 
 typedef uint8_t u8;
 typedef uint16_t u16;

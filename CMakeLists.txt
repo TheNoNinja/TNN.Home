@@ -19,3 +19,11 @@ add_executable(tnn_device_sim
 )
 
 target_include_directories(tnn_device_sim PRIVATE src)
+
+add_executable(tnn_tests
+    tests/test_main.c
+    tests/mqtt_test.c
+    src/mqtt/mqtt.c
+)
+
+target_include_directories(tnn_tests PRIVATE src)

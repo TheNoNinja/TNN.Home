@@ -1,4 +1,4 @@
-#include "mqtt.h"
+#include "mqtt/mqtt.h"
 
 #include <string.h>
 
@@ -52,6 +52,12 @@ void mqtt_write_str(MqttWriter *w, str value)
 
 void mqtt_write_varint(MqttWriter *w, u32 value)
 {
+    if (value > MQTT_VARINT_MAX)
+    {
+        w->overflow = 1;
+        return;
+    }
+
     do
     {
         u8 byte = (u8)(value % 128);
@@ -83,7 +89,10 @@ void mqtt_write_publish(MqttWriter *w, const str topic, const str payload, const
 {
     const u32 remaining = 2 + (u32)topic.length + (u32)payload.length;
     u8 first_byte = MQTT_PUBLISH << 4;
-    if (retain) first_byte = first_byte | 0x01;
+    if (retain)
+    {
+        first_byte = first_byte | 0x01;
+    }
     mqtt_write_u8(w, first_byte);
     mqtt_write_varint(w, remaining);
     mqtt_write_str(w, topic);
