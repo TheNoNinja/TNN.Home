@@ -13,7 +13,8 @@ void mqtt_test_str(void)
 }
 
 typedef struct MqttTestVarint MqttTestVarint;
-struct MqttTestVarint {
+struct MqttTestVarint
+{
     u32 value;
     u8 bytes[4];
     u64 length;
@@ -31,7 +32,7 @@ void mqtt_test_varint(void)
         { .value = 2097152,   .bytes = { 0x80, 0x80, 0x80, 0x01 }, .length = 4 },
         { .value = 268435455, .bytes = { 0xFF, 0xFF, 0xFF, 0x7F }, .length = 4 },
     };
-    const u32 count = sizeof(cases) / sizeof(cases[0]);
+    const u32 count = ARRAY_COUNT(cases);
 
     for (u32 i = 0; i < count; i += 1)
     {
@@ -42,7 +43,7 @@ void mqtt_test_varint(void)
     }
 }
 
-void mqtt_test_varint_to_big(void)
+void mqtt_test_varint_too_big(void)
 {
     u8 buffer[8];
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));

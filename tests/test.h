@@ -11,7 +11,7 @@ void test_expect_bytes(const u8 *data, u64 length, const u8 *expected, u64 expec
 
 void mqtt_test_str(void);
 void mqtt_test_varint(void);
-void mqtt_test_varint_to_big(void);
+void mqtt_test_varint_too_big(void);
 void mqtt_test_connect(void);
 
 #endif

@@ -2,8 +2,12 @@
 
 #include <string.h>
 
+#include "base/base_assert.h"
+
 MqttWriter mqtt_writer_create(u8 *buffer, const u64 capacity)
 {
+    ASSERT(buffer != 0);
+
     MqttWriter w = {0};
     w.data = buffer;
     w.capacity = capacity;

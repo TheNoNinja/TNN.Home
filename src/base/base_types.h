@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 #define UNUSED(x) ((void)(x))
+#define ARRAY_COUNT(array) (sizeof(array) / sizeof((array)[0]))
+#define KB(n) ((u64)(n) * 1024)
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -28,5 +30,6 @@ struct str
     u64 length;
 };
 #define STR_LITERAL(s) ((str){ (u8 *)(s), sizeof(s) - 1 })
+#define STR_FMT(s) (int)(s).length, (char *)(s).data
 
 #endif

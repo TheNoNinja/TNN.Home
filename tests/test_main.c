@@ -1,7 +1,7 @@
 #include "test.h"
 
-#include "stdio.h"
-#include "string.h"
+#include <stdio.h>
+#include <string.h>
 
 typedef void TestFunction(void);
 typedef struct TestCase TestCase;
@@ -14,7 +14,7 @@ struct TestCase
 internal const TestCase test_cases[] = {
     { .name = "mqtt string golden bytes",  .function = mqtt_test_str },
     { .name = "mqtt varint golden bytes",  .function = mqtt_test_varint },
-    { .name = "mqtt varint overflow",      .function = mqtt_test_varint_to_big },
+    { .name = "mqtt varint overflow",      .function = mqtt_test_varint_too_big },
     { .name = "mqtt connect golden bytes", .function = mqtt_test_connect },
 };
 
@@ -64,7 +64,7 @@ void test_expect_bytes(const u8 *data, const u64 length, const u8 *expected, con
 
 int main(void)
 {
-    const u32 count = sizeof(test_cases) / sizeof(test_cases[0]);
+    const u32 count = ARRAY_COUNT(test_cases);
     u32 failed = 0;
     for (u32 i = 0; i < count; i++)
     {

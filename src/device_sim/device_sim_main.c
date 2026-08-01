@@ -36,7 +36,7 @@ internal b32 device_sim_publish(const int sock, const str topic, const str paylo
     u8 buffer[256];
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
     mqtt_write_publish(&w, topic, payload, retain);
-    printf("publish %.*s = %.*s\n", (int)topic.length, (char *)topic.data, (int)payload.length, (char *)payload.data);
+    printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
     return device_sim_send(sock, &w);
 }
 
