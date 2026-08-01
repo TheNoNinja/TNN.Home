@@ -15,6 +15,7 @@ endif()
 
 add_executable(tnn_device_sim
     src/device_sim/device_sim_main.c
+    src/mqtt/mqtt.c
 )
 
 target_include_directories(tnn_device_sim PRIVATE src)

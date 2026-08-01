@@ -1,4 +1,5 @@
 #include "base/base_types.h"
+#include "mqtt/mqtt.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -12,16 +13,43 @@
 #define DEVICE_SIM_ID "tnn-sim-1"
 #define DEVICE_SIM_TOPIC "homie/5/" DEVICE_SIM_ID "/"
 
+internal b32 device_sim_send(const int sock, const MqttWriter *w)
+{
+    if (w->overflow)
+    {
+        fprintf(stderr, "packet does not fit in the buffer\n");
+        return 0;
+    }
+
+    const ssize_t sent = send(sock, w->data, w->length, 0);
+    if (sent != (ssize_t)w->length)
+    {
+        perror("send");
+        return 0;
+    }
+
+    return 1;
+}
+
+internal b32 device_sim_publish(const int sock, const str topic, const str payload, const b32 retain)
+{
+    u8 buffer[256];
+    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    mqtt_write_publish(&w, topic, payload, retain);
+    printf("publish %.*s = %.*s\n", (int)topic.length, (char *)topic.data, (int)payload.length, (char *)payload.data);
+    return device_sim_send(sock, &w);
+}
+
 int main(void)
 {
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    const int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0)
     {
         perror("socket");
         return 1;
     }
 
-    int one = 1;
+    const int one = 1;
     setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
     struct sockaddr_in broker = {0};
@@ -38,19 +66,18 @@ int main(void)
 
     printf("connected to %s:%d\n", DEVICE_SIM_BROKER_IP, DEVICE_SIM_BROKER_PORT);
 
-    u8 connect_packet [] = {
-        0x10, 0x15,
-        0x00, 0x04, 'M', 'Q', 'T', 'T',
-        0x04,
-        0x02,
-        0x00, 0x00,
-        0x00, 0x09, 't', 'n', 'n', '-', 's', 'i', 'm', '-', '1'
-    };
-    send(sock, connect_packet, sizeof(connect_packet), 0);
+    u8 buffer[256];
+    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    mqtt_write_connect(&w, STR_LITERAL(DEVICE_SIM_ID), 0);
+    if (!device_sim_send(sock, &w))
+    {
+        close(sock);
+        return 1;
+    }
 
     u8 connection_ack[4];
-    ssize_t received = recv(sock, connection_ack, sizeof(connection_ack), 0);
-    if (received != 4 || connection_ack[0] != 0x20)
+    const ssize_t received = recv(sock, connection_ack, sizeof(connection_ack), 0);
+    if (received != 4 || connection_ack[0] != MQTT_CONNECT_ACK << 4)
     {
         fprintf(stderr, "expected a 4-byte CONNACK, got %zd bytes\n", received);
         close(sock);
@@ -64,6 +91,25 @@ int main(void)
     }
     printf("CONNACK: accepted (return code 0)\n");
 
+    b32 ok = 1;
+    ok = ok && device_sim_publish(sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("init"), 1);
+    ok = ok && device_sim_publish(sock, STR_LITERAL(DEVICE_SIM_TOPIC "$description"), STR_LITERAL("{\"homie\":\"5.0\",\"version\":1,\"name\":\"TNN simulator 1\"}"), 1);
+    ok = ok && device_sim_publish(sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("ready"), 1);
+
+    if (!ok)
+    {
+        close(sock);
+        return 1;
+    }
+
+    printf("press Enter to disconnect\n");
+    getchar();
+    ok = device_sim_publish(sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("disconnected"), 1);
+    w = mqtt_writer_create(buffer, sizeof(buffer));
+    mqtt_write_disconnect(&w);
+    ok = ok && device_sim_send(sock, &w);
+
     close(sock);
-    return 0;
+    printf("disconnected\n");
+    return ok ? 0 : 1;
 }
