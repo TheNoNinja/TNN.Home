@@ -1,6 +1,7 @@
 #ifndef MQTT_H
 #define MQTT_H
 
+#include "mqtt/mqtt_client.h"
 #include "mqtt/mqtt_reader.h"
 #include "mqtt/mqtt_writer.h"
 

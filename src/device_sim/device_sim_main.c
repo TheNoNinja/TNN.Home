@@ -2,9 +2,6 @@
 #include "base/base_arena.h"
 #include "mqtt/mqtt.h"
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <poll.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -21,7 +18,7 @@
 
 internal u8 device_sim_memory[KB(8)];
 
-internal b32 device_sim_send(const int sock, const MqttWriter *w)
+internal b32 device_sim_send(MqttClient *c, const MqttWriter *w)
 {
     if (w->overflow)
     {
@@ -29,7 +26,7 @@ internal b32 device_sim_send(const int sock, const MqttWriter *w)
         return 0;
     }
 
-    const ssize_t sent = send(sock, w->data, w->length, MSG_NOSIGNAL);
+    const ssize_t sent = send(c->sock_ref, w->data, w->length, MSG_NOSIGNAL);
     if (sent != (ssize_t)w->length)
     {
         perror("send");
@@ -39,7 +36,7 @@ internal b32 device_sim_send(const int sock, const MqttWriter *w)
     return 1;
 }
 
-internal b32 device_sim_publish(Arena *arena, const int sock, const str topic, const str payload, const b32 retain)
+internal b32 device_sim_publish(Arena *arena, MqttClient *c, const str topic, const str payload, const b32 retain)
 {
     const u64 mark = arena->position;
     u8 *buffer = ARENA_PUSH_ARRAY(arena, u8, DEVICE_SIM_PACKET_MAX);
@@ -51,7 +48,7 @@ internal b32 device_sim_publish(Arena *arena, const int sock, const str topic, c
     MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
     mqtt_write_publish(&w, topic, payload, retain);
     printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
-    const b32 ok = device_sim_send(sock, &w);
+    const b32 ok = mqtt_client_send(c, &w);
     arena_pop_to(arena, mark);
     return ok;
 }
@@ -63,7 +60,7 @@ internal u64 device_sim_now_ms(void)
     return (u64)now.tv_sec * 1000 + (u64)now.tv_nsec / 1000000;
 }
 
-internal b32 device_sim_wait_for_enter(const int sock, u8 *buffer)
+internal b32 device_sim_wait_for_enter(MqttClient *c, u8 *buffer)
 {
     const u64 interval_ms = DEVICE_SIM_KEEP_ALIVE * 1000;
     u64 next_ping_ms = device_sim_now_ms() + interval_ms;
@@ -74,7 +71,7 @@ internal b32 device_sim_wait_for_enter(const int sock, u8 *buffer)
         struct pollfd fds[2] = {0};
         fds[0].fd = STDIN_FILENO;
         fds[0].events = POLLIN;
-        fds[1].fd = sock;
+        fds[1].fd = c->sock_ref;
         fds[1].events = POLLIN;
 
         const u64 now_ms = device_sim_now_ms();
@@ -93,7 +90,7 @@ internal b32 device_sim_wait_for_enter(const int sock, u8 *buffer)
         if (fds[1].revents)
         {
             u8 packet[2];
-            const ssize_t received = recv(sock, packet, sizeof(packet), 0);
+            const ssize_t received = recv(c->sock_ref, packet, sizeof(packet), 0);
             if (received <= 0)
             {
                 fprintf(stderr, "the broker closed the connection\n");
@@ -119,7 +116,7 @@ internal b32 device_sim_wait_for_enter(const int sock, u8 *buffer)
             MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
             mqtt_write_pingreq(&w);
             printf("PINGREQ\n");
-            if (!device_sim_send(sock, &w))
+            if (!device_sim_send(c, &w))
             {
                 return 0;
             }
@@ -133,100 +130,47 @@ int main(void)
 {
     Arena arena = arena_create(device_sim_memory, sizeof(device_sim_memory));
 
-    const int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0)
-    {
-        perror("socket");
+    MqttClient client = mqtt_client_connect(DEVICE_SIM_BROKER_IP, DEVICE_SIM_BROKER_PORT, STR_LITERAL(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("lost"));
+    if (client.sock_ref < 0){
         return 1;
     }
-
-    const int one = 1;
-    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
-
-    struct sockaddr_in broker = {0};
-    broker.sin_family = AF_INET;
-    broker.sin_port = htons(DEVICE_SIM_BROKER_PORT);
-    inet_pton(AF_INET, DEVICE_SIM_BROKER_IP, &broker.sin_addr);
-
-    if (connect(sock, (struct sockaddr*) &broker, sizeof(broker)) < 0)
-    {
-        perror("connect");
-        close(sock);
-        return 1;
-    }
-
-    printf("connected to %s:%d\n", DEVICE_SIM_BROKER_IP, DEVICE_SIM_BROKER_PORT);
 
     u8* buffer = ARENA_PUSH_ARRAY(&arena, u8, DEVICE_SIM_PACKET_MAX);
     if (!buffer)
     {
-        close(sock);
-        return 1;
+        goto error_handling;
     }
-
-    MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
-    mqtt_write_connect(&w, STR_LITERAL(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("lost"));
-    if (!device_sim_send(sock, &w))
-    {
-        close(sock);
-        return 1;
-    }
-
-    u8 connection_ack[4];
-    const ssize_t received = recv(sock, connection_ack, sizeof(connection_ack), 0);
-    if (received <= 0)
-    {
-        fprintf(stderr, "broker closed connection before CONNACK\n");
-        close(sock);
-        return 1;
-    }
-
-    MqttReader r = mqtt_reader_create(connection_ack, (u64)received);
-    const u8 first_byte = mqtt_read_u8(&r);
-    const u32 remaining = mqtt_read_varint(&r);
-    const u8 session = mqtt_read_u8(&r);
-    const u8 return_code = mqtt_read_u8(&r);
-    if (r.error || first_byte != (MQTT_CONNECT_ACK << 4) || remaining != 2)
-    {
-        fprintf(stderr, "expected 4-byte CONNACK, got %zd bytes starting with 0x%02x\n", received, connection_ack[0]);
-        close(sock);
-        return 1;
-    }
-
-    if (return_code != 0)
-    {
-            fprintf(stderr, "CONNACK: refused (return code %d)\n", return_code);
-            close(sock);
-            return 1;
-    }
-
-    printf("CONNACK: accepted (return code %d, session present %d)\n", return_code, session);
 
     b32 ok = 1;
-    ok = ok && device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("init"), 1);
-    ok = ok && device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$description"), STR_LITERAL("{\"homie\":\"5.0\",\"version\":1,\"name\":\"TNN simulator 1\"}"), 1);
-    ok = ok && device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("ready"), 1);
+    ok = ok && device_sim_publish(&arena, &client, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("init"), 1);
+    ok = ok && device_sim_publish(&arena, &client, STR_LITERAL(DEVICE_SIM_TOPIC "$description"), STR_LITERAL("{\"homie\":\"5.0\",\"version\":1,\"name\":\"TNN simulator 1\"}"), 1);
+    ok = ok && device_sim_publish(&arena, &client, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("ready"), 1);
 
     if (!ok)
     {
-        close(sock);
-        return 1;
+        goto error_handling;
     }
 
     printf("press Enter to disconnect\n");
     
-    if (!device_sim_wait_for_enter(sock, buffer))
+    if (!device_sim_wait_for_enter(&client, buffer))
     {
-        close(sock);
-        return 1;
+        goto error_handling;
     }
 
-    ok = device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("disconnected"), 1);
-    w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
+    ok = device_sim_publish(&arena, &client, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("disconnected"), 1);
+    MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
     mqtt_write_disconnect(&w);
-    ok = ok && device_sim_send(sock, &w);
+    ok = ok && device_sim_send(&client, &w);
 
-    close(sock);
+    close(client.sock_ref);
     printf("disconnected\n");
     return ok ? 0 : 1;
+
+    error_handling:
+    if (client.sock_ref >= 0)
+    {
+        close(client.sock_ref);
+    }
+    return 1;
 }
