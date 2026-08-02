@@ -12,14 +12,17 @@ struct TestCase
 };
 
 internal const TestCase test_cases[] = {
-    { .name = "base arena push",           .function = base_test_arena_push },
-    { .name = "base arena full",           .function = base_test_arena_full },
-    { .name = "base arena pop",           .function = base_test_arena_pop },
+    { .name = "base arena push",                     .function = base_test_arena_push },
+    { .name = "base arena full",                     .function = base_test_arena_full },
+    { .name = "base arena pop",                      .function = base_test_arena_pop },
 
-    { .name = "mqtt string golden bytes",  .function = mqtt_test_str },
-    { .name = "mqtt varint golden bytes",  .function = mqtt_test_varint },
-    { .name = "mqtt varint overflow",      .function = mqtt_test_varint_too_big },
-    { .name = "mqtt connect golden bytes", .function = mqtt_test_connect },
+    { .name = "mqtt string golden bytes",            .function = mqtt_test_str },
+    { .name = "mqtt varint golden bytes",            .function = mqtt_test_varint },
+    { .name = "mqtt varint overflow",                .function = mqtt_test_varint_too_big },
+    { .name = "mqtt connect golden bytes",           .function = mqtt_test_connect },
+    { .name = "mqtt connect with will golden bytes", .function = mqtt_test_connect_will },
+    { .name = "mqtt pingreq golden bytes",           .function = mqtt_test_pingreq },
+    
 };
 
 internal const char *test_current_name;

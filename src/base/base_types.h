@@ -31,5 +31,6 @@ struct str
 };
 #define STR_LITERAL(s) ((str){ (u8 *)(s), sizeof(s) - 1 })
 #define STR_FMT(s) (int)(s).length, (char *)(s).data
+#define STR_EMPTY STR_LITERAL("")
 
 #endif

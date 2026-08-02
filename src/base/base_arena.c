@@ -4,15 +4,15 @@
 #include <stdio.h>
 #include <string.h>
 
-Arena arena_create(u8 *buffer, u64 capacity)
+Arena arena_create(u8 *buffer, const u64 capacity)
 {
     Arena arena = {0};
     arena.data = buffer;
     arena.capacity = capacity;
     return arena;
-};
+}
 
-void *arena_push(Arena *arena, u64 size, u64 align)
+void *arena_push(Arena *arena, const u64 size, const u64 align)
 {
     ASSERT(align != 0 && (align & (align - 1)) == 0);
     const u64 address = (u64)(uintptr_t)(arena->data + arena->position);
@@ -30,7 +30,7 @@ void *arena_push(Arena *arena, u64 size, u64 align)
     return result;
 }
 
-void arena_pop_to(Arena *arena, u64 position) 
+void arena_pop_to(Arena *arena, const u64 position) 
 {
     ASSERT(position <= arena->position);
     arena->position = position;

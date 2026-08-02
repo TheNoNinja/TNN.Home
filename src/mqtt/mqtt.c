@@ -75,18 +75,31 @@ void mqtt_write_varint(MqttWriter *w, u32 value)
 }
 
 
-void mqtt_write_connect(MqttWriter *w, const str client_id, const u16 keep_alive_seconds)
+void mqtt_write_connect(MqttWriter *w, const str client_id, const u16 keep_alive_seconds, const str will_topic, const str will_payload)
 {
     const str protocol_name = STR_LITERAL("MQTT");
-    const u32 remaining = 2 + (u32)protocol_name.length + 1 + 1 + 2 + 2 + (u32)client_id.length;
+    const b32 has_will = will_topic.length > 0;
+
+    u32 remaining = 2 + (u32)protocol_name.length + 1 + 1 + 2 + 2 + (u32)client_id.length;
+
+    u8 flags = MQTT_CONNECT_FLAG_CLEAN_SESSION;
+    if (has_will){
+        remaining += 2 + (u32)will_topic.length + 2 + (u32)will_payload.length;
+        flags = flags | MQTT_CONNECT_FLAG_WILL | MQTT_CONNECT_FLAG_WILL_RETAIN;
+    }
 
     mqtt_write_u8(w, MQTT_CONNECT << 4);
     mqtt_write_varint(w, remaining);
     mqtt_write_str(w, protocol_name);
-    mqtt_write_u8(w, 4);
-    mqtt_write_u8(w, 0x02);
+    mqtt_write_u8(w, MQTT_PROTOCOL_3_1_1);
+    mqtt_write_u8(w, flags);
     mqtt_write_u16_be(w, keep_alive_seconds);
     mqtt_write_str(w, client_id);
+    if (has_will)
+    {
+        mqtt_write_str(w, will_topic);
+        mqtt_write_str(w, will_payload);
+    }
 }
 
 void mqtt_write_publish(MqttWriter *w, const str topic, const str payload, const b32 retain)
@@ -101,6 +114,11 @@ void mqtt_write_publish(MqttWriter *w, const str topic, const str payload, const
     mqtt_write_varint(w, remaining);
     mqtt_write_str(w, topic);
     mqtt_write_bytes(w, payload);
+}
+
+void mqtt_write_pingreq(MqttWriter *w){
+    mqtt_write_u8(w, MQTT_PINGREQ << 4);
+    mqtt_write_u8(w, 0);
 }
 
 void mqtt_write_disconnect(MqttWriter *w)

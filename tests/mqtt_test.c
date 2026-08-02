@@ -66,6 +66,38 @@ void mqtt_test_connect(void)
 
     u8 buffer[64];
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
-    mqtt_write_connect(&w, STR_LITERAL("tnntest"), 0);
+    mqtt_write_connect(&w, STR_LITERAL("tnntest"), 0, STR_EMPTY, STR_EMPTY);
+    TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
+}
+
+void mqtt_test_connect_will(void)
+{
+    const u8 expected[] = {
+        0x10, 0x23,                            //Connect + size
+        0x00, 0x04, 'M', 'Q', 'T', 'T',        //Protocol
+        0x04,                                  //Protocol version
+        0x26,                                  //Will retain + will + clean session flags
+        0x00, 0x0A,                            //Keep alive 10s
+        0x00, 0x07,                            //Client id length
+        't', 'n', 'n', 't', 'e', 's', 't',     //Client id
+        0x00, 0x08,                            //Will topic length
+        'w', '/', '$', 's', 't', 'a', 't', 'e',//Will topic
+        0x00, 0x04,                            //Will payload length
+        'l', 'o', 's', 't'                     //Will payload
+    };
+
+    u8 buffer[64];
+    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    mqtt_write_connect(&w, STR_LITERAL("tnntest"), 10, STR_LITERAL("w/$state"), STR_LITERAL("lost"));
+    TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
+}
+
+void mqtt_test_pingreq(void) 
+{
+    const u8 expected [] = { 0xC0, 0x00 };
+
+    u8 buffer[4];
+    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    mqtt_write_pingreq(&w);
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
