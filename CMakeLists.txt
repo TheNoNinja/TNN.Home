@@ -15,15 +15,22 @@ endif()
 
 add_executable(tnn_device_sim
     src/device_sim/device_sim_main.c
+    src/base/base_arena.c
+    src/base/base_assert.c
     src/mqtt/mqtt_client.c
     src/mqtt/mqtt_writer.c
     src/mqtt/mqtt_reader.c
-    src/base/base_assert.c
-    src/base/base_arena.c
-
 )
-
 target_include_directories(tnn_device_sim PRIVATE src)
+
+add_executable(tnn_mqtt_dump
+    src/mqtt_dump/mqtt_dump_main.c
+    src/base/base_assert.c
+    src/mqtt/mqtt_client.c
+    src/mqtt/mqtt_writer.c
+    src/mqtt/mqtt_reader.c
+)
+target_include_directories(tnn_mqtt_dump PRIVATE src)
 
 add_executable(tnn_tests
     tests/base_test.c
@@ -35,5 +42,4 @@ add_executable(tnn_tests
     src/base/base_assert.c
     src/base/base_arena.c
 )
-
 target_include_directories(tnn_tests PRIVATE src)

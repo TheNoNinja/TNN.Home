@@ -86,7 +86,7 @@ MqttClient mqtt_client_connect(const char *ip, const u16 port, const str client_
         fprintf(stderr, "CONNACK: refused (return code %d)\n", return_code);
         goto error_handling;
     }
-    printf("CONNACK: accepted (return code %d, session present %d)", return_code, session);
+    printf("CONNACK: accepted (return code %d, session present %d)\n", return_code, session);
     return client;
 
     error_handling:
