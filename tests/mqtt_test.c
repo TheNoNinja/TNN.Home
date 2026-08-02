@@ -1,5 +1,6 @@
 #include "test.h"
 #include "mqtt/mqtt.h"
+#include "mqtt/mqtt_reader.h"
 
 void mqtt_test_str(void)
 {
@@ -19,10 +20,7 @@ struct MqttTestVarint
     u8 bytes[4];
     u64 length;
 };
-
-void mqtt_test_varint(void)
-{
-    const MqttTestVarint cases[] = {
+internal const MqttTestVarint mqtt_test_varint_cases[] = {
         { .value = 0,         .bytes = { 0x00 },                   .length = 1 },
         { .value = 127,       .bytes = { 0x7F },                   .length = 1 },
         { .value = 128,       .bytes = { 0x80, 0x01 },             .length = 2 },
@@ -32,9 +30,13 @@ void mqtt_test_varint(void)
         { .value = 2097152,   .bytes = { 0x80, 0x80, 0x80, 0x01 }, .length = 4 },
         { .value = 268435455, .bytes = { 0xFF, 0xFF, 0xFF, 0x7F }, .length = 4 },
     };
-    const u32 count = ARRAY_COUNT(cases);
 
-    for (u32 i = 0; i < count; i += 1)
+void mqtt_test_varint(void)
+{
+    const MqttTestVarint *cases = mqtt_test_varint_cases;
+    const u32 count = ARRAY_COUNT(mqtt_test_varint_cases);
+
+    for (u32 i = 0; i < count; i++)
     {
         u8 buffer[8];
         MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
@@ -100,4 +102,56 @@ void mqtt_test_pingreq(void)
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
     mqtt_write_pingreq(&w);
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
+}
+
+void mqtt_test_read_str(void) 
+{
+    const u8 packet[] = { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x00, 0x00 };
+    const u8 mqtt[] = { 'M', 'Q', 'T', 'T' };
+
+    MqttReader r = mqtt_reader_create(packet, sizeof(packet));
+    const str first = mqtt_read_str(&r);
+    const str second = mqtt_read_str(&r);
+    TEST_EXPECT_BYTES(first.data, first.length, mqtt, sizeof(mqtt));
+    TEST_EXPECT(first.data == packet + 2);
+    TEST_EXPECT(second.length == 0);
+    TEST_EXPECT(!r.error && r.position == sizeof(packet));
+}
+
+void mqtt_test_read_past_end(void)
+{
+    const u8 packet[] = { 0x12, 0x34 };
+    MqttReader r = mqtt_reader_create(packet, sizeof(packet));
+    TEST_EXPECT(mqtt_read_u16_be(&r) == 0x1234);
+    TEST_EXPECT(!r.error);
+    TEST_EXPECT(mqtt_read_u8(&r) == 0);
+    TEST_EXPECT(r.error);
+    TEST_EXPECT(mqtt_read_u16_be(&r) == 0 && mqtt_read_str(&r).length == 0);
+    TEST_EXPECT(r.error && r.position == 2);
+}
+
+void mqtt_test_read_varint(void)
+{
+    const MqttTestVarint *cases = mqtt_test_varint_cases;
+    const u32 count = (u32)ARRAY_COUNT(mqtt_test_varint_cases);
+
+    for (u32 i = 0; i < count; i++)
+    {
+        MqttReader r = mqtt_reader_create(cases[i].bytes, cases[i].length);
+        TEST_EXPECT(mqtt_read_varint(&r) == cases[i].value);
+        TEST_EXPECT(!r.error && r.position == cases[i].length);
+    }
+}
+
+void mqtt_test_read_varint_too_long(void) 
+{
+    const u8 five_bytes[] = { 0x80, 0x80, 0x80, 0x80, 0x01 };
+    MqttReader r = mqtt_reader_create(five_bytes, sizeof(five_bytes));
+    TEST_EXPECT(mqtt_read_varint(&r) == 0);
+    TEST_EXPECT(r.error);
+
+    const u8 cut_off[] = { 0x80 };
+    r = mqtt_reader_create(cut_off, sizeof(cut_off));
+    TEST_EXPECT(mqtt_read_varint(&r) == 0);
+    TEST_EXPECT(r.error);
 }

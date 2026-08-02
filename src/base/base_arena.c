@@ -18,7 +18,8 @@ void *arena_push(Arena *arena, const u64 size, const u64 align)
     const u64 address = (u64)(uintptr_t)(arena->data + arena->position);
     const u64 padding = (align - address % align) % align;
 
-    if (padding + size > arena->capacity - arena->position){
+    if (padding + size > arena->capacity - arena->position)
+    {
         arena->overflow = 1;
         fprintf(stderr, "arena full: %llu bytes wanted, %llu free \n", (unsigned long long) size, (unsigned long long)(arena->capacity - arena->position));
         return 0;

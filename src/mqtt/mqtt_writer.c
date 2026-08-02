@@ -1,8 +1,8 @@
+#include "mqtt/mqtt_writer.h"
 #include "mqtt/mqtt.h"
+#include "base/base_assert.h"
 
 #include <string.h>
-
-#include "base/base_assert.h"
 
 MqttWriter mqtt_writer_create(u8 *buffer, const u64 capacity)
 {
@@ -83,7 +83,8 @@ void mqtt_write_connect(MqttWriter *w, const str client_id, const u16 keep_alive
     u32 remaining = 2 + (u32)protocol_name.length + 1 + 1 + 2 + 2 + (u32)client_id.length;
 
     u8 flags = MQTT_CONNECT_FLAG_CLEAN_SESSION;
-    if (has_will){
+    if (has_will)
+    {
         remaining += 2 + (u32)will_topic.length + 2 + (u32)will_payload.length;
         flags = flags | MQTT_CONNECT_FLAG_WILL | MQTT_CONNECT_FLAG_WILL_RETAIN;
     }
@@ -116,7 +117,8 @@ void mqtt_write_publish(MqttWriter *w, const str topic, const str payload, const
     mqtt_write_bytes(w, payload);
 }
 
-void mqtt_write_pingreq(MqttWriter *w){
+void mqtt_write_pingreq(MqttWriter *w)
+{
     mqtt_write_u8(w, MQTT_PINGREQ << 4);
     mqtt_write_u8(w, 0);
 }

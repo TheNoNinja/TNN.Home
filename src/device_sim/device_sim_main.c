@@ -158,7 +158,8 @@ int main(void)
     printf("connected to %s:%d\n", DEVICE_SIM_BROKER_IP, DEVICE_SIM_BROKER_PORT);
 
     u8* buffer = ARENA_PUSH_ARRAY(&arena, u8, DEVICE_SIM_PACKET_MAX);
-    if (!buffer){
+    if (!buffer)
+    {
         close(sock);
         return 1;
     }
@@ -173,19 +174,33 @@ int main(void)
 
     u8 connection_ack[4];
     const ssize_t received = recv(sock, connection_ack, sizeof(connection_ack), 0);
-    if (received != 4 || connection_ack[0] != MQTT_CONNECT_ACK << 4)
+    if (received <= 0)
     {
-        fprintf(stderr, "expected a 4-byte CONNACK, got %zd bytes\n", received);
+        fprintf(stderr, "broker closed connection before CONNACK\n");
         close(sock);
         return 1;
     }
-    if (connection_ack[3] != 0)
+
+    MqttReader r = mqtt_reader_create(connection_ack, (u64)received);
+    const u8 first_byte = mqtt_read_u8(&r);
+    const u32 remaining = mqtt_read_varint(&r);
+    const u8 session = mqtt_read_u8(&r);
+    const u8 return_code = mqtt_read_u8(&r);
+    if (r.error || first_byte != (MQTT_CONNECT_ACK << 4) || remaining != 2)
     {
-        fprintf(stderr, "CONNACK: refused (return code %d)\n", connection_ack[3]);
+        fprintf(stderr, "expected 4-byte CONNACK, got %zd bytes starting with 0%02x\n", received, connection_ack[0]);
         close(sock);
         return 1;
     }
-    printf("CONNACK: accepted (return code 0)\n");
+
+    if (return_code != 0)
+    {
+            fprintf(stderr, "CONNACK: refused (return code %d)\n", return_code);
+            close(sock);
+            return 1;
+    }
+
+    printf("CONNACK: accepted (return code %d, session present %d)\n", return_code, session);
 
     b32 ok = 1;
     ok = ok && device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("init"), 1);

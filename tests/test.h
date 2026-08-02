@@ -19,5 +19,9 @@ void mqtt_test_varint_too_big(void);
 void mqtt_test_connect(void);
 void mqtt_test_connect_will(void);
 void mqtt_test_pingreq(void);
+void mqtt_test_read_str(void);
+void mqtt_test_read_past_end(void); 
+void mqtt_test_read_varint(void);
+void mqtt_test_read_varint_too_long(void);
 
 #endif

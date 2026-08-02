@@ -22,7 +22,10 @@ internal const TestCase test_cases[] = {
     { .name = "mqtt connect golden bytes",           .function = mqtt_test_connect },
     { .name = "mqtt connect with will golden bytes", .function = mqtt_test_connect_will },
     { .name = "mqtt pingreq golden bytes",           .function = mqtt_test_pingreq },
-    
+    { .name = "mqtt read str",                       .function = mqtt_test_read_str },
+    { .name = "mqtt read past end",                  .function = mqtt_test_read_past_end },
+    { .name = "mqtt read varint",                    .function = mqtt_test_read_varint },
+    { .name = "mqtt read varint overflow",           .function = mqtt_test_read_varint_too_long },
 };
 
 internal const char *test_current_name;
