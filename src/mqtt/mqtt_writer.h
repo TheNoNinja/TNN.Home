@@ -21,6 +21,7 @@ void mqtt_write_str(MqttWriter *w, str value);
 void mqtt_write_varint(MqttWriter *w, u32 value);
 
 void mqtt_write_connect(MqttWriter *w, str client_id, u16 keep_alive_seconds, str will_topic, str will_payload);
+void mqtt_write_subscribe(MqttWriter *w, u16 packet_id, str topic_filter);
 void mqtt_write_publish(MqttWriter *w, str topic, str payload, b32 retain);
 void mqtt_write_pingreq(MqttWriter *w);
 void mqtt_write_disconnect(MqttWriter *w);

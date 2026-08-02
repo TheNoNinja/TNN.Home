@@ -103,13 +103,24 @@ void mqtt_write_connect(MqttWriter *w, const str client_id, const u16 keep_alive
     }
 }
 
+void mqtt_write_subscribe(MqttWriter *w, const u16 packet_id, const str topic_filter) 
+{
+    const u32 remaining = 2 + 2 + (u32)topic_filter.length + 1;
+
+    mqtt_write_u8(w, MQTT_SUBSCRIBE << 4 | MQTT_SUBSCRIBE_FLAG);
+    mqtt_write_varint(w, remaining);
+    mqtt_write_u16_be(w, packet_id);
+    mqtt_write_str(w, topic_filter);
+    mqtt_write_u8(w, 0);
+}
+
 void mqtt_write_publish(MqttWriter *w, const str topic, const str payload, const b32 retain)
 {
     const u32 remaining = 2 + (u32)topic.length + (u32)payload.length;
     u8 first_byte = MQTT_PUBLISH << 4;
     if (retain)
     {
-        first_byte = first_byte | 0x01;
+        first_byte = first_byte | MQTT_PUBLISH_FLAG_RETAIN;
     }
     mqtt_write_u8(w, first_byte);
     mqtt_write_varint(w, remaining);

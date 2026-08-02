@@ -188,7 +188,7 @@ int main(void)
     const u8 return_code = mqtt_read_u8(&r);
     if (r.error || first_byte != (MQTT_CONNECT_ACK << 4) || remaining != 2)
     {
-        fprintf(stderr, "expected 4-byte CONNACK, got %zd bytes starting with 0%02x\n", received, connection_ack[0]);
+        fprintf(stderr, "expected 4-byte CONNACK, got %zd bytes starting with 0x%02x\n", received, connection_ack[0]);
         close(sock);
         return 1;
     }

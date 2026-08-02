@@ -94,6 +94,22 @@ void mqtt_test_connect_will(void)
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
 
+void mqtt_test_subscribe(void) 
+{
+    const u8 expected[] = {
+        0x82, 0x0E,                                  // Subscribe + size
+        0x00, 0x01,                                  // Packet id 1
+        0x00, 0x09,                                  // Topic filter lenght
+        'h', 'o', 'm', 'i', 'e', '/', '5', '/', '#', // Topic filter
+        0x00                                         // QoS 0
+    };
+
+    u8 buffer[32];
+    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    mqtt_write_subscribe(&w, 1, STR_LITERAL("homie/5/#"));
+    TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
+}
+
 void mqtt_test_pingreq(void) 
 {
     const u8 expected [] = { 0xC0, 0x00 };
@@ -154,4 +170,41 @@ void mqtt_test_read_varint_too_long(void)
     r = mqtt_reader_create(cut_off, sizeof(cut_off));
     TEST_EXPECT(mqtt_read_varint(&r) == 0);
     TEST_EXPECT(r.error);
+}
+
+void mqtt_test_read_fixed_header(void) 
+{
+    const u8 packet[] = { 0x31, 0x82, 0x01, 0xD0, 0x00 };
+    MqttReader r = mqtt_reader_create(packet, sizeof(packet));
+
+    MqttFixedHeader header = mqtt_read_fixed_header(&r);
+    TEST_EXPECT(header.type == MQTT_PUBLISH && header.flags == MQTT_PUBLISH_FLAG_RETAIN && header.remaining_length == 130);
+    header = mqtt_read_fixed_header(&r);
+    TEST_EXPECT(header.type == MQTT_PINGRESP && header.flags == 0 && header.remaining_length == 0);
+    TEST_EXPECT(!r.error && r.position == sizeof(packet));
+}
+
+void mqtt_test_read_publish(void) 
+{
+    const u8 packet[] = { 0x00, 0x03, 'a', '/', 'b', 'o', 'n' };
+    const u8 topic[] = { 'a', '/', 'b' };
+    const u8 payload[] = { 'o', 'n' };
+
+    MqttReader r = mqtt_reader_create(packet, sizeof(packet));
+    MqttPublish m = mqtt_read_publish(&r, MQTT_PUBLISH_FLAG_RETAIN);
+    TEST_EXPECT_BYTES(m.topic.data, m.topic.length, topic, sizeof(topic));
+    TEST_EXPECT_BYTES(m.payload.data, m.payload.length, payload, sizeof(payload));
+    TEST_EXPECT(m.retain && m.qos == 0);
+    TEST_EXPECT(!r.error && r.position == sizeof(packet));
+
+    const u8 packet_qos1[] = { 0x00, 0x03, 'a', '/', 'b', 0x12, 0x34, 'o', 'n' };
+    r = mqtt_reader_create(packet_qos1, sizeof(packet_qos1));
+    m = mqtt_read_publish(&r, 0x02);
+    TEST_EXPECT_BYTES(m.payload.data, m.payload.length, payload, sizeof(payload));
+    TEST_EXPECT(!m.retain && m.qos == 1);
+
+    const u8 liar_packet[] = { 0x00, 0x09, 'a', '/', 'b' };
+    r = mqtt_reader_create(liar_packet, sizeof(liar_packet));
+    m = mqtt_read_publish(&r, 0);
+    TEST_EXPECT(r.error && m.topic.length == 0 && m.payload.length == 0);
 }

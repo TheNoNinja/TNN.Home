@@ -1,4 +1,5 @@
 #include "mqtt/mqtt_reader.h"
+#include "mqtt/mqtt.h"
 #include "base/base_types.h"
 #include "base/base_assert.h"
 
@@ -73,4 +74,30 @@ u32 mqtt_read_varint(MqttReader *r)
         }
         multiplier *= 128;
     }
+}
+
+MqttFixedHeader mqtt_read_fixed_header(MqttReader *r) 
+{
+    const u8 first_byte = mqtt_read_u8(r);
+    MqttFixedHeader header = {0};
+    header.type = first_byte >> 4;
+    header.flags = first_byte & 0x0F;
+    header.remaining_length = mqtt_read_varint(r);
+    return header;
+}
+
+MqttPublish mqtt_read_publish(MqttReader *r, const u8 flags)
+{
+    MqttPublish m = {0};
+    m.retain = (flags & MQTT_PUBLISH_FLAG_RETAIN) != 0;
+    m.qos = (flags >> 1) & 0x03;
+
+    m.topic = mqtt_read_str(r);
+    if (m.qos > 0)
+    {
+        mqtt_read_u16_be(r);
+    }
+
+    m.payload = mqtt_read_bytes(r, r->length - r->position);
+    return m;
 }
