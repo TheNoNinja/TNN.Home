@@ -17,15 +17,18 @@ add_executable(tnn_device_sim
     src/device_sim/device_sim_main.c
     src/mqtt/mqtt.c
     src/base/base_assert.c
+    src/base/base_arena.c
 )
 
 target_include_directories(tnn_device_sim PRIVATE src)
 
 add_executable(tnn_tests
+    tests/base_test.c
     tests/test_main.c
     tests/mqtt_test.c
     src/mqtt/mqtt.c
     src/base/base_assert.c
+    src/base/base_arena.c
 )
 
 target_include_directories(tnn_tests PRIVATE src)

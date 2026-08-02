@@ -1,4 +1,5 @@
 #include "base/base_types.h"
+#include "base/base_arena.h"
 #include "mqtt/mqtt.h"
 
 #include <arpa/inet.h>
@@ -8,10 +9,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define DEVICE_SIM_BROKER_IP "127.0.0.1"
+#define DEVICE_SIM_BROKER_IP   "127.0.0.1"
 #define DEVICE_SIM_BROKER_PORT 1883
-#define DEVICE_SIM_ID "tnn-sim-1"
-#define DEVICE_SIM_TOPIC "homie/5/" DEVICE_SIM_ID "/"
+#define DEVICE_SIM_ID          "tnn-sim-1"
+#define DEVICE_SIM_TOPIC       "homie/5/" DEVICE_SIM_ID "/"
+#define DEVICE_SIM_PACKET_MAX  256
+
+internal u8 device_sim_memory[KB(8)];
 
 internal b32 device_sim_send(const int sock, const MqttWriter *w)
 {
@@ -31,17 +35,27 @@ internal b32 device_sim_send(const int sock, const MqttWriter *w)
     return 1;
 }
 
-internal b32 device_sim_publish(const int sock, const str topic, const str payload, const b32 retain)
+internal b32 device_sim_publish(Arena *arena, const int sock, const str topic, const str payload, const b32 retain)
 {
-    u8 buffer[256];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    const u64 mark = arena->position;
+    u8 *buffer = ARENA_PUSH_ARRAY(arena, u8, DEVICE_SIM_PACKET_MAX);
+    if(!buffer)
+    {
+        return 0;
+    }
+
+    MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
     mqtt_write_publish(&w, topic, payload, retain);
     printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
-    return device_sim_send(sock, &w);
+    const b32 ok = device_sim_send(sock, &w);
+    arena_pop_to(arena, mark);
+    return ok;
 }
 
 int main(void)
 {
+    Arena arena = arena_create(device_sim_memory, sizeof(device_sim_memory));
+
     const int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0)
     {
@@ -66,8 +80,13 @@ int main(void)
 
     printf("connected to %s:%d\n", DEVICE_SIM_BROKER_IP, DEVICE_SIM_BROKER_PORT);
 
-    u8 buffer[256];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    u8* buffer = ARENA_PUSH_ARRAY(&arena, u8, DEVICE_SIM_PACKET_MAX);
+    if (!buffer){
+        close(sock);
+        return 1;
+    }
+
+    MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
     mqtt_write_connect(&w, STR_LITERAL(DEVICE_SIM_ID), 0);
     if (!device_sim_send(sock, &w))
     {
@@ -92,9 +111,9 @@ int main(void)
     printf("CONNACK: accepted (return code 0)\n");
 
     b32 ok = 1;
-    ok = ok && device_sim_publish(sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("init"), 1);
-    ok = ok && device_sim_publish(sock, STR_LITERAL(DEVICE_SIM_TOPIC "$description"), STR_LITERAL("{\"homie\":\"5.0\",\"version\":1,\"name\":\"TNN simulator 1\"}"), 1);
-    ok = ok && device_sim_publish(sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("ready"), 1);
+    ok = ok && device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("init"), 1);
+    ok = ok && device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$description"), STR_LITERAL("{\"homie\":\"5.0\",\"version\":1,\"name\":\"TNN simulator 1\"}"), 1);
+    ok = ok && device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("ready"), 1);
 
     if (!ok)
     {
@@ -104,8 +123,8 @@ int main(void)
 
     printf("press Enter to disconnect\n");
     getchar();
-    ok = device_sim_publish(sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("disconnected"), 1);
-    w = mqtt_writer_create(buffer, sizeof(buffer));
+    ok = device_sim_publish(&arena, sock, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("disconnected"), 1);
+    w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
     mqtt_write_disconnect(&w);
     ok = ok && device_sim_send(sock, &w);
 
