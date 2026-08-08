@@ -5,8 +5,9 @@
 #include "mqtt/mqtt_writer.h"
 
 typedef struct MqttClient MqttClient;
-struct MqttClient {
-    int sock_ref;
+struct MqttClient 
+{
+    int sock;
 };
 
 MqttClient mqtt_client_connect(const char *ip, u16 port, str client_id, u16 keep_alive_seconds, str will_topic, str will_payload);

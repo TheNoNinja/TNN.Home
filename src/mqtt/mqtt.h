@@ -3,6 +3,7 @@
 
 #include "mqtt/mqtt_client.h"
 #include "mqtt/mqtt_reader.h"
+#include "mqtt/mqtt_stream.h"
 #include "mqtt/mqtt_writer.h"
 
 #define MQTT_CONNECT       1
@@ -15,6 +16,8 @@
 #define MQTT_DISCONNECT    14
 
 #define MQTT_VARINT_MAX  268435455
+
+#define MQTT_FIXED_HEADER_MAX 5
 
 #define MQTT_CONNECT_FLAG_CLEAN_SESSION 0x02
 #define MQTT_CONNECT_FLAG_WILL 0x04

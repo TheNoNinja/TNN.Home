@@ -25,6 +25,10 @@ void mqtt_test_read_past_end(void);
 void mqtt_test_read_varint(void);
 void mqtt_test_read_varint_too_long(void);
 void mqtt_test_read_fixed_header(void);
-void mqtt_test_read_publish(void);  
+void mqtt_test_read_publish(void);
+void mqtt_test_stream_split(void);
+void mqtt_test_stream_burst(void);
+void mqtt_test_stream_oversized(void);
+void mqtt_test_stream_malformed(void);
 
 #endif

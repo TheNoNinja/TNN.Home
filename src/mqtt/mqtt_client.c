@@ -19,7 +19,7 @@ b32 mqtt_client_send(MqttClient *c, const MqttWriter *w)
         return 0;
     }
 
-    const ssize_t sent = send(c->sock_ref, w->data, w->length, MSG_NOSIGNAL);
+    const ssize_t sent = send(c->sock, w->data, w->length, MSG_NOSIGNAL);
     if (sent != (ssize_t)w->length)
     {
         perror("send");
@@ -32,7 +32,7 @@ MqttClient mqtt_client_connect(const char *ip, const u16 port, const str client_
 {
     const int sock = socket(AF_INET, SOCK_STREAM, 0);
     MqttClient client;
-    client.sock_ref = sock;
+    client.sock = sock;
     if (sock < 0)
     {
         perror("socket");
@@ -69,7 +69,6 @@ MqttClient mqtt_client_connect(const char *ip, const u16 port, const str client_
     {
         fprintf(stderr, "the broker closed connection before CONNACK\n");
         goto error_handling;
-        return client;
     }
 
     MqttReader r = mqtt_reader_create(connection_ack, (u64)recieved);
@@ -91,6 +90,6 @@ MqttClient mqtt_client_connect(const char *ip, const u16 port, const str client_
 
     error_handling:
     close(sock);
-    client.sock_ref = -1;
+    client.sock = -1;
     return client;
 }

@@ -56,7 +56,7 @@ internal b32 mqtt_dump_handle(const MqttFixedHeader header, const str body)
 
 internal b32 mqtt_dump_receive(MqttClient *c)
 {
-    const ssize_t received = recv(c->sock_ref, mqtt_dump_rx_buffer, sizeof(mqtt_dump_rx_buffer), 0);
+    const ssize_t received = recv(c->sock, mqtt_dump_rx_buffer, sizeof(mqtt_dump_rx_buffer), 0);
     if (received < 0 && errno == EAGAIN)
     {
         u8 packet[MQTT_DUMP_TX_MAX];
@@ -92,24 +92,24 @@ int main(void)
     setvbuf(stdout, 0, _IOLBF, 0);
 
     MqttClient client = mqtt_client_connect(MQTT_DUMP_BROKER_IP, MQTT_DUMP_BROKER_PORT, STR_LITERAL(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY);
-    if (client.sock_ref <0)
+    if (client.sock < 0)
     {
         return 1;
     }
 
     const struct timeval keep_alive = { MQTT_DUMP_KEEP_ALIVE, 0 };
-    setsockopt(client.sock_ref, SOL_SOCKET, SO_RCVTIMEO, &keep_alive, sizeof(keep_alive));
+    setsockopt(client.sock, SOL_SOCKET, SO_RCVTIMEO, &keep_alive, sizeof(keep_alive));
 
     u8 packet[MQTT_DUMP_TX_MAX];
     MqttWriter w = mqtt_writer_create(packet, sizeof(packet));
     mqtt_write_subscribe(&w, 1, STR_LITERAL(MQTT_DUMP_TOPIC_FILTER));
     if (!mqtt_client_send(&client, &w))
     {
-        close(client.sock_ref);
+        close(client.sock);
         return 1;
     }
 
     while(mqtt_dump_receive(&client)){}
-    close(client.sock_ref);
+    close(client.sock);
     return 1;
 }

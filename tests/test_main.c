@@ -29,6 +29,10 @@ internal const TestCase test_cases[] = {
     { .name = "mqtt read varint overflow",           .function = mqtt_test_read_varint_too_long },
     { .name = "mqtt read fixed header",              .function = mqtt_test_read_fixed_header },
     { .name = "mqtt read publish",                   .function = mqtt_test_read_publish },
+    { .name = "mqtt stream split packet",            .function = mqtt_test_stream_split },
+    { .name = "mqtt stream several packets",         .function = mqtt_test_stream_burst },
+    { .name = "mqtt stream oversized",               .function = mqtt_test_stream_oversized },
+    { .name = "mqtt stream malformed",               .function = mqtt_test_stream_malformed },
 };
 
 internal const char *test_current_name;

@@ -2,6 +2,8 @@
 #include "mqtt/mqtt.h"
 #include "mqtt/mqtt_reader.h"
 
+#include <string.h>
+
 void mqtt_test_str(void)
 {
     const u8 expected[] = { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x00, 0x00 };
@@ -201,10 +203,99 @@ void mqtt_test_read_publish(void)
     r = mqtt_reader_create(packet_qos1, sizeof(packet_qos1));
     m = mqtt_read_publish(&r, 0x02);
     TEST_EXPECT_BYTES(m.payload.data, m.payload.length, payload, sizeof(payload));
-    TEST_EXPECT(!m.retain && m.qos == 1);
+    TEST_EXPECT(!m.retain && m.qos == 1 && !r.error);
 
     const u8 liar_packet[] = { 0x00, 0x09, 'a', '/', 'b' };
     r = mqtt_reader_create(liar_packet, sizeof(liar_packet));
     m = mqtt_read_publish(&r, 0);
     TEST_EXPECT(r.error && m.topic.length == 0 && m.payload.length == 0);
+}
+
+internal void mqtt_test_stream_feed(MqttStream *s, const u8 *bytes, const u64 count)
+{
+    mqtt_stream_compact(s);
+    memcpy(s->data + s->length, bytes, count);
+    s->length += count;
+}
+
+void mqtt_test_stream_split(void) 
+{
+    const u8 packet[] = { 0x31, 0x07, 0x00, 0x03, 'a', '/', 'b', 'o', 'n' };
+    u8 buffer[16];
+    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), sizeof(buffer));
+    MqttFixedHeader header = {0};
+    str body = STR_EMPTY;
+
+    for (u64 i = 0; i + 1 < sizeof(packet); i++)
+    {
+        mqtt_test_stream_feed(&s, packet + i, 1);
+        TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+    }
+
+    mqtt_test_stream_feed(&s, packet + sizeof(packet) - 1, 1);
+    TEST_EXPECT(mqtt_stream_next(&s, &header, &body));
+    TEST_EXPECT(header.type == MQTT_PUBLISH && header.flags == MQTT_PUBLISH_FLAG_RETAIN);
+    TEST_EXPECT_BYTES(body.data, body.length, packet + 2, 7);
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+}
+
+void mqtt_test_stream_burst(void) 
+{
+    const u8 first[] = {
+         0x31, 0x07, 0x00, 0x03, 'a', '/', 'b', 'o', 'n',//PUBLISH
+         0xD0, 0x00,                                     //PINGRESP
+         0x90, 0x03, 0x00                                //Partial SUBACK 
+    };
+    const u8 last[] = { 0x01, 0x00 };                    //Leftover SUBACK
+    const u8 expected[] = { 0x00, 0x01, 0x00 };
+
+    u8 buffer[16];
+    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), sizeof(buffer));
+    MqttFixedHeader header = {0};
+    str body = STR_EMPTY;
+
+    mqtt_test_stream_feed(&s, first, sizeof(first));
+    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PUBLISH && body.length == 7);
+    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PINGRESP && body.length == 0);
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+
+    mqtt_test_stream_feed(&s, last, sizeof(last));
+    TEST_EXPECT(s.position == 0 && s.length == 5);
+    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_SUBSCRIBE_ACK);
+    TEST_EXPECT_BYTES(body.data, body.length, expected, sizeof(expected));
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+}
+
+void mqtt_test_stream_oversized(void)
+{
+    const u8 big[] = { 0x31, 0x07, 0x00, 0x03, 'a', '/', 'b', 'o', 'n' };
+    const u8 after[] = { 0xD0, 0x00 };
+
+    u8 buffer[8];
+    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), sizeof(buffer));
+    MqttFixedHeader header = {0};
+    str body = STR_EMPTY;
+
+    mqtt_test_stream_feed(&s, big, 5);
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+    TEST_EXPECT(s.skipped == 1 && s.skip == 4 && s.position == 5);
+    mqtt_test_stream_feed(&s, big + 5, 4);
+    mqtt_test_stream_feed(&s, after, sizeof(after));
+    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PINGRESP);
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.error && s.skipped == 1 && s.skip == 0);
+}
+
+void mqtt_test_stream_malformed(void)
+{
+    const u8 bad[] = { 0x30, 0x80, 0x80, 0x80, 0x80, 0x01 };
+    u8 buffer[16];
+    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), sizeof(buffer));
+    MqttFixedHeader header = {0};
+    str body = STR_EMPTY;
+
+    mqtt_test_stream_feed(&s, bad, 4);
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.error);
+    mqtt_test_stream_feed(&s, bad + 4, 2);
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+    TEST_EXPECT(s.error && !mqtt_stream_next(&s, &header, &body));
 }
