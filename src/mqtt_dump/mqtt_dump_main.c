@@ -14,6 +14,7 @@
 #define MQTT_DUMP_KEEP_ALIVE 10
 #define MQTT_DUMP_TX_MAX 64
 #define MQTT_DUMP_RX_MAX KB(64)
+#define MQTT_DUMP_RX_PACKET_MAX KB(64)
 
 internal u8 mqtt_dump_rx_buffer[MQTT_DUMP_RX_MAX];
 
@@ -56,7 +57,7 @@ internal b32 mqtt_dump_handle(const MqttFixedHeader header, const str body)
 
 internal b32 mqtt_dump_receive(MqttClient *c)
 {
-    const ssize_t received = recv(c->sock, mqtt_dump_rx_buffer, sizeof(mqtt_dump_rx_buffer), 0);
+    const i64 received = mqtt_client_receive(c);
     if (received < 0 && errno == EAGAIN)
     {
         u8 packet[MQTT_DUMP_TX_MAX];
@@ -64,35 +65,40 @@ internal b32 mqtt_dump_receive(MqttClient *c)
         mqtt_write_pingreq(&w);
         return mqtt_client_send(c, &w);
     }
+    if (received < 0 && errno == EINTR)
+    {
+        return 1;
+    }
     if (received <= 0)
     {
         fprintf(stderr, "the broker closed the connection\n");
         return 0;
     }
 
-    MqttReader r = mqtt_reader_create(mqtt_dump_rx_buffer, (u64)received);
-    while (r.position < r.length){
-        const MqttFixedHeader header = mqtt_read_fixed_header(&r);
-        const str body = mqtt_read_bytes(&r, header.remaining_length);
-        if (r.error)
-        {
-            fprintf(stderr, "a packet is cut off at the end of %zd received bytes\n", received);
-            return 0;
-        }
+    MqttFixedHeader header = {0};
+    str body = STR_EMPTY;
+    while (mqtt_stream_next(&c->in, &header, &body))
+    {
         if (!mqtt_dump_handle(header, body))
         {
             return 0;
         }
     }
-    return 1;
+
+    const u64 waiting = c->in.length - c->in.position;
+    if (waiting > 0)
+    {
+        fprintf(stderr, "(%llu bytes of a cut-off packet wait for the rest)\n", (unsigned long long) waiting);
+    }
+    return !c->in.error;
 }
 
 int main(void) 
 {
     setvbuf(stdout, 0, _IOLBF, 0);
 
-    MqttClient client = mqtt_client_connect(MQTT_DUMP_BROKER_IP, MQTT_DUMP_BROKER_PORT, STR_LITERAL(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY);
-    if (client.sock < 0)
+    MqttClient client = mqtt_client_create(mqtt_dump_rx_buffer, sizeof(mqtt_dump_rx_buffer), MQTT_DUMP_RX_PACKET_MAX);
+    if (!mqtt_client_connect(&client, MQTT_DUMP_BROKER_IP, MQTT_DUMP_BROKER_PORT, STR_LITERAL(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }

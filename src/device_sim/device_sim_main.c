@@ -4,19 +4,20 @@
 
 #include <poll.h>
 #include <stdio.h>
-#include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
 
-#define DEVICE_SIM_BROKER_IP   "127.0.0.1"
-#define DEVICE_SIM_BROKER_PORT 1883
-#define DEVICE_SIM_ID          "tnn-sim-1"
-#define DEVICE_SIM_TOPIC       "homie/5/" DEVICE_SIM_ID "/"
-#define DEVICE_SIM_KEEP_ALIVE  10
-#define DEVICE_SIM_PACKET_MAX  256
+#define DEVICE_SIM_BROKER_IP     "127.0.0.1"
+#define DEVICE_SIM_BROKER_PORT   1883
+#define DEVICE_SIM_ID            "tnn-sim-1"
+#define DEVICE_SIM_TOPIC         "homie/5/" DEVICE_SIM_ID "/"
+#define DEVICE_SIM_KEEP_ALIVE    10
+#define DEVICE_SIM_PACKET_MAX    256
+#define DEVICE_SIM_RX_MAX        KB(8)
+#define DEVICE_SIM_RX_PACKET_MAX KB(4)
 
 
-internal u8 device_sim_memory[KB(8)];
+internal u8 device_sim_memory[KB(16)];
 
 internal b32 device_sim_publish(Arena *arena, MqttClient *c, const str topic, const str payload, const b32 retain)
 {
@@ -71,20 +72,27 @@ internal b32 device_sim_wait_for_enter(MqttClient *c, u8 *buffer)
 
         if (fds[1].revents)
         {
-            u8 packet[2];
-            const ssize_t received = recv(c->sock, packet, sizeof(packet), 0);
-            if (received <= 0)
+            if (mqtt_client_receive(c) <= 0)
             {
                 fprintf(stderr, "the broker closed the connection\n");
                 return 0;
             }
-            if (received != 2 || packet[0] != (MQTT_PINGRESP << 4))
+            MqttFixedHeader header = {0};
+            str body = STR_EMPTY;
+            while (mqtt_stream_next(&c->in, &header, &body))
             {
-                fprintf(stderr, "unexpected packet from the broker: 0x%02x\n", packet[0]);
-                return 0;
+                if(header.type != MQTT_PINGRESP)
+                {
+                    fprintf(stderr, "unexpected packet from the broker: type %d\n", header.type);
+                    return 0;
+                }
+                printf("PINGRESP\n");
+                ping_answered = 1;  
             }
-            printf("PINGRESP\n");
-            ping_answered = 1;
+            if(c->in.error)
+            {
+                return 0;
+            }          
         }
 
         if (device_sim_now_ms() >= next_ping_ms)
@@ -112,8 +120,14 @@ int main(void)
 {
     Arena arena = arena_create(device_sim_memory, sizeof(device_sim_memory));
 
-    MqttClient client = mqtt_client_connect(DEVICE_SIM_BROKER_IP, DEVICE_SIM_BROKER_PORT, STR_LITERAL(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("lost"));
-    if (client.sock < 0)
+    u8 *rx_buffer = ARENA_PUSH_ARRAY(&arena, u8, DEVICE_SIM_RX_MAX);
+    if (!rx_buffer)
+    {
+        return 1;
+    }
+
+    MqttClient client = mqtt_client_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX);
+    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, DEVICE_SIM_BROKER_PORT, STR_LITERAL(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("lost")))
     {
         return 1;
     }
