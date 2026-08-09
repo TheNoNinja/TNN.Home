@@ -1,10 +1,10 @@
 #include "base/base_types.h"
 #include "base/base_arena.h"
+#include "loop/loop.h"
 #include "mqtt/mqtt.h"
 
-#include <poll.h>
 #include <stdio.h>
-#include <time.h>
+#include <string.h>
 #include <unistd.h>
 
 #define DEVICE_SIM_BROKER_IP     "127.0.0.1"
@@ -36,45 +36,27 @@ internal b32 device_sim_publish(Arena *arena, MqttClient *c, const str topic, co
     return ok;
 }
 
-internal u64 device_sim_now_ms(void)
-{
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return (u64)now.tv_sec * 1000 + (u64)now.tv_nsec / 1000000;
-}
-
-internal b32 device_sim_wait_for_enter(MqttClient *c, u8 *buffer)
+internal b32 device_sim_run(Loop *l, MqttClient *c, u8 *buffer)
 {
     const u64 interval_ms = DEVICE_SIM_KEEP_ALIVE * 1000;
-    u64 next_ping_ms = device_sim_now_ms() + interval_ms;
+    const u32 ping = loop_timer_add(l);
+    loop_timer_start(l, ping, interval_ms);
     b32 ping_answered = 1;
 
-    for(;;)
+    loop_watch(l, STDIN_FILENO);
+    loop_watch(l, c->sock);
+
+    while(loop_wait(l))
     {
-        struct pollfd fds[2] = {0};
-        fds[0].fd = STDIN_FILENO;
-        fds[0].events = POLLIN;
-        fds[1].fd = c->sock;
-        fds[1].events = POLLIN;
-
-        const u64 now_ms = device_sim_now_ms();
-        const int timeout_ms = now_ms < next_ping_ms ? (int)(next_ping_ms - now_ms) : 0;
-        if (poll(fds, ARRAY_COUNT(fds), timeout_ms) < 0)
-        {
-            perror("poll");
-            return 0;
-        }
-
-        if (fds[0].revents)
+        if (loop_readable(l, STDIN_FILENO))
         {
             return 1;
         }
 
-        if (fds[1].revents)
+        if (loop_readable(l, c->sock))
         {
-            if (mqtt_client_receive(c) <= 0)
+            if (!mqtt_client_receive(c))
             {
-                fprintf(stderr, "the broker closed the connection\n");
                 return 0;
             }
             MqttFixedHeader header = {0};
@@ -95,7 +77,7 @@ internal b32 device_sim_wait_for_enter(MqttClient *c, u8 *buffer)
             }          
         }
 
-        if (device_sim_now_ms() >= next_ping_ms)
+        if (loop_timer_fired(l, ping))
         {
             if (!ping_answered)
             {
@@ -111,9 +93,16 @@ internal b32 device_sim_wait_for_enter(MqttClient *c, u8 *buffer)
                 return 0;
             }
             ping_answered = 0;
-            next_ping_ms = device_sim_now_ms() + interval_ms;
+            loop_timer_start(l, ping, interval_ms);
         }
     }
+
+    if (l->stop_signal == 0)
+    {
+        return 0;
+    }
+    printf("\nsignal %d (%s): disconnecting\n", l->stop_signal, strsignal(l->stop_signal));
+    return 1;
 }
 
 int main(void)
@@ -148,9 +137,10 @@ int main(void)
         goto error_handling;
     }
 
-    printf("press Enter to disconnect\n");
-    
-    if (!device_sim_wait_for_enter(&client, buffer))
+    printf("press Enter or Ctrl+C to disconnect\n");
+    Loop loop = loop_create();
+    loop_catch_signals();
+    if (!device_sim_run(&loop, &client, buffer))
     {
         goto error_handling;
     }

@@ -14,7 +14,7 @@ struct MqttClient
 
 MqttClient mqtt_client_create(u8 *buffer, u64 capacity, u64 packet_max);
 b32 mqtt_client_connect(MqttClient *c, const char *ip, u16 port, str client_id, u16 keep_alive_seconds, str will_topic, str will_payload);
-i64 mqtt_client_receive(MqttClient *c);
+b32 mqtt_client_receive(MqttClient *c);
 b32 mqtt_client_send(const MqttClient *c, const MqttWriter *w);
 
 #endif

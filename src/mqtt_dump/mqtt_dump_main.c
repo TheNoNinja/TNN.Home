@@ -1,10 +1,9 @@
 #include "base/base_types.h"
+#include "loop/loop.h"
 #include "mqtt/mqtt.h"
 
-#include <errno.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <sys/time.h>
+#include <string.h>
 #include <unistd.h>
 
 #define MQTT_DUMP_BROKER_IP "127.0.0.1"
@@ -57,21 +56,8 @@ internal b32 mqtt_dump_handle(const MqttFixedHeader header, const str body)
 
 internal b32 mqtt_dump_receive(MqttClient *c)
 {
-    const i64 received = mqtt_client_receive(c);
-    if (received < 0 && errno == EAGAIN)
+    if (!mqtt_client_receive(c))
     {
-        u8 packet[MQTT_DUMP_TX_MAX];
-        MqttWriter w = mqtt_writer_create(packet, sizeof(packet));
-        mqtt_write_pingreq(&w);
-        return mqtt_client_send(c, &w);
-    }
-    if (received < 0 && errno == EINTR)
-    {
-        return 1;
-    }
-    if (received <= 0)
-    {
-        fprintf(stderr, "the broker closed the connection\n");
         return 0;
     }
 
@@ -103,19 +89,41 @@ int main(void)
         return 1;
     }
 
-    const struct timeval keep_alive = { MQTT_DUMP_KEEP_ALIVE, 0 };
-    setsockopt(client.sock, SOL_SOCKET, SO_RCVTIMEO, &keep_alive, sizeof(keep_alive));
-
     u8 packet[MQTT_DUMP_TX_MAX];
     MqttWriter w = mqtt_writer_create(packet, sizeof(packet));
     mqtt_write_subscribe(&w, 1, STR_LITERAL(MQTT_DUMP_TOPIC_FILTER));
-    if (!mqtt_client_send(&client, &w))
+    b32 ok = mqtt_client_send(&client, &w);
+
+    Loop loop = loop_create();
+    loop_catch_signals();
+    loop_watch(&loop, client.sock);
+    const u32 ping = loop_timer_add(&loop);
+    loop_timer_start(&loop, ping, MQTT_DUMP_KEEP_ALIVE * 1000);
+
+    while (ok && loop_wait(&loop))
     {
-        close(client.sock);
-        return 1;
+        if (loop_readable(&loop, client.sock))
+        {
+            ok = mqtt_dump_receive(&client);
+        }
+
+        if (loop_timer_fired(&loop, ping))
+        {
+            w = mqtt_writer_create(packet, sizeof(packet));
+            mqtt_write_pingreq(&w);
+            ok = ok && mqtt_client_send(&client, &w);
+            loop_timer_start(&loop, ping, MQTT_DUMP_KEEP_ALIVE * 1000);
+        }
     }
 
-    while(mqtt_dump_receive(&client)){}
+    ok = ok && loop.stop_signal != 0;
+    if (ok){
+        printf("\nsignal %d (%s): disconnecting\n", loop.stop_signal, strsignal(loop.stop_signal));
+        w = mqtt_writer_create(packet, sizeof(packet));
+        mqtt_write_disconnect(&w);
+        ok = mqtt_client_send(&client, &w);
+    }
+
     close(client.sock);
-    return 1;
+    return ok ? 0 : 1;
 }

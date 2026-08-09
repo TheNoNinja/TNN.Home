@@ -2,6 +2,8 @@
 #include "mqtt/mqtt.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <stdio.h>
@@ -27,10 +29,15 @@ b32 mqtt_client_send(const MqttClient *c, const MqttWriter *w)
     }
 
     const ssize_t sent = send(c->sock, w->data, w->length, MSG_NOSIGNAL);
-    if (sent != (ssize_t)w->length)
+    if (sent < 0)
     {
         perror("send");
         return 0;
+    }
+
+    if ((u64)sent != w->length)
+    {
+        fprintf(stderr, "send: only %lld of %llu bytes went out (the send buffer is full)\n", (long long)sent, (unsigned long long)w->length);
     }
     return 1;
 }
@@ -72,13 +79,8 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     str body = STR_EMPTY;
     while(!mqtt_stream_next(&c->in, &header, &body))
     {
-        if (c->in.error)
+        if (c->in.error || !mqtt_client_receive(c))
         {
-            goto error_handling;
-        }
-        if (mqtt_client_receive(c) <= 0)
-        {
-            fprintf(stderr, "the broker closed the connection before CONNACK\n");
             goto error_handling;
         }
     }
@@ -97,6 +99,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
         goto error_handling;
     }
     printf("CONNACK: accepted (return code %d, session present %d)\n", return_code, session);
+    fcntl(c->sock, F_SETFL, fcntl(c->sock, F_GETFL) | O_NONBLOCK);
     return 1;
 
 error_handling:
@@ -105,13 +108,26 @@ error_handling:
     return 0;
 }
 
-i64 mqtt_client_receive(MqttClient *c)
+b32 mqtt_client_receive(MqttClient *c)
 {
     mqtt_stream_compact(&c->in);
-    const ssize_t received = recv(c->sock, c->in.data + c->in.length, c->in.capacity - c->in.length, 0);
+    const ssize_t received = recv(c ->sock, c->in.data + c->in.length, c->in.capacity - c->in.length, 0);
     if (received > 0)
     {
         c->in.length += (u64)received;
+        return 1;
     }
-    return received;
+    if (received == 0)
+    {
+        fprintf(stderr, "the broker closed the connection\n");
+        return 0;
+    }
+
+    if (errno == EAGAIN || errno == EINTR)
+    {
+        return 1;
+    }
+
+    perror("recv");
+    return 0;
 }
