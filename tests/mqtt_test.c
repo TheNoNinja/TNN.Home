@@ -236,7 +236,7 @@ void mqtt_test_stream_split(void)
     TEST_EXPECT(mqtt_stream_next(&s, &header, &body));
     TEST_EXPECT(header.type == MQTT_PUBLISH && header.flags == MQTT_PUBLISH_FLAG_RETAIN);
     TEST_EXPECT_BYTES(body.data, body.length, packet + 2, 7);
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.error);
 }
 
 void mqtt_test_stream_burst(void) 
@@ -263,7 +263,7 @@ void mqtt_test_stream_burst(void)
     TEST_EXPECT(s.position == 0 && s.length == 5);
     TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_SUBSCRIBE_ACK);
     TEST_EXPECT_BYTES(body.data, body.length, expected, sizeof(expected));
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.error);
 }
 
 void mqtt_test_stream_oversized(void)

@@ -15,6 +15,11 @@ internal const TestCase test_cases[] = {
     { .name = "base arena push",                     .function = base_test_arena_push },
     { .name = "base arena full",                     .function = base_test_arena_full },
     { .name = "base arena pop",                      .function = base_test_arena_pop },
+    
+    { .name = "loop timeout",                        .function = loop_test_timeout },
+    { .name = "loop timer fires",                    .function = loop_test_timer_fires },
+    { .name = "loop pipe",                           .function = loop_test_pipe },
+    { .name = "loop signal",                         .function = loop_test_signal },
 
     { .name = "mqtt string golden bytes",            .function = mqtt_test_str },
     { .name = "mqtt varint golden bytes",            .function = mqtt_test_varint },

@@ -13,6 +13,11 @@ void base_test_arena_push(void);
 void base_test_arena_full(void);
 void base_test_arena_pop(void);
 
+void loop_test_timeout(void);
+void loop_test_timer_fires(void);
+void loop_test_pipe(void);
+void loop_test_signal(void);
+
 void mqtt_test_str(void);
 void mqtt_test_varint(void);
 void mqtt_test_varint_too_big(void);

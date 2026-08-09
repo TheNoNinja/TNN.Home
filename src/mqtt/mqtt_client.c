@@ -8,7 +8,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-
 #define MQTT_CLIENT_CONNECT_MAX 256
 
 MqttClient mqtt_client_create(u8 *buffer, const u64 capacity, const u64 packet_max)
@@ -19,7 +18,7 @@ MqttClient mqtt_client_create(u8 *buffer, const u64 capacity, const u64 packet_m
     return c;
 }
 
-b32 mqtt_client_send(MqttClient *c, const MqttWriter *w) 
+b32 mqtt_client_send(const MqttClient *c, const MqttWriter *w)
 {
     if (w->overflow)
     {
@@ -42,7 +41,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     if (c->sock < 0)
     {
         perror("socket");
-        goto error_handling;
+        return 0;
     }
 
     const int one = 1;
