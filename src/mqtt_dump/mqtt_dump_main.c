@@ -1,8 +1,10 @@
 #include "base/base_types.h"
+#include "base/base_log.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -29,10 +31,10 @@ internal b32 mqtt_dump_handle(const MqttFixedHeader header, const str body)
             const u8 return_code = mqtt_read_u8(&r);
             if (r.error || packet_id != 1 || return_code != MQTT_SUBSCRIBE_ACK_QOS_0)
             {
-                fprintf(stderr, "SUBACK: refused (packet id %d, return code 0x%02x)\n", packet_id, return_code);
+                LOG_ERROR("SUBACK: refused (packet id %d, return code 0x%02x)", packet_id, return_code);
                 return 0;
             }
-            printf("subscribed to %s\n", MQTT_DUMP_TOPIC_FILTER);
+            LOG_INFO("subscribed to %s", MQTT_DUMP_TOPIC_FILTER);
             return 1;
         }
         case MQTT_PUBLISH:
@@ -40,16 +42,16 @@ internal b32 mqtt_dump_handle(const MqttFixedHeader header, const str body)
             const MqttPublish m = mqtt_read_publish(&r, header.flags);
             if (r.error)
             {
-                fprintf(stderr, "malformed PUBLISH of %llu bytes\n", (unsigned long long)body.length);
+                LOG_ERROR("malformed PUBLISH of %llu bytes", (unsigned long long)body.length);
                 return 0;
             }
-            printf("%.*s = %.*s%s\n", STR_FMT(m.topic), STR_FMT(m.payload), m.retain ? " (retained)" : "");
+            LOG_INFO("%.*s = %.*s%s", STR_FMT(m.topic), STR_FMT(m.payload), m.retain ? " (retained)" : "");
             return 1;
         }
         case MQTT_PINGRESP:
             return 1;
         default:
-            fprintf(stderr, "unexpected packet type %d, ignored\n", header.type);
+            LOG_ERROR("unexpected packet type %d, ignored", header.type);
             return 1;
     }
 }
@@ -74,17 +76,30 @@ internal b32 mqtt_dump_receive(MqttClient *c)
     const u64 waiting = c->in.length - c->in.position;
     if (waiting > 0)
     {
-        fprintf(stderr, "(%llu bytes of a cut-off packet wait for the rest)\n", (unsigned long long) waiting);
+        LOG_ERROR("(%llu bytes of a cut-off packet wait for the rest)", (unsigned long long) waiting);
     }
     return !c->in.error;
 }
 
-int main(void) 
+int main(const int argc, const char **argv) 
 {
     setvbuf(stdout, 0, _IOLBF, 0);
 
+    u16 port = MQTT_DUMP_BROKER_PORT;
+    if(argc > 1)
+    {
+        char *end = 0;
+        const long value = strtol(argv[1], &end, 10);
+        if (*end != '\0' || value < 1 || value > 65535)
+        {
+            LOG_ERROR("usage: %s [port(default '%d')]", argv[0], MQTT_DUMP_BROKER_PORT);
+            return 1;
+        }
+        port = (u16)value;
+    }
+
     MqttClient client = mqtt_client_create(mqtt_dump_rx_buffer, sizeof(mqtt_dump_rx_buffer), MQTT_DUMP_RX_PACKET_MAX);
-    if (!mqtt_client_connect(&client, MQTT_DUMP_BROKER_IP, MQTT_DUMP_BROKER_PORT, STR_LITERAL(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    if (!mqtt_client_connect(&client, MQTT_DUMP_BROKER_IP, port, STR_LITERAL(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
@@ -117,8 +132,9 @@ int main(void)
     }
 
     ok = ok && loop.stop_signal != 0;
-    if (ok){
-        printf("\nsignal %d (%s): disconnecting\n", loop.stop_signal, strsignal(loop.stop_signal));
+    if (ok)
+    {
+        LOG_INFO("\nsignal %d (%s): disconnecting", loop.stop_signal, strsignal(loop.stop_signal));
         w = mqtt_writer_create(packet, sizeof(packet));
         mqtt_write_disconnect(&w);
         ok = mqtt_client_send(&client, &w);

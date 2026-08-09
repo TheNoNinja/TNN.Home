@@ -1,10 +1,11 @@
 #include "loop/loop.h"
 #include "base/base_assert.h"
+#include "base/base_log.h"
 
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
-#include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 internal volatile sig_atomic_t loop_signal_received;
@@ -131,7 +132,7 @@ b32 loop_wait(Loop *l)
     }
     if (ready < 0 && errno != EINTR)
     {
-        perror("poll");
+        LOG_ERROR("poll: %s", strerror(errno));
         return 0;
     }
 

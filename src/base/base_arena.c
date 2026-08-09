@@ -1,7 +1,7 @@
 #include "base/base_arena.h"
 #include "base/base_assert.h"
+#include "base/base_log.h"
 
-#include <stdio.h>
 #include <string.h>
 
 Arena arena_create(u8 *buffer, const u64 capacity)
@@ -21,7 +21,7 @@ void *arena_push(Arena *arena, const u64 size, const u64 align)
     if (padding + size > arena->capacity - arena->position)
     {
         arena->overflow = 1;
-        fprintf(stderr, "arena full: %llu bytes wanted, %llu free \n", (unsigned long long) size, (unsigned long long)(arena->capacity - arena->position));
+        LOG_ERROR("arena full: %llu bytes wanted, %llu free", (unsigned long long) size, (unsigned long long)(arena->capacity - arena->position));
         return 0;
     }
 

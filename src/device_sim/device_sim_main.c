@@ -1,9 +1,10 @@
 #include "base/base_types.h"
 #include "base/base_arena.h"
+#include "base/base_log.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -19,7 +20,7 @@
 
 internal u8 device_sim_memory[KB(16)];
 
-internal b32 device_sim_publish(Arena *arena, MqttClient *c, const str topic, const str payload, const b32 retain)
+internal b32 device_sim_publish(Arena *arena, const MqttClient *c, const str topic, const str payload, const b32 retain)
 {
     const u64 mark = arena->position;
     u8 *buffer = ARENA_PUSH_ARRAY(arena, u8, DEVICE_SIM_PACKET_MAX);
@@ -30,7 +31,7 @@ internal b32 device_sim_publish(Arena *arena, MqttClient *c, const str topic, co
 
     MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
     mqtt_write_publish(&w, topic, payload, retain);
-    printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
+    LOG_INFO("publish %.*s = %.*s", STR_FMT(topic), STR_FMT(payload));
     const b32 ok = mqtt_client_send(c, &w);
     arena_pop_to(arena, mark);
     return ok;
@@ -65,10 +66,10 @@ internal b32 device_sim_run(Loop *l, MqttClient *c, u8 *buffer)
             {
                 if(header.type != MQTT_PINGRESP)
                 {
-                    fprintf(stderr, "unexpected packet from the broker: type %d\n", header.type);
+                    LOG_ERROR("unexpected packet from the broker: type %d", header.type);
                     return 0;
                 }
-                printf("PINGRESP\n");
+                LOG_INFO("PINGRESP");
                 ping_answered = 1;  
             }
             if(c->in.error)
@@ -81,13 +82,13 @@ internal b32 device_sim_run(Loop *l, MqttClient *c, u8 *buffer)
         {
             if (!ping_answered)
             {
-                fprintf(stderr, "no PINGRESP within %ds\n", DEVICE_SIM_KEEP_ALIVE);
+                LOG_ERROR("no PINGRESP within %ds", DEVICE_SIM_KEEP_ALIVE);
                 return 0;
             }
 
             MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
             mqtt_write_pingreq(&w);
-            printf("PINGREQ\n");
+            LOG_INFO("PINGREQ");
             if (!mqtt_client_send(c, &w))
             {
                 return 0;
@@ -101,11 +102,11 @@ internal b32 device_sim_run(Loop *l, MqttClient *c, u8 *buffer)
     {
         return 0;
     }
-    printf("\nsignal %d (%s): disconnecting\n", l->stop_signal, strsignal(l->stop_signal));
+    LOG_INFO("signal %d (%s): disconnecting", l->stop_signal, strsignal(l->stop_signal));
     return 1;
 }
 
-int main(void)
+int main(const int argc, const char **argv)
 {
     Arena arena = arena_create(device_sim_memory, sizeof(device_sim_memory));
 
@@ -115,8 +116,21 @@ int main(void)
         return 1;
     }
 
+    u16 port = DEVICE_SIM_BROKER_PORT;
+    if(argc > 1)
+    {
+        char *end = 0;
+        const long value = strtol(argv[1], &end, 10);
+        if (*end != '\0' || value < 1 || value > 65535)
+        {
+            LOG_ERROR("usage: %s [port(default '%d')]", argv[0], DEVICE_SIM_BROKER_PORT);
+            return 1;
+        }
+        port = (u16)value;
+    }
+
     MqttClient client = mqtt_client_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX);
-    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, DEVICE_SIM_BROKER_PORT, STR_LITERAL(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("lost")))
+    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, port, STR_LITERAL(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("lost")))
     {
         return 1;
     }
@@ -137,7 +151,7 @@ int main(void)
         goto error_handling;
     }
 
-    printf("press Enter or Ctrl+C to disconnect\n");
+    LOG_INFO("press Enter or Ctrl+C to disconnect");
     Loop loop = loop_create();
     loop_catch_signals();
     if (!device_sim_run(&loop, &client, buffer))
@@ -151,7 +165,7 @@ int main(void)
     ok = ok && mqtt_client_send(&client, &w);
 
     close(client.sock);
-    printf("disconnected\n");
+    LOG_INFO("disconnected");
     return ok ? 0 : 1;
 
     error_handling:

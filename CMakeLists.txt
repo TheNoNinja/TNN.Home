@@ -17,6 +17,7 @@ add_executable(tnn_device_sim
     src/device_sim/device_sim_main.c
     src/base/base_arena.c
     src/base/base_assert.c
+    src/base/base_log.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
     src/mqtt/mqtt_reader.c
@@ -28,6 +29,7 @@ target_include_directories(tnn_device_sim PRIVATE src)
 add_executable(tnn_mqtt_dump
     src/mqtt_dump/mqtt_dump_main.c
     src/base/base_assert.c
+    src/base/base_log.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
     src/mqtt/mqtt_reader.c
@@ -43,6 +45,7 @@ add_executable(tnn_tests
     tests/mqtt_test.c
     src/base/base_assert.c
     src/base/base_arena.c
+    src/base/base_log.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
     src/mqtt/mqtt_reader.c
@@ -50,3 +53,17 @@ add_executable(tnn_tests
     src/mqtt/mqtt_writer.c
 )
 target_include_directories(tnn_tests PRIVATE src)
+
+option (TNN_FUZZ "Build the libFuzzer target (Clang only)" OFF)
+if(TNN_FUZZ)
+    add_executable(tnn_fuzz_mqtt
+        tests/mqtt_fuzz.c
+        src/mqtt/mqtt_reader.c
+        src/mqtt/mqtt_stream.c
+        src/base/base_assert.c
+        src/base/base_log.c
+    )
+    target_include_directories(tnn_fuzz_mqtt PRIVATE src)
+    target_compile_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
+    target_link_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
+endif()

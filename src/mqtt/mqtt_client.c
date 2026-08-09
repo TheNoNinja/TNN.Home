@@ -1,3 +1,4 @@
+#include "base/base_log.h"
 #include "mqtt/mqtt_client.h"
 #include "mqtt/mqtt.h"
 
@@ -6,7 +7,7 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -24,20 +25,21 @@ b32 mqtt_client_send(const MqttClient *c, const MqttWriter *w)
 {
     if (w->overflow)
     {
-        fprintf(stderr, "packet does not fit in the buffer\n");
+        LOG_ERROR("packet does not fit in the buffer");
         return 0;
     }
 
     const ssize_t sent = send(c->sock, w->data, w->length, MSG_NOSIGNAL);
     if (sent < 0)
     {
-        perror("send");
+        LOG_ERROR("send: %s", strerror(errno));
         return 0;
     }
 
     if ((u64)sent != w->length)
     {
-        fprintf(stderr, "send: only %lld of %llu bytes went out (the send buffer is full)\n", (long long)sent, (unsigned long long)w->length);
+        LOG_ERROR("send: only %lld of %llu bytes went out (the send buffer is full)", (long long)sent, (unsigned long long)w->length);
+        return 0;
     }
     return 1;
 }
@@ -47,7 +49,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     c->sock = socket(AF_INET, SOCK_STREAM, 0);
     if (c->sock < 0)
     {
-        perror("socket");
+        LOG_ERROR("socket: %s", strerror(errno));
         return 0;
     }
 
@@ -61,11 +63,11 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
 
     if (connect(c->sock, (struct sockaddr *)&broker, sizeof(broker)) < 0)
     {
-        perror("connect");
+        LOG_ERROR("connect to %s:%d: %s", ip, port, strerror(errno));
         goto error_handling;
     }
 
-    printf("connected to %s:%d\n", ip, port);
+    LOG_INFO("connected to %s:%d", ip, port);
 
     u8 packet[MQTT_CLIENT_CONNECT_MAX];
     MqttWriter w = mqtt_writer_create(packet, sizeof(packet));
@@ -90,15 +92,15 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     const u8 return_code = mqtt_read_u8(&r);
     if (r.error || header.type != MQTT_CONNECT_ACK || header.remaining_length != 2)
     {
-        fprintf(stderr, "expected a CONNACK, got packet type %d with %u bytes\n", header.type, header.remaining_length);
+        LOG_ERROR("expected a CONNACK, got packet type %d with %u bytes", header.type, header.remaining_length);
         goto error_handling;
     }
     if (return_code != 0)
     {
-        fprintf(stderr, "CONNACK: refused (return code %d)\n", return_code);
+        LOG_ERROR("CONNACK: refused (return code %d)", return_code);
         goto error_handling;
     }
-    printf("CONNACK: accepted (return code %d, session present %d)\n", return_code, session);
+    LOG_INFO("CONNACK: accepted (return code %d, session present %d)", return_code, session);
     fcntl(c->sock, F_SETFL, fcntl(c->sock, F_GETFL) | O_NONBLOCK);
     return 1;
 
@@ -119,7 +121,7 @@ b32 mqtt_client_receive(MqttClient *c)
     }
     if (received == 0)
     {
-        fprintf(stderr, "the broker closed the connection\n");
+        LOG_ERROR("the broker closed the connection");
         return 0;
     }
 
@@ -128,6 +130,6 @@ b32 mqtt_client_receive(MqttClient *c)
         return 1;
     }
 
-    perror("recv");
+    LOG_ERROR("recv: %s", strerror(errno));
     return 0;
 }

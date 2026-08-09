@@ -1,8 +1,8 @@
 #include "mqtt/mqtt_stream.h"
 #include "mqtt/mqtt.h"
 #include "base/base_assert.h"
+#include "base/base_log.h"
 
-#include <stdio.h>
 #include <string.h>
 
 MqttStream mqtt_stream_create(u8 *buffer, const u64 capacity, const u64 packet_max)
@@ -53,7 +53,7 @@ b32 mqtt_stream_next(MqttStream *s, MqttFixedHeader *header, str *body)
         {
             if (unread >= MQTT_FIXED_HEADER_MAX)
             {
-                fprintf(stderr, "malformed packet: the remaining length has more than 4 bytes\n");
+                LOG_ERROR("malformed packet: the remaining length has more than 4 bytes");
                 s->error = 1;
             }
             return 0;
@@ -62,7 +62,7 @@ b32 mqtt_stream_next(MqttStream *s, MqttFixedHeader *header, str *body)
         const u64 packet_length = r.position + h.remaining_length;
         if (packet_length > s->packet_max)
         {
-            fprintf(stderr, "skipping a packet of %llu bytes (type %d): the limit is %llu\n", (unsigned long long) packet_length, h.type, (unsigned long long)s->packet_max);
+            LOG_WARN("skipping a packet of %llu bytes (type %d): the limit is %llu", (unsigned long long) packet_length, h.type, (unsigned long long)s->packet_max);
             s->skipped += 1;
             s->skip = packet_length;
             continue;

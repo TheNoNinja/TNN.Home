@@ -10,14 +10,16 @@ TBA
 
 ## Development
 
-### MQTT Broker
-Setup broker container once
+### MQTT Brokers
+Setup broker containers once
 ```bash
 docker run -d -t --name tnn-nanomq -p 1883:1883 docker.io/emqx/nanomq:0.25.6-slim
+docker run -d -t --name tnn-mosquitto -p 1884:1883 docker.io/library/eclipse-mosquitto:2.1.2-alpine
 ```
 It it exists you can start it again with
 ```bash
 docker start tnn-nanomq
+docker start tnn-mosquitto
 ```
 
 ### Building

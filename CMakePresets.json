@@ -32,11 +32,20 @@
         "CMAKE_UNITY_BUILD": "ON",
         "CMAKE_UNITY_BUILD_BATCH_SIZE": "0"
       }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "Fuzz (Clang, libFuzzer)",
+      "inherits": "debug-clang",
+      "cacheVariables": {
+        "TNN_FUZZ": "ON"
+      }
     }
   ],
   "buildPresets": [
     { "name": "debug", "displayName": "Debug (GCC)", "configurePreset": "debug" },
     { "name": "debug-clang", "displayName": "Debug (Clang)", "configurePreset": "debug-clang" },
-    { "name": "release-unity", "displayName": "Release (unity build)", "configurePreset": "release-unity" }
+    { "name": "release-unity", "displayName": "Release (unity build)", "configurePreset": "release-unity" },
+    { "name": "fuzz", "displayName": "Fuzz (Clang, libFuzzer)", "configurePreset": "fuzz" }
   ]
 }
