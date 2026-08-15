@@ -1,5 +1,5 @@
-#ifndef HISTOGRAM_HISTOGRAM_H
-#define HISTOGRAM_HISTOGRAM_H
+#ifndef HISTOGRAM_H
+#define HISTOGRAM_H
 
 #include "base/base_types.h"
 

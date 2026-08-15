@@ -27,6 +27,7 @@ internal const TestCase test_cases[] = {
     { .name = "loop signal",                         .function = loop_test_signal },
 
     { .name = "mqtt string golden bytes",            .function = mqtt_test_str },
+    { .name = "mqtt u64 golden bytes",               .function = mqtt_test_u64 },
     { .name = "mqtt varint golden bytes",            .function = mqtt_test_varint },
     { .name = "mqtt varint overflow",                .function = mqtt_test_varint_too_big },
     { .name = "mqtt connect golden bytes",           .function = mqtt_test_connect },

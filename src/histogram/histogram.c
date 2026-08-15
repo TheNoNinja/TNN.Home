@@ -57,8 +57,8 @@ void histogram_record(Histogram *h, const u64 value)
 
 u64 histogram_percentile(const Histogram *h, f64 percent)
 {
-    percent = percent < 0.0 ? 0.0 : percent;
-    percent = percent > 100.0 ? 100.0 : percent;
+    ASSERT(percent >= 0.0 && percent <= 100.0);
+    
     if (h->count == 0)
     {
         return 0;

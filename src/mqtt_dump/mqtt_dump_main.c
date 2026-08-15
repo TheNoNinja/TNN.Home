@@ -45,7 +45,7 @@ internal b32 mqtt_dump_handle(const MqttFixedHeader header, const str body)
                 LOG_ERROR("malformed PUBLISH of %llu bytes", (unsigned long long)body.length);
                 return 0;
             }
-            printf("%.*s = %.*s%s", STR_FMT(m.topic), STR_FMT(m.payload), m.retain ? " (retained)" : "");
+            printf("%.*s = %.*s%s\n", STR_FMT(m.topic), STR_FMT(m.payload), m.retain ? " (retained)" : "");
             return 1;
         }
         case MQTT_PINGRESP:

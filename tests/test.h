@@ -24,6 +24,7 @@ void loop_test_pipe(void);
 void loop_test_signal(void);
 
 void mqtt_test_str(void);
+void mqtt_test_u64(void);
 void mqtt_test_varint(void);
 void mqtt_test_varint_too_big(void);
 void mqtt_test_connect(void);

@@ -16,6 +16,7 @@ MqttWriter mqtt_writer_create(u8 *buffer, u64 capacity);
 
 void mqtt_write_u8(MqttWriter *w, u8 value);
 void mqtt_write_u16_be(MqttWriter *w, u16 value);
+void mqtt_write_u64_be(MqttWriter *w, u64 value);
 void mqtt_write_bytes(MqttWriter *w, str value);
 void mqtt_write_str(MqttWriter *w, str value);
 void mqtt_write_varint(MqttWriter *w, u32 value);

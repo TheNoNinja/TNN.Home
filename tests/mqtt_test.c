@@ -15,6 +15,20 @@ void mqtt_test_str(void)
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
 
+void mqtt_test_u64(void)
+{
+    const u8 expected[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+    u8 buffer[8];
+    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    mqtt_write_u64_be(&w, 0x0102030405060708);
+    TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
+
+    MqttReader r = mqtt_reader_create(buffer, sizeof(buffer));
+    TEST_EXPECT(mqtt_read_u64_be(&r) == 0x0102030405060708 && !r.error);
+    TEST_EXPECT(mqtt_read_u64_be(&r) == 0 && r.error);
+
+}
+
 typedef struct MqttTestVarint MqttTestVarint;
 struct MqttTestVarint
 {

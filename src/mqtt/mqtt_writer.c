@@ -32,6 +32,14 @@ void mqtt_write_u16_be(MqttWriter *w, const u16 value)
     mqtt_write_u8(w, (u8)value & 0xFF);
 }
 
+void mqtt_write_u64_be(MqttWriter *w, const u64 value)
+{
+    for (i32 i = 7; i >= 0; i--)
+    {
+        mqtt_write_u8(w, (u8)(value >> (8 * i)));
+    }
+}
+
 void mqtt_write_bytes(MqttWriter *w, const str value)
 {
     if (w->length + value.length > w->capacity)

@@ -33,6 +33,7 @@ MqttReader mqtt_reader_create(const u8 *data, u64 length);
 
 u8 mqtt_read_u8(MqttReader *r);
 u16 mqtt_read_u16_be(MqttReader *r);
+u64 mqtt_read_u64_be(MqttReader *r);
 str mqtt_read_bytes(MqttReader *r, u64 count);
 str mqtt_read_str(MqttReader *r);
 u32 mqtt_read_varint(MqttReader *r);

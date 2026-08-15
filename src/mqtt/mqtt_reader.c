@@ -32,6 +32,16 @@ u16 mqtt_read_u16_be(MqttReader *r)
     return (u16)(high << 8 | low);
 }
 
+u64 mqtt_read_u64_be(MqttReader *r)
+{
+    u64 value = 0;
+    for (u32 i = 0; i < 8; i++)
+    {
+        value = (value << 8) | mqtt_read_u8(r);
+    }
+    return value;
+}
+
 str mqtt_read_bytes(MqttReader *r, const u64 count)
 {
     if (r->error || r->position + count > r->length)

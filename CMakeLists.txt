@@ -27,6 +27,20 @@ add_executable(tnn_device_sim
 )
 target_include_directories(tnn_device_sim PRIVATE src)
 
+add_executable(tnn_echo_probe 
+    src/echo_probe/echo_probe_main.c
+    src/base/base_assert.c
+    src/base/base_log.c
+    src/base/base_time.c
+    src/histogram/histogram.c
+    src/loop/loop.c
+    src/mqtt/mqtt_client.c
+    src/mqtt/mqtt_reader.c
+    src/mqtt/mqtt_stream.c
+    src/mqtt/mqtt_writer.c    
+)
+target_include_directories(tnn_echo_probe PRIVATE src)
+
 add_executable(tnn_mqtt_dump
     src/mqtt_dump/mqtt_dump_main.c
     src/base/base_assert.c
