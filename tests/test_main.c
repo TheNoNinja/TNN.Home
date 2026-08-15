@@ -16,6 +16,7 @@ internal const TestCase test_cases[] = {
     { .name = "base arena full",                     .function = base_test_arena_full },
     { .name = "base arena pop",                      .function = base_test_arena_pop },
     { .name = "base time",                           .function = base_test_time },
+    { .name = "base time mono",                      .function = base_test_time_mono },
 
     { .name = "histogram index",                     .function = histogram_test_index },
     { .name = "histogram bound",                     .function = histogram_test_bounds },

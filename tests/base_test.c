@@ -51,3 +51,12 @@ void base_test_time(void)
     TEST_EXPECT(after > before);
     TEST_EXPECT(after - before > 1 * TIME_NS_PER_MS && after - before < 1 * TIME_NS_PER_S);
 }
+
+void base_test_time_mono(void)
+{
+    const u64 before = time_now_mono_ns();
+    poll(0, 0, 2);
+    const u64 after = time_now_mono_ns();
+    TEST_EXPECT(after > before);
+    TEST_EXPECT(after - before > 1 * TIME_NS_PER_MS && after - before < 1 * TIME_NS_PER_S);
+}

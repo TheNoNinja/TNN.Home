@@ -5,9 +5,12 @@
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/timerfd.h>
+#include <time.h>
 #include <unistd.h>
 
 #define ECHO_PROBE_BROKER_IP "127.0.0.1"
@@ -16,6 +19,8 @@
 #define ECHO_PROBE_TOPIC "tnn/echo-probe"
 #define ECHO_PROBE_KEEP_ALIVE 10
 #define ECHO_PROBE_COUNT 20000
+#define ECHO_PROBE_RATE 1000
+#define ECHO_PROBE_RATE_MAX 100000
 #define ECHO_PROBE_TIMEOUT_MS 1000
 #define ECHO_PROBE_TX_MAX 64
 #define ECHO_PROBE_PAYLOAD_MAX 16
@@ -29,11 +34,17 @@ struct EchoProbe
 {
     MqttClient client;
     Loop loop;
+    int tick;
     u32 timeout;
     u32 count;
+    u32 rate;
+    u64 interval_ns;
+    u64 start_ns;
     u32 sent;
+    u32 received;
     u32 lost;
     Histogram round_trip;
+    Histogram latency;
 };
 
 internal b32 echo_probe_send(EchoProbe *p)
@@ -48,13 +59,62 @@ internal b32 echo_probe_send(EchoProbe *p)
     const str message = { payload, body.length };
     mqtt_write_publish(&w, STR_LITERAL(ECHO_PROBE_TOPIC), message, 0);
     p->sent += 1;
-    loop_timer_start(&p->loop, p->timeout, ECHO_PROBE_TIMEOUT_MS);
+    if (p->rate == 0 || p->sent == p->count)
+    {
+        loop_timer_start(&p->loop, p->timeout, ECHO_PROBE_TIMEOUT_MS);
+    }
     return mqtt_client_send(&p->client, &w);
 }
 
 internal b32 echo_probe_next(EchoProbe *p)
 {
     return p->sent < p->count ? echo_probe_send(p) : 1;
+}
+
+internal void echo_probe_tick_start(EchoProbe *p)
+{
+    struct itimerspec spec = {0};
+    spec.it_value.tv_sec = (time_t)(p->interval_ns / TIME_NS_PER_S);
+    spec.it_value.tv_nsec = (long)(p->interval_ns % TIME_NS_PER_S);
+    spec.it_interval = spec.it_value;
+    p->start_ns = time_now_mono_ns() + p->interval_ns;
+    timerfd_settime(p->tick, 0, &spec, 0);
+}
+
+internal b32 echo_probe_tick(EchoProbe *p)
+{
+    u64 ticks = 0;
+    if (read(p->tick, &ticks, sizeof(ticks)) < 0)
+    {
+        LOG_ERROR("read the tick: %s", strerror(errno));
+        return 0;
+    }
+    for(u64 i = 0; i < ticks && p->sent < p->count; i++)
+    {
+        if(!echo_probe_send(p))
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+internal b32 echo_probe_give_up(EchoProbe *p)
+{
+    if (p->rate == 0)
+    {
+        p->lost += 1;
+        LOG_WARN("no echo for message %u within %d ms", p->sent -1, ECHO_PROBE_TIMEOUT_MS);
+        return echo_probe_next(p);
+    }
+    p->lost = p->sent - p->received;
+    LOG_WARN("%u echos still out %d ms after the last send", p->lost, ECHO_PROBE_TIMEOUT_MS);
+    return 1;
+}
+
+internal b32 echo_probe_done(const EchoProbe *p)
+{
+    return p->received + p->lost >= p->count;
 }
 
 internal b32 echo_probe_handle(EchoProbe *p, const MqttFixedHeader header, const str body)
@@ -72,12 +132,19 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttFixedHeader header, const
                 LOG_ERROR("SUBACK: refused (packet id %d, return code 0x%02x)", packet_id, return_code);
                 return 0;
             }
-            LOG_INFO("subscribed to %s: sending %d messages, one at a time,", ECHO_PROBE_TOPIC, p->count);
-            return echo_probe_send(p);
+            if (p->rate == 0)
+            {
+                LOG_INFO("subscribed to %s: sending %u messages, one at a time", ECHO_PROBE_TOPIC, p->count);
+                return echo_probe_send(p);
+            }
+            LOG_INFO("subscribed to %s: sending %u messages, %u per second", ECHO_PROBE_TOPIC, p->count, p->rate);
+            echo_probe_tick_start(p);
+            return 1;
         }
         case MQTT_PUBLISH:
         {
             const u64 now_ns = time_now_raw_ns();
+            const u64 now_mono_ns = time_now_mono_ns();
             const MqttPublish m = mqtt_read_publish(&r, header.flags);
             MqttReader payload = mqtt_reader_create(m.payload.data, m.payload.length);
             const u64 sent_ns = mqtt_read_u64_be(&payload);
@@ -88,14 +155,21 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttFixedHeader header, const
                 return 0;
             }
 
-            if (sequence + 1 != p->sent)
+
+            const b32 waited_for = p->rate == 0 ? sequence + 1 == p->sent : sequence < p->sent;
+            if (!waited_for)
             {
-                LOG_WARN("echo of message %llu is not the one in flight, ignored", (unsigned long long)sequence);
+                LOG_WARN("echo of message %llu is not the one we wait for, ignored", (unsigned long long)sequence);
                 return 1;
             }
+            p->received += 1;
 
             histogram_record(&p->round_trip, now_ns - sent_ns);
-            return echo_probe_next(p);
+            if (p->rate == 0){
+                return echo_probe_next(p);
+            }
+            histogram_record(&p->latency, now_mono_ns - (p->start_ns + sequence * p->interval_ns));
+            return 1;
         }
         default:
         {
@@ -136,15 +210,19 @@ int main(const int argc, char **argv)
 {
     long port = ECHO_PROBE_BROKER_PORT;
     long count = ECHO_PROBE_COUNT;
-    if (argc > 3 || (argc > 1 && !echo_probe_number(argv[1], 1, 65535, &port)) || (argc > 2 && !echo_probe_number(argv[2], 1, 1000000, &count)))
+    long rate = ECHO_PROBE_RATE;
+    if (argc > 4 || (argc > 1 && !echo_probe_number(argv[1], 1, 65535, &port)) || (argc > 2 && !echo_probe_number(argv[2], 1, 1000000, &count)) || (argc > 3 && !echo_probe_number(argv[3], 0, ECHO_PROBE_RATE_MAX, &rate)))
     {
-        LOG_ERROR("usage: %s [port(1 - 65535, default %d)] [count(1 - 1000000, default %d)]", argv[0], ECHO_PROBE_BROKER_PORT, ECHO_PROBE_COUNT);
+        LOG_ERROR("usage: %s [port(1 - 65535, default %d)] [count(1 - 1000000, default %d)] [rate(0 - %d, default %d)]", argv[0], ECHO_PROBE_BROKER_PORT, ECHO_PROBE_COUNT, ECHO_PROBE_RATE_MAX, ECHO_PROBE_RATE);
         return 1;
     }
 
     EchoProbe p = {0};
     p.count = (u32)count;
+    p.rate = rate;
+    p.interval_ns = rate > 0 ? TIME_NS_PER_S / (u64)rate : 0;
     p.round_trip = histogram_create();
+    p.latency = histogram_create();
     p.client = mqtt_client_create(echo_probe_rx_buffer, sizeof(echo_probe_rx_buffer), ECHO_PROBE_RX_PACKET_MAX);
     if (!mqtt_client_connect(&p.client, ECHO_PROBE_BROKER_IP, (u16)port, STR_LITERAL(ECHO_PROBE_CLIENT_ID), ECHO_PROBE_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
@@ -160,17 +238,28 @@ int main(const int argc, char **argv)
     loop_catch_signals();
     loop_watch(&p.loop, p.client.sock);
     p.timeout = loop_timer_add(&p.loop);
+    p.tick = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+    if (p.tick < 0)
+    {
+        LOG_ERROR("timerfd_create: %s", strerror(errno));
+        ok = 0;
+    }
 
-    while(ok && p.round_trip.count < p.count && loop_wait(&p.loop))
+    loop_watch(&p.loop, p.tick);
+
+    while(ok && !echo_probe_done(&p) && loop_wait(&p.loop))
     {
         if (loop_timer_fired(&p.loop, p.timeout))
         {
-            p.lost += 1;
-            LOG_WARN("no echo for message %u within %d ms", p.sent - 1, ECHO_PROBE_TIMEOUT_MS);
-            ok = echo_probe_next(&p);
+            ok = echo_probe_give_up(&p);
         }
 
-        if (ok && loop_readable(&p.loop, p.client.sock))
+        if (ok && loop_readable(&p.loop, p.tick))
+        {
+            ok = echo_probe_tick(&p);
+        }
+
+        if (ok && !echo_probe_done(&p) && loop_readable(&p.loop, p.client.sock))
         {
             ok = echo_probe_receive(&p);
         }
@@ -180,15 +269,20 @@ int main(const int argc, char **argv)
     {
         LOG_INFO("signal %d (%s): stopping after %u of %u messages", p.loop.stop_signal, strsignal(p.loop.stop_signal), p.sent, p.count);
     }
-    ok = ok && (p.loop.stop_signal != 0 || p.round_trip.count >= p.count);
+    ok = ok && (p.loop.stop_signal != 0 || echo_probe_done(&p));
     if (ok)
     {
+        if(p.rate > 0)
+        {
+            histogram_print(&p.latency, "latency");
+        }
         histogram_print(&p.round_trip, "round trip");
         printf("  lost  %10u\n", p.lost);
         w = mqtt_writer_create(packet, sizeof(packet));
         mqtt_write_disconnect(&w);
         ok = mqtt_client_send(&p.client, &w);
     }
+    close(p.tick);
     close(p.client.sock);
     return ok ? 0 : 1;
 }

@@ -13,6 +13,7 @@ void base_test_arena_push(void);
 void base_test_arena_full(void);
 void base_test_arena_pop(void);
 void base_test_time(void);
+void base_test_time_mono(void);
 
 void histogram_test_index(void);
 void histogram_test_bounds(void);
