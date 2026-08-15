@@ -15,7 +15,12 @@ internal const TestCase test_cases[] = {
     { .name = "base arena push",                     .function = base_test_arena_push },
     { .name = "base arena full",                     .function = base_test_arena_full },
     { .name = "base arena pop",                      .function = base_test_arena_pop },
-    
+    { .name = "base time",                           .function = base_test_time },
+
+    { .name = "histogram index",                     .function = histogram_test_index },
+    { .name = "histogram bound",                     .function = histogram_test_bounds },
+    { .name = "histogram percentiles",               .function = histogram_test_percentiles },
+
     { .name = "loop timeout",                        .function = loop_test_timeout },
     { .name = "loop timer fires",                    .function = loop_test_timer_fires },
     { .name = "loop pipe",                           .function = loop_test_pipe },

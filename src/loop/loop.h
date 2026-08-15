@@ -31,7 +31,7 @@ u64 loop_now_ms(void);
 Loop loop_create(void);
 void loop_catch_signals(void);
 
-void loop_watch(Loop *l, const int fd);
+void loop_watch(Loop *l, int fd);
 
 u32 loop_timer_add(Loop *l);
 void loop_timer_start(Loop *l, u32 timer, u64 delay_ms);

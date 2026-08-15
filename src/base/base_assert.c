@@ -6,6 +6,6 @@
 _Noreturn void assert_fail(const char *condition, const char *file, const int line) 
 {
     fflush(stdout);
-    LOG_ERROR("%s:%d: ASSERT failed: %s", file, line, condition);
+    log_line("error", file, line, "ASSERT failed: %s\n", condition);
     __builtin_trap();
 }

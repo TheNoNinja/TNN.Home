@@ -12,6 +12,11 @@ void test_expect_bytes(const u8 *data, u64 length, const u8 *expected, u64 expec
 void base_test_arena_push(void);
 void base_test_arena_full(void);
 void base_test_arena_pop(void);
+void base_test_time(void);
+
+void histogram_test_index(void);
+void histogram_test_bounds(void);
+void histogram_test_percentiles(void);
 
 void loop_test_timeout(void);
 void loop_test_timer_fires(void);

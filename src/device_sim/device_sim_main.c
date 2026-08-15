@@ -5,6 +5,7 @@
 #include "mqtt/mqtt.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -31,7 +32,7 @@ internal b32 device_sim_publish(Arena *arena, const MqttClient *c, const str top
 
     MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
     mqtt_write_publish(&w, topic, payload, retain);
-    LOG_INFO("publish %.*s = %.*s", STR_FMT(topic), STR_FMT(payload));
+    printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
     const b32 ok = mqtt_client_send(c, &w);
     arena_pop_to(arena, mark);
     return ok;
@@ -69,7 +70,7 @@ internal b32 device_sim_run(Loop *l, MqttClient *c, u8 *buffer)
                     LOG_ERROR("unexpected packet from the broker: type %d", header.type);
                     return 0;
                 }
-                LOG_INFO("PINGRESP");
+                printf("PINGRESP\n");
                 ping_answered = 1;  
             }
             if(c->in.error)
@@ -88,7 +89,7 @@ internal b32 device_sim_run(Loop *l, MqttClient *c, u8 *buffer)
 
             MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
             mqtt_write_pingreq(&w);
-            LOG_INFO("PINGREQ");
+            printf("PINGREQ\n");
             if (!mqtt_client_send(c, &w))
             {
                 return 0;
@@ -151,7 +152,7 @@ int main(const int argc, const char **argv)
         goto error_handling;
     }
 
-    LOG_INFO("press Enter or Ctrl+C to disconnect");
+    printf("press Enter or Ctrl+C to disconnect\n");
     Loop loop = loop_create();
     loop_catch_signals();
     if (!device_sim_run(&loop, &client, buffer))
@@ -165,7 +166,7 @@ int main(const int argc, const char **argv)
     ok = ok && mqtt_client_send(&client, &w);
 
     close(client.sock);
-    LOG_INFO("disconnected");
+    printf("disconnected\n");
     return ok ? 0 : 1;
 
     error_handling:

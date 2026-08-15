@@ -1,6 +1,8 @@
 #include "test.h"
 #include "base/base_arena.h"
+#include "base/base_time.h"
 
+#include <poll.h>
 #include <string.h>
 
 void base_test_arena_push(void)
@@ -38,4 +40,14 @@ void base_test_arena_pop(void)
     u8 *second = ARENA_PUSH_ARRAY(&arena, u8, 8);
     TEST_EXPECT(first == second);
     TEST_EXPECT(arena.position == 12);
+}
+
+void base_test_time(void)
+{
+    const u64 before = time_now_raw_ns();
+    poll(0, 0, 2);
+    const u64 after = time_now_raw_ns();
+
+    TEST_EXPECT(after > before);
+    TEST_EXPECT(after - before > 1 * TIME_NS_PER_MS && after - before < 1 * TIME_NS_PER_S);
 }

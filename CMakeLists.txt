@@ -18,6 +18,7 @@ add_executable(tnn_device_sim
     src/base/base_arena.c
     src/base/base_assert.c
     src/base/base_log.c
+    src/base/base_time.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
     src/mqtt/mqtt_reader.c
@@ -30,6 +31,7 @@ add_executable(tnn_mqtt_dump
     src/mqtt_dump/mqtt_dump_main.c
     src/base/base_assert.c
     src/base/base_log.c
+    src/base/base_time.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
     src/mqtt/mqtt_reader.c
@@ -40,12 +42,15 @@ target_include_directories(tnn_mqtt_dump PRIVATE src)
 
 add_executable(tnn_tests
     tests/base_test.c
+    tests/histogram_test.c
     tests/loop_test.c
     tests/test_main.c
     tests/mqtt_test.c
     src/base/base_assert.c
     src/base/base_arena.c
     src/base/base_log.c
+    src/base/base_time.c
+    src/histogram/histogram.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
     src/mqtt/mqtt_reader.c

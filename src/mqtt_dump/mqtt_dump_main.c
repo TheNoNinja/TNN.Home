@@ -45,13 +45,13 @@ internal b32 mqtt_dump_handle(const MqttFixedHeader header, const str body)
                 LOG_ERROR("malformed PUBLISH of %llu bytes", (unsigned long long)body.length);
                 return 0;
             }
-            LOG_INFO("%.*s = %.*s%s", STR_FMT(m.topic), STR_FMT(m.payload), m.retain ? " (retained)" : "");
+            printf("%.*s = %.*s%s", STR_FMT(m.topic), STR_FMT(m.payload), m.retain ? " (retained)" : "");
             return 1;
         }
         case MQTT_PINGRESP:
             return 1;
         default:
-            LOG_ERROR("unexpected packet type %d, ignored", header.type);
+            LOG_WARN("unexpected packet type %d, ignored", header.type);
             return 1;
     }
 }
@@ -76,7 +76,7 @@ internal b32 mqtt_dump_receive(MqttClient *c)
     const u64 waiting = c->in.length - c->in.position;
     if (waiting > 0)
     {
-        LOG_ERROR("(%llu bytes of a cut-off packet wait for the rest)", (unsigned long long) waiting);
+        LOG_INFO("(%llu bytes of a cut-off packet wait for the rest)", (unsigned long long) waiting);
     }
     return !c->in.error;
 }
@@ -134,7 +134,7 @@ int main(const int argc, const char **argv)
     ok = ok && loop.stop_signal != 0;
     if (ok)
     {
-        LOG_INFO("\nsignal %d (%s): disconnecting", loop.stop_signal, strsignal(loop.stop_signal));
+        LOG_INFO("signal %d (%s): disconnecting", loop.stop_signal, strsignal(loop.stop_signal));
         w = mqtt_writer_create(packet, sizeof(packet));
         mqtt_write_disconnect(&w);
         ok = mqtt_client_send(&client, &w);
