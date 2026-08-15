@@ -59,6 +59,15 @@ add_executable(tnn_tests
 )
 target_include_directories(tnn_tests PRIVATE src)
 
+add_executable(tnn_timer_lateness
+    src/timer_lateness/timer_lateness_main.c
+    src/base/base_assert.c
+    src/base/base_log.c
+    src/base/base_time.c
+    src/histogram/histogram.c
+)
+target_include_directories(tnn_timer_lateness PRIVATE src)
+
 option (TNN_FUZZ "Build the libFuzzer target (Clang only)" OFF)
 if(TNN_FUZZ)
     add_executable(tnn_fuzz_mqtt

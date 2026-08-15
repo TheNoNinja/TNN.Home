@@ -1,5 +1,8 @@
 #include "histogram/histogram.h"
 #include "base/base_assert.h"
+#include "base/base_time.h"
+
+#include <stdio.h>
 
 Histogram histogram_create(void)
 {
@@ -79,4 +82,23 @@ u64 histogram_percentile(const Histogram *h, f64 percent)
     }
     return h->max;
 
+}
+
+internal f64 histogram_us(const f64 ns)
+{
+    return (f64)ns / TIME_NS_PER_US;
+}
+
+void histogram_print(const Histogram *h, const char *name)
+{
+    printf("%s: %llu samples\n", name, (unsigned long long)h->count);
+    if (h->count == 0)
+    {
+        return;
+    }
+    printf("  min   %10.1f us\n", histogram_us(h->min));
+    printf("  p50   %10.1f us\n", histogram_us(histogram_percentile(h, 50.0)));
+    printf("  p99   %10.1f us\n", histogram_us(histogram_percentile(h, 99.0)));
+    printf("  p99.9 %10.1f us\n", histogram_us(histogram_percentile(h, 99.9)));
+    printf("  max   %10.1f us\n", histogram_us(h->max));
 }
