@@ -16,6 +16,7 @@
 #define ECHO_PROBE_TOPIC "tnn/echo-probe"
 #define ECHO_PROBE_KEEP_ALIVE 10
 #define ECHO_PROBE_COUNT 20000
+#define ECHO_PROBE_TIMEOUT_MS 1000
 #define ECHO_PROBE_TX_MAX 64
 #define ECHO_PROBE_PAYLOAD_MAX 16
 #define ECHO_PROBE_RX_MAX KB(64)
@@ -28,8 +29,10 @@ struct EchoProbe
 {
     MqttClient client;
     Loop loop;
+    u32 timeout;
     u32 count;
     u32 sent;
+    u32 lost;
     Histogram round_trip;
 };
 
@@ -45,6 +48,7 @@ internal b32 echo_probe_send(EchoProbe *p)
     const str message = { payload, body.length };
     mqtt_write_publish(&w, STR_LITERAL(ECHO_PROBE_TOPIC), message, 0);
     p->sent += 1;
+    loop_timer_start(&p->loop, p->timeout, ECHO_PROBE_TIMEOUT_MS);
     return mqtt_client_send(&p->client, &w);
 }
 
@@ -155,10 +159,18 @@ int main(const int argc, char **argv)
     p.loop = loop_create();
     loop_catch_signals();
     loop_watch(&p.loop, p.client.sock);
+    p.timeout = loop_timer_add(&p.loop);
 
     while(ok && p.round_trip.count < p.count && loop_wait(&p.loop))
     {
-        if (loop_readable(&p.loop, p.client.sock))
+        if (loop_timer_fired(&p.loop, p.timeout))
+        {
+            p.lost += 1;
+            LOG_WARN("no echo for message %u within %d ms", p.sent - 1, ECHO_PROBE_TIMEOUT_MS);
+            ok = echo_probe_next(&p);
+        }
+
+        if (ok && loop_readable(&p.loop, p.client.sock))
         {
             ok = echo_probe_receive(&p);
         }
@@ -172,6 +184,7 @@ int main(const int argc, char **argv)
     if (ok)
     {
         histogram_print(&p.round_trip, "round trip");
+        printf("  lost  %10u\n", p.lost);
         w = mqtt_writer_create(packet, sizeof(packet));
         mqtt_write_disconnect(&w);
         ok = mqtt_client_send(&p.client, &w);
