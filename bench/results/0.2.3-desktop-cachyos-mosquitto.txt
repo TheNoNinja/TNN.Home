@@ -1,0 +1,14 @@
+echo probe: port 1884, count 60000, rate 1000, release build, 2026-09-26 11:12
+latency: 60000 samples
+  min         26.4 us
+  p50         35.8 us
+  p99         75.8 us
+  p99.9      114.7 us
+  max       2533.4 us
+round trip: 60000 samples
+  min         22.1 us
+  p50         30.2 us
+  p99         64.0 us
+  p99.9       98.3 us
+  max       2528.3 us
+  lost           0

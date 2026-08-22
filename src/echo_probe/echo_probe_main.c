@@ -26,6 +26,13 @@
 #define ECHO_PROBE_PAYLOAD_MAX 16
 #define ECHO_PROBE_RX_MAX KB(64)
 #define ECHO_PROBE_RX_PACKET_MAX KB(64)
+#define ECHO_PROBE_LINE_MAX 256
+
+#ifdef NDEBUG
+#define ECHO_PROBE_BUILD "release"
+#else 
+#define ECHO_PROBE_BUILD "debug"
+#endif
 
 internal u8 echo_probe_rx_buffer[ECHO_PROBE_RX_MAX];
 
@@ -199,6 +206,108 @@ internal b32 echo_probe_receive(EchoProbe *p)
     return !p->client.in.error;
 }
 
+internal void echo_probe_print(const EchoProbe *p, const long port)
+{
+    char date[32];
+    const time_t now = time(0);
+    struct tm local;
+    localtime_r(&now, &local);
+    strftime(date, sizeof(date), "%Y-%m-%d %H:%M", &local);
+
+    printf("echo probe: port %ld, count %u, rate %u, %s build, %s\n", port, p->count, p->rate, ECHO_PROBE_BUILD, date);
+    if (p->rate > 0)
+    {
+        histogram_print(&p->latency, "latency");
+    }
+    histogram_print(&p->round_trip, "round trip");
+    printf("  lost  %10u\n", p->lost);
+
+}
+
+internal b32 echo_probe_compare_line(const char *before, const char *after)
+{
+    char name_before[16];
+    char name_after[16];
+    char unit[8] = "";
+    f64 value_before = 0.0;
+    f64 value_after = 0.0;
+    if (sscanf(before, "%15s %lf %7s", name_before, &value_before, unit) < 2 || sscanf(after, "%15s %lf", name_after, &value_after) != 2 || strcmp(name_before, name_after) != 0)
+    {
+        return 0;
+    }
+    const int decimals = unit[0] != '\0' ? 1 : 0;
+    printf("  %-6s %10.*f %-2s -> %10.*f", name_before, decimals, value_before, unit, decimals, value_after);
+    if (value_before > 0.0)
+    {
+        printf(" %-2s %+8.1f %%", unit, (value_after - value_before) / value_before * 100.0);
+    }
+    printf("\n");
+    return 1;
+}
+
+internal b32 echo_probe_compare (const char *before_path, const char *after_path)
+{
+    FILE *before = fopen(before_path, "r");
+    if (!before)
+    {
+        LOG_ERROR("cannot open %s: %s", before_path, strerror(errno));
+        return 0;
+    }
+
+    FILE *after = fopen(after_path, "r");
+    if (!after)
+    {
+        LOG_ERROR("cannot open %s: %s", after_path, strerror(errno));
+        fclose(before);
+        return 0;
+    }
+
+    char a[ECHO_PROBE_LINE_MAX];
+    char b[ECHO_PROBE_LINE_MAX];
+    b32 ok = 1;
+    for (u32 line = 1; ok; line++)
+    {
+        const b32 more_a = fgets(a, sizeof(a), before) != 0;
+        const b32 more_b = fgets(b, sizeof(b), after) != 0;
+        if (!more_a || !more_b)
+        {
+            if(more_a != more_b)
+            {
+                LOG_ERROR("%s ends at line %u, the other file goes on", more_a ? after_path : before_path, line);
+                ok = 0;
+            }
+            break;
+        }
+
+        a[strcspn(a, "\n")] = '\0';
+        b[strcspn(b, "\n")] = '\0';
+        if (a[0] == ' ')
+        {
+            ok = echo_probe_compare_line(a, b);
+        }
+        else 
+        {
+            const u64 name = strcspn(a, ":");
+            ok = name == strcspn(b, ":");
+            if (ok && strcmp(a, b) == 0)
+            {
+                printf("%s\n", a);
+            }
+            else if (ok)
+            {
+                printf("before: %s\nafter:  %s\n", a, b);
+            }
+        }
+        if (!ok)
+        {
+            LOG_ERROR("line %u does not match: '%s' and '%s'", line, a, b);
+        }
+    }
+    fclose(before);
+    fclose(after);
+    return ok;
+}
+
 internal b32 echo_probe_number(const char *text, const long min, const long max, long *value)
 {
     char *end = 0;
@@ -208,12 +317,18 @@ internal b32 echo_probe_number(const char *text, const long min, const long max,
 
 int main(const int argc, char **argv)
 {
+    if (argc == 4 && strcmp(argv[1], "compare") == 0)
+    {
+        return echo_probe_compare(argv[2], argv[3]) ? 0 : 1;
+    }
+
     long port = ECHO_PROBE_BROKER_PORT;
     long count = ECHO_PROBE_COUNT;
     long rate = ECHO_PROBE_RATE;
     if (argc > 4 || (argc > 1 && !echo_probe_number(argv[1], 1, 65535, &port)) || (argc > 2 && !echo_probe_number(argv[2], 1, 1000000, &count)) || (argc > 3 && !echo_probe_number(argv[3], 0, ECHO_PROBE_RATE_MAX, &rate)))
     {
         LOG_ERROR("usage: %s [port(1 - 65535, default %d)] [count(1 - 1000000, default %d)] [rate(0 - %d, default %d)]", argv[0], ECHO_PROBE_BROKER_PORT, ECHO_PROBE_COUNT, ECHO_PROBE_RATE_MAX, ECHO_PROBE_RATE);
+        LOG_ERROR("usage: %s compare <before> <after>", argv[0]);
         return 1;
     }
 
@@ -272,12 +387,7 @@ int main(const int argc, char **argv)
     ok = ok && (p.loop.stop_signal != 0 || echo_probe_done(&p));
     if (ok)
     {
-        if(p.rate > 0)
-        {
-            histogram_print(&p.latency, "latency");
-        }
-        histogram_print(&p.round_trip, "round trip");
-        printf("  lost  %10u\n", p.lost);
+        echo_probe_print(&p, port);
         w = mqtt_writer_create(packet, sizeof(packet));
         mqtt_write_disconnect(&w);
         ok = mqtt_client_send(&p.client, &w);
