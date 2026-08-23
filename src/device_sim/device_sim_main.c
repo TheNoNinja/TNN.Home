@@ -1,6 +1,7 @@
 #include "base/base_types.h"
 #include "base/base_arena.h"
 #include "base/base_log.h"
+#include "json/json.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
 
@@ -9,14 +10,16 @@
 #include <string.h>
 #include <unistd.h>
 
-#define DEVICE_SIM_BROKER_IP     "127.0.0.1"
-#define DEVICE_SIM_BROKER_PORT   1883
-#define DEVICE_SIM_ID            "tnn-sim-1"
-#define DEVICE_SIM_TOPIC         "homie/5/" DEVICE_SIM_ID "/"
-#define DEVICE_SIM_KEEP_ALIVE    10
-#define DEVICE_SIM_PACKET_MAX    256
-#define DEVICE_SIM_RX_MAX        KB(8)
-#define DEVICE_SIM_RX_PACKET_MAX KB(4)
+#define DEVICE_SIM_BROKER_IP           "127.0.0.1"
+#define DEVICE_SIM_BROKER_PORT         1883
+#define DEVICE_SIM_ID                  "tnn-sim-1"
+#define DEVICE_SIM_TOPIC               "homie/5/" DEVICE_SIM_ID "/"
+#define DEVICE_SIM_KEEP_ALIVE          10
+#define DEVICE_SIM_PACKET_MAX          512
+#define DEVICE_SIM_DESCRIPTION_MAX     384
+#define DEVICE_SIM_DESCRIPTION_VERSION 2
+#define DEVICE_SIM_RX_MAX              KB(8)
+#define DEVICE_SIM_RX_PACKET_MAX       KB(4)
 
 
 internal u8 device_sim_memory[KB(16)];
@@ -36,6 +39,61 @@ internal b32 device_sim_publish(Arena *arena, const MqttClient *c, const str top
     const b32 ok = mqtt_client_send(c, &w);
     arena_pop_to(arena, mark);
     return ok;
+}
+
+internal void device_sim_write_description(JsonWriter *w)
+{
+    json_write_object_begin(w);
+    json_write_key(w, STR_LITERAL("homie"));
+    json_write_str(w, STR_LITERAL("5.0"));
+    json_write_key(w, STR_LITERAL("version"));
+    json_write_i64(w, DEVICE_SIM_DESCRIPTION_VERSION);
+    json_write_key(w, STR_LITERAL("name"));
+    json_write_str(w, STR_LITERAL("TNN virtual light"));
+    json_write_key(w, STR_LITERAL("nodes"));
+    json_write_object_begin(w);
+    json_write_key(w, STR_LITERAL("light"));
+    json_write_object_begin(w);
+    json_write_key(w, STR_LITERAL("name"));
+    json_write_str(w, STR_LITERAL("Light"));
+    json_write_key(w, STR_LITERAL("properties"));
+    json_write_object_begin(w);
+    json_write_key(w, STR_LITERAL("on"));
+    json_write_object_begin(w);
+    json_write_key(w, STR_LITERAL("name"));
+    json_write_str(w, STR_LITERAL("On"));
+    json_write_key(w, STR_LITERAL("datatype"));
+    json_write_str(w, STR_LITERAL("boolean"));
+    json_write_key(w, STR_LITERAL("settable"));
+    json_write_bool(w, 1);
+    json_write_object_end(w);
+    json_write_object_end(w);
+    json_write_object_end(w);
+    json_write_object_end(w);
+    json_write_object_end(w);
+}
+
+internal b32 device_sim_publish_description(Arena *arena, const MqttClient *c)
+{
+    const u64 mark = arena->position;
+
+    u8 *buffer = ARENA_PUSH_ARRAY(arena, u8, DEVICE_SIM_DESCRIPTION_MAX);
+    if (!buffer)
+    {
+        return 0;
+    }
+
+    JsonWriter w = json_writer_create(buffer, DEVICE_SIM_DESCRIPTION_MAX);
+    device_sim_write_description(&w);
+    if (w.overflow)
+    {
+        LOG_ERROR("the $description does not fir in %d bytes", DEVICE_SIM_DESCRIPTION_MAX);
+    }
+    const str description = { w.data, w.length };
+    const b32 ok = !w.overflow && device_sim_publish(arena, c, STR_LITERAL(DEVICE_SIM_TOPIC "$description"), description, 1);
+    arena_pop_to(arena, mark);
+    return ok;
+    
 }
 
 internal b32 device_sim_run(Loop *l, MqttClient *c, u8 *buffer)
@@ -144,7 +202,7 @@ int main(const int argc, const char **argv)
 
     b32 ok = 1;
     ok = ok && device_sim_publish(&arena, &client, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("init"), 1);
-    ok = ok && device_sim_publish(&arena, &client, STR_LITERAL(DEVICE_SIM_TOPIC "$description"), STR_LITERAL("{\"homie\":\"5.0\",\"version\":1,\"name\":\"TNN simulator 1\"}"), 1);
+    ok = ok && device_sim_publish_description(&arena, &client);
     ok = ok && device_sim_publish(&arena, &client, STR_LITERAL(DEVICE_SIM_TOPIC "$state"), STR_LITERAL("ready"), 1);
 
     if (!ok)

@@ -20,6 +20,8 @@ void histogram_test_bounds(void);
 void histogram_test_percentiles(void);
 
 void json_test_object(void);
+void json_test_escape(void);
+void json_test_overflow(void);
 
 void loop_test_timeout(void);
 void loop_test_timer_fires(void);
