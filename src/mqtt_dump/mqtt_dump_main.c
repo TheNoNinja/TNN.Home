@@ -1,5 +1,4 @@
-#include "base/base_types.h"
-#include "base/base_log.h"
+#include "base/base.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
 
@@ -99,14 +98,14 @@ int main(const int argc, const char **argv)
     }
 
     MqttClient client = mqtt_client_create(mqtt_dump_rx_buffer, sizeof(mqtt_dump_rx_buffer), MQTT_DUMP_RX_PACKET_MAX);
-    if (!mqtt_client_connect(&client, MQTT_DUMP_BROKER_IP, port, STR_LITERAL(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    if (!mqtt_client_connect(&client, MQTT_DUMP_BROKER_IP, port, STR(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
 
     u8 packet[MQTT_DUMP_TX_MAX];
     MqttWriter w = mqtt_writer_create(packet, sizeof(packet));
-    mqtt_write_subscribe(&w, 1, STR_LITERAL(MQTT_DUMP_TOPIC_FILTER));
+    mqtt_write_subscribe(&w, 1, STR(MQTT_DUMP_TOPIC_FILTER));
     b32 ok = mqtt_client_send(&client, &w);
 
     Loop loop = loop_create();

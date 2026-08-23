@@ -1,7 +1,7 @@
 #ifndef JSON_WRITER_H
 #define JSON_WRITER_H
 
-#include "base/base_types.h"
+#include "base/base.h"
 
 typedef struct JsonWriter JsonWriter;
 struct JsonWriter

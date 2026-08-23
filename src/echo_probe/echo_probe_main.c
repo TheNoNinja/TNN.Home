@@ -1,6 +1,4 @@
-#include "base/base_log.h"
-#include "base/base_time.h"
-#include "base/base_types.h"
+#include "base/base.h"
 #include "histogram/histogram.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
@@ -64,7 +62,7 @@ internal b32 echo_probe_send(EchoProbe *p)
     u8 packet[ECHO_PROBE_TX_MAX];
     MqttWriter w= mqtt_writer_create(packet, sizeof(packet));
     const str message = { payload, body.length };
-    mqtt_write_publish(&w, STR_LITERAL(ECHO_PROBE_TOPIC), message, 0);
+    mqtt_write_publish(&w, STR(ECHO_PROBE_TOPIC), message, 0);
     p->sent += 1;
     if (p->rate == 0 || p->sent == p->count)
     {
@@ -340,14 +338,14 @@ int main(const int argc, char **argv)
     p.round_trip = histogram_create();
     p.latency = histogram_create();
     p.client = mqtt_client_create(echo_probe_rx_buffer, sizeof(echo_probe_rx_buffer), ECHO_PROBE_RX_PACKET_MAX);
-    if (!mqtt_client_connect(&p.client, ECHO_PROBE_BROKER_IP, (u16)port, STR_LITERAL(ECHO_PROBE_CLIENT_ID), ECHO_PROBE_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    if (!mqtt_client_connect(&p.client, ECHO_PROBE_BROKER_IP, (u16)port, STR(ECHO_PROBE_CLIENT_ID), ECHO_PROBE_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
 
     u8 packet[ECHO_PROBE_TX_MAX];
     MqttWriter w = mqtt_writer_create(packet, sizeof(packet));
-    mqtt_write_subscribe(&w, 1, STR_LITERAL(ECHO_PROBE_TOPIC));
+    mqtt_write_subscribe(&w, 1, STR(ECHO_PROBE_TOPIC));
     b32 ok = mqtt_client_send(&p.client, &w);
 
     p.loop = loop_create();

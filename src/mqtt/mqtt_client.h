@@ -1,7 +1,7 @@
 #ifndef MQTT_CLIENT_H
 #define MQTT_CLIENT_H
 
-#include "base/base_types.h"
+#include "base/base.h"
 #include "mqtt/mqtt_stream.h"
 #include "mqtt/mqtt_writer.h"
 

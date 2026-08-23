@@ -1,6 +1,4 @@
 #include "base/base_arena.h"
-#include "base/base_assert.h"
-#include "base/base_log.h"
 
 #include <string.h>
 

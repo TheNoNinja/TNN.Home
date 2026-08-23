@@ -1,6 +1,4 @@
 #include "loop/loop.h"
-#include "base/base_assert.h"
-#include "base/base_log.h"
 
 #include <errno.h>
 #include <limits.h>

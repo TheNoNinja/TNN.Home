@@ -1,6 +1,4 @@
 #include "test.h"
-#include "base/base_arena.h"
-#include "base/base_time.h"
 
 #include <poll.h>
 #include <string.h>
@@ -59,4 +57,17 @@ void base_test_time_mono(void)
     const u64 after = time_now_mono_ns();
     TEST_EXPECT(after > before);
     TEST_EXPECT(after - before > 1 * TIME_NS_PER_MS && after - before < 1 * TIME_NS_PER_S);
+}
+
+void base_test_str_equal(void)
+{
+    const str light = STR("light");
+    TEST_EXPECT(str_equal(light, STR("light")));
+    TEST_EXPECT(!str_equal(light, STR("Light")));
+    TEST_EXPECT(!str_equal(light, STR("lights")));
+    TEST_EXPECT(!str_equal(light, STR("ligh")));
+
+    const str nothing = {0};
+    TEST_EXPECT(str_equal(nothing, STR_EMPTY));
+    TEST_EXPECT(!str_equal(nothing, light));
 }

@@ -1,7 +1,5 @@
 #include "mqtt/mqtt_reader.h"
 #include "mqtt/mqtt.h"
-#include "base/base_types.h"
-#include "base/base_assert.h"
 
 MqttReader mqtt_reader_create(const u8 *data, const u64 length)
 {

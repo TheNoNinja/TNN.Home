@@ -1,7 +1,7 @@
 #ifndef TEST_H
 #define TEST_H
 
-#include "base/base_types.h"
+#include "base/base.h"
 
 #define TEST_EXPECT(condition) test_expect((condition), #condition, __FILE__, __LINE__)
 #define TEST_EXPECT_BYTES(data, length, expected, expected_length) test_expect_bytes((data), (length), (expected), (expected_length), __FILE__, __LINE__)
@@ -14,6 +14,7 @@ void base_test_arena_full(void);
 void base_test_arena_pop(void);
 void base_test_time(void);
 void base_test_time_mono(void);
+void base_test_str_equal(void);
 
 void histogram_test_index(void);
 void histogram_test_bounds(void);

@@ -1,7 +1,7 @@
 #ifndef MQTT_WRITER_H
 #define MQTT_WRITER_H
 
-#include "base/base_types.h"
+#include "base/base.h"
 
 typedef struct MqttWriter MqttWriter;
 struct MqttWriter

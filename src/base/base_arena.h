@@ -1,7 +1,7 @@
 #ifndef BASE_ARENA_H
 #define BASE_ARENA_H
 
-#include "base/base_types.h"
+#include "base/base.h"
 
 typedef struct Arena Arena;
 struct Arena 

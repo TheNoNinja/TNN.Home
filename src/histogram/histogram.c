@@ -1,6 +1,4 @@
 #include "histogram/histogram.h"
-#include "base/base_assert.h"
-#include "base/base_time.h"
 
 #include <stdio.h>
 

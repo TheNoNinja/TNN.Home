@@ -1,5 +1,4 @@
 #include "json/json_writer.h"
-#include "base/base_assert.h"
 
 #include <string.h>
 
@@ -78,7 +77,7 @@ void json_write_str(JsonWriter *w, const str value)
         else if (c < 0x20)
         {
             const char *hex = "0123456789abcdef";
-            json_write_bytes(w, STR_LITERAL("\\u00"));
+            json_write_bytes(w, STR("\\u00"));
             json_write_char(w, (u8)hex[c >> 4]);
             json_write_char(w, (u8)hex[c & 0x0F]);
         }
@@ -115,6 +114,6 @@ void json_write_i64(JsonWriter *w, const i64 value)
 void json_write_bool(JsonWriter *w, const b32 value)
 {
     json_write_comma(w);
-    json_write_bytes(w, value ? STR_LITERAL("true") : STR_LITERAL("false"));
+    json_write_bytes(w, value ? STR("true") : STR("false"));
     w->comma = 1;
 }

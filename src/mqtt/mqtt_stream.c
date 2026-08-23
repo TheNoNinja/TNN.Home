@@ -1,7 +1,5 @@
 #include "mqtt/mqtt_stream.h"
 #include "mqtt/mqtt.h"
-#include "base/base_assert.h"
-#include "base/base_log.h"
 
 #include <string.h>
 

@@ -1,7 +1,7 @@
 #ifndef BASE_TIME_H
 #define BASE_TIME_H
 
-#include "base/base_types.h"
+#include "base/base.h"
 
 #define TIME_NS_PER_US 1000
 #define TIME_NS_PER_MS 1000000

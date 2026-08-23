@@ -18,6 +18,7 @@ add_executable(tnn_device_sim
     src/base/base_arena.c
     src/base/base_assert.c
     src/base/base_log.c
+    src/base/base_str.c
     src/base/base_time.c
     src/json/json_writer.c
     src/loop/loop.c
@@ -32,6 +33,7 @@ add_executable(tnn_echo_probe
     src/echo_probe/echo_probe_main.c
     src/base/base_assert.c
     src/base/base_log.c
+    src/base/base_str.c
     src/base/base_time.c
     src/histogram/histogram.c
     src/loop/loop.c
@@ -46,6 +48,7 @@ add_executable(tnn_mqtt_dump
     src/mqtt_dump/mqtt_dump_main.c
     src/base/base_assert.c
     src/base/base_log.c
+    src/base/base_str.c
     src/base/base_time.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
@@ -65,6 +68,7 @@ add_executable(tnn_tests
     src/base/base_assert.c
     src/base/base_arena.c
     src/base/base_log.c
+    src/base/base_str.c
     src/base/base_time.c
     src/histogram/histogram.c
     src/json/json_writer.c
@@ -80,6 +84,7 @@ add_executable(tnn_timer_lateness
     src/timer_lateness/timer_lateness_main.c
     src/base/base_assert.c
     src/base/base_log.c
+    src/base/base_str.c
     src/base/base_time.c
     src/histogram/histogram.c
 )
@@ -93,6 +98,7 @@ if(TNN_FUZZ)
         src/mqtt/mqtt_stream.c
         src/base/base_assert.c
         src/base/base_log.c
+        src/base/base_str.c
     )
     target_include_directories(tnn_fuzz_mqtt PRIVATE src)
     target_compile_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)

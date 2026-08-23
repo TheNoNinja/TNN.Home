@@ -3,27 +3,27 @@
 
 void json_test_object(void)
 {
-    const str expected = STR_LITERAL("{\"name\":\"light\",\"on\":true,\"off\":false,\"inner\":{\"empty\":{},\"min\":-9223372036854775808,\"max\":9223372036854775807},\"zero\":0}");
+    const str expected = STR("{\"name\":\"light\",\"on\":true,\"off\":false,\"inner\":{\"empty\":{},\"min\":-9223372036854775808,\"max\":9223372036854775807},\"zero\":0}");
     u8 buffer[256];
     JsonWriter w = json_writer_create(buffer, sizeof(buffer));
     json_write_object_begin(&w);
-    json_write_key(&w, STR_LITERAL("name"));
-    json_write_str(&w, STR_LITERAL("light"));
-    json_write_key(&w, STR_LITERAL("on"));
+    json_write_key(&w, STR("name"));
+    json_write_str(&w, STR("light"));
+    json_write_key(&w, STR("on"));
     json_write_bool(&w, 1);
-    json_write_key(&w, STR_LITERAL("off"));
+    json_write_key(&w, STR("off"));
     json_write_bool(&w, 0);
-    json_write_key(&w, STR_LITERAL("inner"));
+    json_write_key(&w, STR("inner"));
     json_write_object_begin(&w);
-    json_write_key(&w, STR_LITERAL("empty"));
+    json_write_key(&w, STR("empty"));
     json_write_object_begin(&w);
     json_write_object_end(&w);
-    json_write_key(&w, STR_LITERAL("min"));
+    json_write_key(&w, STR("min"));
     json_write_i64(&w, INT64_MIN);
-    json_write_key(&w, STR_LITERAL("max"));
+    json_write_key(&w, STR("max"));
     json_write_i64(&w, INT64_MAX);
     json_write_object_end(&w);
-    json_write_key(&w, STR_LITERAL("zero"));
+    json_write_key(&w, STR("zero"));
     json_write_i64(&w, 0);
     json_write_object_end(&w);
     TEST_EXPECT(!w.overflow);
@@ -32,10 +32,10 @@ void json_test_object(void)
 
 void json_test_escape(void)
 {
-    const str expected = STR_LITERAL("\"a\\\"b\\\\c\\u000a\\u0001\xc3\xa9\"");
+    const str expected = STR("\"a\\\"b\\\\c\\u000a\\u0001\xc3\xa9\"");
     u8 buffer[64];
     JsonWriter w = json_writer_create(buffer, sizeof(buffer));
-    json_write_str(&w, STR_LITERAL("a\"b\\c\n\x01" "\xc3\xa9"));
+    json_write_str(&w, STR("a\"b\\c\n\x01" "\xc3\xa9"));
     TEST_EXPECT(!w.overflow);
     TEST_EXPECT_BYTES(w.data, w.length, expected.data, expected.length);
 }
@@ -49,7 +49,7 @@ void json_test_overflow(void)
     }
     JsonWriter w = json_writer_create(buffer, 8);
     json_write_object_begin(&w);
-    json_write_key(&w, STR_LITERAL("settable"));
+    json_write_key(&w, STR("settable"));
     json_write_bool(&w, 1);
     json_write_object_end(&w);
     TEST_EXPECT(w.overflow);

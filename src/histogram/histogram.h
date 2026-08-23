@@ -1,7 +1,7 @@
 #ifndef HISTOGRAM_H
 #define HISTOGRAM_H
 
-#include "base/base_types.h"
+#include "base/base.h"
 
 #define HISTOGRAM_SUB_BITS 6
 #define HISTOGRAM_SUB_COUNT (1u << HISTOGRAM_SUB_BITS)

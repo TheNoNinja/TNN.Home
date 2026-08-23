@@ -10,8 +10,8 @@ void mqtt_test_str(void)
 
     u8 buffer[16];
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
-    mqtt_write_str(&w, STR_LITERAL("MQTT"));
-    mqtt_write_str(&w, STR_LITERAL(""));
+    mqtt_write_str(&w, STR("MQTT"));
+    mqtt_write_str(&w, STR(""));
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
 
@@ -84,7 +84,7 @@ void mqtt_test_connect(void)
 
     u8 buffer[64];
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
-    mqtt_write_connect(&w, STR_LITERAL("tnntest"), 0, STR_EMPTY, STR_EMPTY);
+    mqtt_write_connect(&w, STR("tnntest"), 0, STR_EMPTY, STR_EMPTY);
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
 
@@ -106,7 +106,7 @@ void mqtt_test_connect_will(void)
 
     u8 buffer[64];
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
-    mqtt_write_connect(&w, STR_LITERAL("tnntest"), 10, STR_LITERAL("w/$state"), STR_LITERAL("lost"));
+    mqtt_write_connect(&w, STR("tnntest"), 10, STR("w/$state"), STR("lost"));
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
 
@@ -122,7 +122,7 @@ void mqtt_test_subscribe(void)
 
     u8 buffer[32];
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
-    mqtt_write_subscribe(&w, 1, STR_LITERAL("homie/5/#"));
+    mqtt_write_subscribe(&w, 1, STR("homie/5/#"));
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
 

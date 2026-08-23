@@ -1,6 +1,5 @@
 #include "mqtt/mqtt_writer.h"
 #include "mqtt/mqtt.h"
-#include "base/base_assert.h"
 
 #include <string.h>
 
@@ -85,7 +84,7 @@ void mqtt_write_varint(MqttWriter *w, u32 value)
 
 void mqtt_write_connect(MqttWriter *w, const str client_id, const u16 keep_alive_seconds, const str will_topic, const str will_payload)
 {
-    const str protocol_name = STR_LITERAL("MQTT");
+    const str protocol_name = STR("MQTT");
     const b32 has_will = will_topic.length > 0;
 
     u32 remaining = 2 + (u32)protocol_name.length + 1 + 1 + 2 + 2 + (u32)client_id.length;
