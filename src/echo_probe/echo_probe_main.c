@@ -18,7 +18,7 @@
 #define ECHO_PROBE_CLIENT_ID "tnn-echo-probe"
 #define ECHO_PROBE_TOPIC "tnn/echo-probe"
 #define ECHO_PROBE_KEEP_ALIVE 10
-#define ECHO_PROBE_COUNT 20000
+#define ECHO_PROBE_COUNT 60000
 #define ECHO_PROBE_RATE 1000
 #define ECHO_PROBE_RATE_MAX 100000
 #define ECHO_PROBE_TIMEOUT_MS 1000
@@ -172,7 +172,8 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttFixedHeader header, const
             p->received += 1;
 
             histogram_record(&p->round_trip, now_ns - sent_ns);
-            if (p->rate == 0){
+            if (p->rate == 0)
+            {
                 return echo_probe_next(p);
             }
             histogram_record(&p->latency, now_mono_ns - (p->start_ns + sequence * p->interval_ns));
@@ -245,7 +246,7 @@ internal b32 echo_probe_compare_line(const char *before, const char *after)
     return 1;
 }
 
-internal b32 echo_probe_compare (const char *before_path, const char *after_path)
+internal b32 echo_probe_compare(const char *before_path, const char *after_path)
 {
     FILE *before = fopen(before_path, "r");
     if (!before)
@@ -288,7 +289,7 @@ internal b32 echo_probe_compare (const char *before_path, const char *after_path
         else 
         {
             const u64 name = strcspn(a, ":");
-            ok = name == strcspn(b, ":");
+            ok = name == strcspn(b, ":") && strncmp(a, b, name) == 0;
             if (ok && strcmp(a, b) == 0)
             {
                 printf("%s\n", a);

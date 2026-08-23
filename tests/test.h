@@ -19,6 +19,8 @@ void histogram_test_index(void);
 void histogram_test_bounds(void);
 void histogram_test_percentiles(void);
 
+void json_test_object(void);
+
 void loop_test_timeout(void);
 void loop_test_timer_fires(void);
 void loop_test_pipe(void);

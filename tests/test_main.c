@@ -22,6 +22,8 @@ internal const TestCase test_cases[] = {
     { .name = "histogram bound",                     .function = histogram_test_bounds },
     { .name = "histogram percentiles",               .function = histogram_test_percentiles },
 
+    { .name = "json test object",                    .function = json_test_object },
+
     { .name = "loop timeout",                        .function = loop_test_timeout },
     { .name = "loop timer fires",                    .function = loop_test_timer_fires },
     { .name = "loop pipe",                           .function = loop_test_pipe },
