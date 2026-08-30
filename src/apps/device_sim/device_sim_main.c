@@ -92,7 +92,7 @@ internal b32 device_sim_publish_description(Arena *arena, const MqttClient *c)
     device_sim_write_description(&w);
     if (w.overflow)
     {
-        LOG_ERROR("the $description does not fir in %d bytes", DEVICE_SIM_DESCRIPTION_MAX);
+        LOG_ERROR("the $description does not fit in %d bytes", DEVICE_SIM_DESCRIPTION_MAX);
     }
     const str description = { w.data, w.length };
     const b32 ok = !w.overflow && device_sim_publish(arena, c, STR(DEVICE_SIM_TOPIC "$description"), description, 1);
@@ -113,7 +113,7 @@ internal b32 device_sim_set(Arena *arena, const MqttClient *c, const MqttPublish
 {
     if (!str_equal(m.topic, STR(DEVICE_SIM_LIGHT_SET_TOPIC)))
     {
-        LOG_WARN("a nessage on %.*s,  which is not our /set topic, ignored", STR_FMT(m.topic));
+        LOG_WARN("a message on %.*s,  which is not our /set topic, ignored", STR_FMT(m.topic));
         return 1;
     }
     if (!str_equal(m.payload, STR("true")) && !str_equal(m.payload, STR("false")))

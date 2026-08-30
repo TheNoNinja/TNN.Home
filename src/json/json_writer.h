@@ -9,7 +9,7 @@ struct JsonWriter
     u8 *data;
     u64 capacity;
     u64 length;
-    u32 overflow;
+    b32 overflow;
     b32 comma;
 };
 

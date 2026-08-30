@@ -18,6 +18,13 @@ internal const TestCase test_cases[] = {
     { .name = "base time",                           .function = base_test_time },
     { .name = "base time mono",                      .function = base_test_time_mono },
     { .name = "base str equal",                      .function = base_test_str_equal },
+    { .name = "base str cut",                        .function = base_test_str_cut },
+
+    { .name = "homie topic",                         .function = homie_test_topic },
+    { .name = "homie invalid topic",                 .function = homie_test_topic_invalid },
+    { .name = "homie topic build",                   .function = homie_test_topic_build },
+    { .name = "homie id",                            .function = homie_test_id },
+    { .name = "homie state",                         .function = homie_test_state },
 
     { .name = "histogram index",                     .function = histogram_test_index },
     { .name = "histogram bound",                     .function = histogram_test_bounds },

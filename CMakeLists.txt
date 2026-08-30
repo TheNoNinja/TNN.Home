@@ -14,7 +14,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 add_executable(tnn_device_sim
-    src/device_sim/device_sim_main.c
+    src/apps/device_sim/device_sim_main.c
     src/base/base_arena.c
     src/base/base_assert.c
     src/base/base_log.c
@@ -30,7 +30,7 @@ add_executable(tnn_device_sim
 target_include_directories(tnn_device_sim PRIVATE src)
 
 add_executable(tnn_echo_probe 
-    src/echo_probe/echo_probe_main.c
+    src/apps/echo_probe/echo_probe_main.c
     src/base/base_assert.c
     src/base/base_log.c
     src/base/base_str.c
@@ -45,7 +45,7 @@ add_executable(tnn_echo_probe
 target_include_directories(tnn_echo_probe PRIVATE src)
 
 add_executable(tnn_mqtt_dump
-    src/mqtt_dump/mqtt_dump_main.c
+    src/apps/mqtt_dump/mqtt_dump_main.c
     src/base/base_assert.c
     src/base/base_log.c
     src/base/base_str.c
@@ -58,9 +58,37 @@ add_executable(tnn_mqtt_dump
 )
 target_include_directories(tnn_mqtt_dump PRIVATE src)
 
+add_executable(tnn_timer_lateness
+    src/apps/timer_lateness/timer_lateness_main.c
+    src/base/base_assert.c
+    src/base/base_log.c
+    src/base/base_str.c
+    src/base/base_time.c
+    src/histogram/histogram.c
+)
+target_include_directories(tnn_timer_lateness PRIVATE src)
+
+add_executable(tnn_controller
+    src/apps/controller/controller_main.c
+    src/base/base_arena.c
+    src/base/base_assert.c
+    src/base/base_log.c
+    src/base/base_str.c
+    src/base/base_time.c
+    src/homie/homie.c
+    src/json/json_writer.c
+    src/loop/loop.c
+    src/mqtt/mqtt_client.c
+    src/mqtt/mqtt_reader.c
+    src/mqtt/mqtt_stream.c
+    src/mqtt/mqtt_writer.c
+)
+target_include_directories(tnn_controller PRIVATE src)
+
 add_executable(tnn_tests
     tests/base_test.c
     tests/histogram_test.c
+    tests/homie_test.c
     tests/json_test.c
     tests/loop_test.c
     tests/test_main.c
@@ -71,6 +99,7 @@ add_executable(tnn_tests
     src/base/base_str.c
     src/base/base_time.c
     src/histogram/histogram.c
+    src/homie/homie.c
     src/json/json_writer.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
@@ -79,16 +108,6 @@ add_executable(tnn_tests
     src/mqtt/mqtt_writer.c
 )
 target_include_directories(tnn_tests PRIVATE src)
-
-add_executable(tnn_timer_lateness
-    src/timer_lateness/timer_lateness_main.c
-    src/base/base_assert.c
-    src/base/base_log.c
-    src/base/base_str.c
-    src/base/base_time.c
-    src/histogram/histogram.c
-)
-target_include_directories(tnn_timer_lateness PRIVATE src)
 
 option (TNN_FUZZ "Build the libFuzzer target (Clang only)" OFF)
 if(TNN_FUZZ)

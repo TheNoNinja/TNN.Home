@@ -71,3 +71,20 @@ void base_test_str_equal(void)
     TEST_EXPECT(str_equal(nothing, STR_EMPTY));
     TEST_EXPECT(!str_equal(nothing, light));
 }
+
+void base_test_str_cut(void)
+{
+    str before = STR_EMPTY;
+    str after = STR_EMPTY;
+
+    TEST_EXPECT(str_cut(STR("homie/5/tnn-sim-1"), '/', &before, &after));
+    TEST_EXPECT(str_equal(before, STR("homie")) && str_equal(after, STR("5/tnn-sim-1")));
+
+    TEST_EXPECT(str_cut(STR("/x"), '/', &before, &after));
+    TEST_EXPECT(before.length == 0 && str_equal(after, STR("x")));
+    TEST_EXPECT(str_cut(STR("x/"), '/', &before, &after));
+    TEST_EXPECT(str_equal(before, STR("x")) && after.length == 0);
+
+    TEST_EXPECT(!str_cut(STR("$state"), '/', &before, &after));
+    TEST_EXPECT(str_equal(before, STR("$state")) && after.length == 0);
+}
