@@ -13,19 +13,21 @@
 
 #define MQTT_CLIENT_CONNECT_MAX 256
 
-MqttClient mqtt_client_create(u8 *buffer, const u64 capacity, const u64 packet_max)
+MqttClient mqtt_client_create(u8 *in_buffer, const u64 in_capacity, const u64 packet_max, u8 *out_buffer, const u64 out_capacity)
 {
     MqttClient c = {0};
     c.sock = -1;
-    c.in = mqtt_stream_create(buffer, capacity, packet_max);
+    c.in = mqtt_stream_create(in_buffer, in_capacity, packet_max);
+    c.out = out_buffer;
+    c.out_capacity = out_capacity;
     return c;
 }
 
-b32 mqtt_client_send(const MqttClient *c, const MqttWriter *w)
+internal b32 mqtt_client_send(const MqttClient *c, const MqttWriter *w)
 {
     if (w->overflow)
     {
-        LOG_ERROR("packet does not fit in the buffer");
+        LOG_ERROR("packet does not fit in the send buffer (%llu bytes)", (unsigned long long)w->capacity);
         return 0;
     }
 
@@ -69,8 +71,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
 
     LOG_INFO("connected to %s:%d", ip, port);
 
-    u8 packet[MQTT_CLIENT_CONNECT_MAX];
-    MqttWriter w = mqtt_writer_create(packet, sizeof(packet));
+    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
     mqtt_write_connect(&w, client_id, keep_alive_seconds, will_topic, will_payload);
     if (!mqtt_client_send(c, &w))
     {
@@ -105,8 +106,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     return 1;
 
 error_handling:
-    close(c->sock);
-    c->sock = -1;
+    mqtt_client_close(c);
     return 0;
 }
 
@@ -131,5 +131,113 @@ b32 mqtt_client_receive(MqttClient *c)
     }
 
     LOG_ERROR("recv: %s", strerror(errno));
+    return 0;
+}
+
+b32 mqtt_client_publish(const MqttClient *c, const str topic, const str payload, const b32 retain)
+{
+    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    mqtt_write_publish(&w, topic, payload, retain);
+    return mqtt_client_send(c, &w);
+}
+
+u16 mqtt_client_subscribe(MqttClient *c, const str filter)
+{
+    c->packet_id += 1;
+    if (c->packet_id == 0)
+    {
+        c->packet_id = 1;
+    }
+    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    mqtt_write_subscribe(&w, c->packet_id, filter);
+    LOG_INFO("SUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), c->packet_id);
+    return mqtt_client_send(c, &w) ? c->packet_id : 0;
+}
+
+b32 mqtt_client_ping(MqttClient *c)
+{
+    if (c->ping_waiting)
+    {
+        LOG_ERROR("no PINGRESP to the last PINGREQ: the broker did not answer");
+        return 0;
+    }
+
+    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    mqtt_write_pingreq(&w);
+    c->ping_waiting = 1;
+    return mqtt_client_send(c, &w);
+}
+
+b32 mqtt_client_disconnect(MqttClient *c)
+{
+    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    mqtt_write_disconnect(&w);
+    const b32 ok = mqtt_client_send(c, &w);
+    mqtt_client_close(c);
+    return ok;
+}
+
+void mqtt_client_close(MqttClient *c)
+{
+    if (c->sock >= 0)
+    {
+        close(c->sock);
+    }
+    c->sock = -1;
+}
+
+b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
+{
+    MqttFixedHeader header = {0};
+    str body = STR_EMPTY;
+    while (!c->error && mqtt_stream_next(&c->in, &header, &body))
+    {
+        MqttReader r = mqtt_reader_create(body.data, body.length);
+        *packet = (MqttPacket){0};
+        packet->type = header.type;
+
+        switch (header.type)
+        {
+            case MQTT_PUBLISH:
+            {
+                packet->publish = mqtt_read_publish(&r, header.flags);
+                if (r.error)
+                {
+                    LOG_ERROR("malformed PUBLISH of %llu bytes", (unsigned long long)body.length);
+                    c->error = 1;
+                    return 0;
+                }
+                return 1;
+            }
+            case MQTT_SUBSCRIBE_ACK:
+            {
+                packet->packet_id = mqtt_read_u16_be(&r);
+                const u8 return_code = mqtt_read_u8(&r);
+                if (r.error || return_code != MQTT_SUBSCRIBE_ACK_QOS_0)
+                {
+                    LOG_ERROR("SUBACK: refused (packet id %d, return code %d)", packet->packet_id, return_code);
+                    c->error = 1;
+                    return 0;
+                }
+                LOG_INFO("SUBACK (packet id %d)", packet->packet_id);
+                return 1;
+            }
+            case MQTT_PINGRESP:
+            {
+                c->ping_waiting = 0;
+                return 1;
+            }
+            default:
+            {
+                LOG_WARN("unexpected packet type %d, ignored", header.type);
+                break;
+            }
+        }
+    }
+
+    if (c->in.error)
+    {
+        c->error = 1;
+    }
     return 0;
 }

@@ -88,3 +88,24 @@ void base_test_str_cut(void)
     TEST_EXPECT(!str_cut(STR("$state"), '/', &before, &after));
     TEST_EXPECT(str_equal(before, STR("$state")) && after.length == 0);
 }
+
+void base_test_str_from_cstr(void)
+{
+    TEST_EXPECT(str_equal(str_from_cstr("1884"), STR("1884")));
+}
+
+void base_test_str_to_u64(void)
+{
+    u64 value = 42;
+    TEST_EXPECT(str_to_u64(STR("1884"), &value) && value == 1884);
+    TEST_EXPECT(str_to_u64(STR("0"), &value) && value == 0);
+    TEST_EXPECT(str_to_u64(STR("18446744073709551615"), &value) && value == UINT64_MAX);
+
+    value = 42;
+    TEST_EXPECT(!str_to_u64(STR("18446744073709551616"), &value));
+    TEST_EXPECT(!str_to_u64(STR_EMPTY, &value));
+    TEST_EXPECT(!str_to_u64(STR("-1"), &value));
+    TEST_EXPECT(!str_to_u64(STR("12a"), &value));
+    TEST_EXPECT(!str_to_u64(STR(" 1"), &value));
+    TEST_EXPECT(value == 42);
+}
