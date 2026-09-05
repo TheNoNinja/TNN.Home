@@ -5,7 +5,6 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/timerfd.h>
 #include <time.h>
@@ -33,6 +32,7 @@
 #endif
 
 internal u8 echo_probe_rx_buffer[ECHO_PROBE_RX_MAX];
+internal u8 echo_probe_tx_buffer[ECHO_PROBE_TX_MAX];
 
 typedef struct EchoProbe EchoProbe;
 struct EchoProbe 
@@ -59,16 +59,13 @@ internal b32 echo_probe_send(EchoProbe *p)
     mqtt_write_u64_be(&body, time_now_raw_ns());
     mqtt_write_u64_be(&body, p->sent);
 
-    u8 packet[ECHO_PROBE_TX_MAX];
-    MqttWriter w= mqtt_writer_create(packet, sizeof(packet));
     const str message = { payload, body.length };
-    mqtt_write_publish(&w, STR(ECHO_PROBE_TOPIC), message, 0);
     p->sent += 1;
     if (p->rate == 0 || p->sent == p->count)
     {
         loop_timer_start(&p->loop, p->timeout, ECHO_PROBE_TIMEOUT_MS);
     }
-    return mqtt_client_send(&p->client, &w);
+    return mqtt_client_publish(&p->client, STR(ECHO_PROBE_TOPIC), message, 0);
 }
 
 internal b32 echo_probe_next(EchoProbe *p)
@@ -122,21 +119,12 @@ internal b32 echo_probe_done(const EchoProbe *p)
     return p->received + p->lost >= p->count;
 }
 
-internal b32 echo_probe_handle(EchoProbe *p, const MqttFixedHeader header, const str body)
+internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
 {
-    MqttReader r = mqtt_reader_create(body.data, body.length);
-
-    switch(header.type)
+    switch(packet->type)
     {
         case MQTT_SUBSCRIBE_ACK:
         {
-            const u16 packet_id = mqtt_read_u16_be(&r);
-            const u8 return_code = mqtt_read_u8(&r);
-            if (r.error || packet_id != 1 || return_code != MQTT_SUBSCRIBE_ACK_QOS_0)
-            {
-                LOG_ERROR("SUBACK: refused (packet id %d, return code 0x%02x)", packet_id, return_code);
-                return 0;
-            }
             if (p->rate == 0)
             {
                 LOG_INFO("subscribed to %s: sending %u messages, one at a time", ECHO_PROBE_TOPIC, p->count);
@@ -150,13 +138,13 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttFixedHeader header, const
         {
             const u64 now_ns = time_now_raw_ns();
             const u64 now_mono_ns = time_now_mono_ns();
-            const MqttPublish m = mqtt_read_publish(&r, header.flags);
-            MqttReader payload = mqtt_reader_create(m.payload.data, m.payload.length);
+            const str message = packet->publish.payload;
+            MqttReader payload = mqtt_reader_create(message.data, message.length);
             const u64 sent_ns = mqtt_read_u64_be(&payload);
             const u64 sequence = mqtt_read_u64_be(&payload);
-            if (r.error || payload.error)
+            if (payload.error)
             {
-                LOG_ERROR("malformed PUBLISH of %llu bytes", (unsigned long long) body.length);
+                LOG_ERROR("malformed echo of %llu bytes", (unsigned long long) message.length);
                 return 0;
             }
 
@@ -179,7 +167,6 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttFixedHeader header, const
         }
         default:
         {
-            LOG_WARN("unexpected packet type %d, ignored", header.type);
             return 1;
         }
     }
@@ -192,20 +179,19 @@ internal b32 echo_probe_receive(EchoProbe *p)
         return 0;
     }
 
-    MqttFixedHeader header = {0};
-    str body = STR_EMPTY;
-    while (mqtt_stream_next(&p->client.in, &header, &body))
+    MqttPacket packet = {0};
+    while (mqtt_client_next(&p->client, &packet))
     {
-        if(!echo_probe_handle(p, header, body))
+        if(!echo_probe_handle(p, &packet))
         {
             return 0;
         }
     }
 
-    return !p->client.in.error;
+    return !p->client.error;
 }
 
-internal void echo_probe_print(const EchoProbe *p, const long port)
+internal void echo_probe_print(const EchoProbe *p, const u64 port)
 {
     char date[32];
     const time_t now = time(0);
@@ -213,7 +199,7 @@ internal void echo_probe_print(const EchoProbe *p, const long port)
     localtime_r(&now, &local);
     strftime(date, sizeof(date), "%Y-%m-%d %H:%M", &local);
 
-    printf("echo probe: port %ld, count %u, rate %u, %s build, %s\n", port, p->count, p->rate, ECHO_PROBE_BUILD, date);
+    printf("echo probe: port %llu, count %u, rate %u, %s build, %s\n", (unsigned long long)port, p->count, p->rate, ECHO_PROBE_BUILD, date);
     if (p->rate > 0)
     {
         histogram_print(&p->latency, "latency");
@@ -307,11 +293,9 @@ internal b32 echo_probe_compare(const char *before_path, const char *after_path)
     return ok;
 }
 
-internal b32 echo_probe_number(const char *text, const long min, const long max, long *value)
+internal b32 echo_probe_number(const char *text, const u64 min, const u64 max, u64 *value)
 {
-    char *end = 0;
-    *value = strtol(text, &end, 10);
-    return *end == '\0' && *value >= min && *value <= max;
+    return str_to_u64(str_from_cstr(text), value) && *value >= min && *value <= max;
 }
 
 int main(const int argc, char **argv)
@@ -321,9 +305,9 @@ int main(const int argc, char **argv)
         return echo_probe_compare(argv[2], argv[3]) ? 0 : 1;
     }
 
-    long port = ECHO_PROBE_BROKER_PORT;
-    long count = ECHO_PROBE_COUNT;
-    long rate = ECHO_PROBE_RATE;
+    u64 port = ECHO_PROBE_BROKER_PORT;
+    u64 count = ECHO_PROBE_COUNT;
+    u64 rate = ECHO_PROBE_RATE;
     if (argc > 4 || (argc > 1 && !echo_probe_number(argv[1], 1, 65535, &port)) || (argc > 2 && !echo_probe_number(argv[2], 1, 1000000, &count)) || (argc > 3 && !echo_probe_number(argv[3], 0, ECHO_PROBE_RATE_MAX, &rate)))
     {
         LOG_ERROR("usage: %s [port(1 - 65535, default %d)] [count(1 - 1000000, default %d)] [rate(0 - %d, default %d)]", argv[0], ECHO_PROBE_BROKER_PORT, ECHO_PROBE_COUNT, ECHO_PROBE_RATE_MAX, ECHO_PROBE_RATE);
@@ -334,19 +318,16 @@ int main(const int argc, char **argv)
     EchoProbe p = {0};
     p.count = (u32)count;
     p.rate = rate;
-    p.interval_ns = rate > 0 ? TIME_NS_PER_S / (u64)rate : 0;
+    p.interval_ns = rate > 0 ? TIME_NS_PER_S / rate : 0;
     p.round_trip = histogram_create();
     p.latency = histogram_create();
-    p.client = mqtt_client_create(echo_probe_rx_buffer, sizeof(echo_probe_rx_buffer), ECHO_PROBE_RX_PACKET_MAX);
+    p.client = mqtt_client_create(echo_probe_rx_buffer, sizeof(echo_probe_rx_buffer), ECHO_PROBE_RX_PACKET_MAX, echo_probe_tx_buffer, sizeof(echo_probe_tx_buffer));
     if (!mqtt_client_connect(&p.client, ECHO_PROBE_BROKER_IP, (u16)port, STR(ECHO_PROBE_CLIENT_ID), ECHO_PROBE_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
 
-    u8 packet[ECHO_PROBE_TX_MAX];
-    MqttWriter w = mqtt_writer_create(packet, sizeof(packet));
-    mqtt_write_subscribe(&w, 1, STR(ECHO_PROBE_TOPIC));
-    b32 ok = mqtt_client_send(&p.client, &w);
+    b32 ok = mqtt_client_subscribe(&p.client, STR(ECHO_PROBE_TOPIC)) != 0;
 
     p.loop = loop_create();
     loop_catch_signals();
@@ -387,11 +368,9 @@ int main(const int argc, char **argv)
     if (ok)
     {
         echo_probe_print(&p, port);
-        w = mqtt_writer_create(packet, sizeof(packet));
-        mqtt_write_disconnect(&w);
-        ok = mqtt_client_send(&p.client, &w);
+        ok = mqtt_client_disconnect(&p.client);
     }
     close(p.tick);
-    close(p.client.sock);
+    mqtt_client_close(&p.client);
     return ok ? 0 : 1;
 }

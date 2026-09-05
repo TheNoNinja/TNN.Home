@@ -3,7 +3,6 @@
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -24,26 +23,14 @@
 
 internal u8 device_sim_memory[KB(16)];
 
-internal b32 device_sim_publish(Arena *arena, const MqttClient *c, const str topic, const str payload, const b32 retain)
+internal b32 device_sim_publish(const MqttClient *c, const str topic, const str payload)
 {
-    const u64 mark = arena->position;
-    u8 *buffer = ARENA_PUSH_ARRAY(arena, u8, DEVICE_SIM_PACKET_MAX);
-    if(!buffer)
-    {
-        return 0;
-    }
-
-    MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
-    mqtt_write_publish(&w, topic, payload, retain);
-    printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
-    const b32 ok = mqtt_client_send(c, &w);
-    arena_pop_to(arena, mark);
-    return ok;
+    return mqtt_client_publish(c, topic, payload, 1);
 }
 
-internal b32 device_sim_light_publish(Arena *arena, const MqttClient *c, const str value)
+internal b32 device_sim_light_publish(const MqttClient *c, const str value)
 {
-    return device_sim_publish(arena, c, STR(DEVICE_SIM_LIGHT_TOPIC "/$target"), value, 1) && device_sim_publish(arena, c, STR(DEVICE_SIM_LIGHT_TOPIC), value, 1);
+    return device_sim_publish(c, STR(DEVICE_SIM_LIGHT_TOPIC "/$target"), value) && device_sim_publish(c, STR(DEVICE_SIM_LIGHT_TOPIC), value);
 }
 
 internal void device_sim_write_description(JsonWriter *w)
@@ -95,21 +82,13 @@ internal b32 device_sim_publish_description(Arena *arena, const MqttClient *c)
         LOG_ERROR("the $description does not fit in %d bytes", DEVICE_SIM_DESCRIPTION_MAX);
     }
     const str description = { w.data, w.length };
-    const b32 ok = !w.overflow && device_sim_publish(arena, c, STR(DEVICE_SIM_TOPIC "$description"), description, 1);
+    const b32 ok = !w.overflow && device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$description"), description);
     arena_pop_to(arena, mark);
     return ok;
     
 }
 
-internal b32 device_sim_subscribe(const MqttClient *c, u8 *buffer)
-{
-    MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
-    mqtt_write_subscribe(&w, 1, STR(DEVICE_SIM_LIGHT_SET_TOPIC));
-    printf("SUBSCRIBE %s\n", DEVICE_SIM_LIGHT_SET_TOPIC);
-    return mqtt_client_send(c, &w);
-}
-
-internal b32 device_sim_set(Arena *arena, const MqttClient *c, const MqttPublish m)
+internal b32 device_sim_set(const MqttClient *c, const MqttPublish m)
 {
     if (!str_equal(m.topic, STR(DEVICE_SIM_LIGHT_SET_TOPIC)))
     {
@@ -121,52 +100,31 @@ internal b32 device_sim_set(Arena *arena, const MqttClient *c, const MqttPublish
         LOG_WARN("%s: '%.*s' is not a boolean (true or false), ignored", DEVICE_SIM_LIGHT_SET_TOPIC, STR_FMT(m.payload));
         return 1;
     }
-    return device_sim_light_publish(arena, c, m.payload);
+    return device_sim_light_publish(c, m.payload);
 }
 
-internal b32 device_sim_handle(Arena *arena, const MqttClient *c, const MqttFixedHeader header, const str body)
+internal b32 device_sim_handle(const MqttClient *c, const MqttPacket *p)
 {
-    MqttReader r = mqtt_reader_create(body.data, body.length);
-
-    switch (header.type)
+    switch (p->type)
     {
         case MQTT_SUBSCRIBE_ACK:
-        {
-            const u16 packet_id = mqtt_read_u16_be(&r);
-            const u8 return_code = mqtt_read_u8(&r);
-            if (r.error || packet_id != 1 || return_code != MQTT_SUBSCRIBE_ACK_QOS_0)
-            {
-                LOG_ERROR("SUBACK: refused (packet id %d, return code 0x%02x)", packet_id, return_code);
-                return 0;
-            }
-            printf("SUBACK\n");
-            return device_sim_publish(arena, c, STR(DEVICE_SIM_TOPIC "$state"), STR("ready"), 1);
-        }
+            return device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$state"), STR("ready"));
+        case MQTT_PINGRESP:
+            printf("PINGRESP\n");
+            return 1;
         case MQTT_PUBLISH:
-        {
-            const MqttPublish m = mqtt_read_publish(&r, header.flags);
-            if (r.error)
-            {
-                LOG_ERROR("malformed PUBLISH of %llu bytes", (unsigned long long)body.length);
-                return 0;
-            }
-            printf("received %.*s = %.*s\n", STR_FMT(m.topic), STR_FMT(m.payload));
-            return device_sim_set(arena, c, m);
-        }
+            printf("received %.*s = %.*s\n", STR_FMT(p->publish.topic), STR_FMT(p->publish.payload));
+            return device_sim_set(c, p->publish);
         default:
-        {
-            LOG_ERROR("unexpected packet from the broker: type %d", header.type);
             return 0;
-        }
     }
 }
 
-internal b32 device_sim_run(Loop *l, Arena *a, MqttClient *c, u8 *buffer)
+internal b32 device_sim_run(Loop *l, MqttClient *c)
 {
     const u64 interval_ms = DEVICE_SIM_KEEP_ALIVE * 1000;
     const u32 ping = loop_timer_add(l);
     loop_timer_start(l, ping, interval_ms);
-    b32 ping_answered = 1;
 
     loop_watch(l, STDIN_FILENO);
     loop_watch(l, c->sock);
@@ -184,21 +142,16 @@ internal b32 device_sim_run(Loop *l, Arena *a, MqttClient *c, u8 *buffer)
             {
                 return 0;
             }
-            MqttFixedHeader header = {0};
-            str body = STR_EMPTY;
-            while (mqtt_stream_next(&c->in, &header, &body))
+
+            MqttPacket p = {0};
+            while (mqtt_client_next(c, &p))
             {
-                if(header.type == MQTT_PINGRESP)
-                {
-                    printf("PINGRESP\n");
-                    ping_answered = 1;  
-                } 
-                else if (!device_sim_handle(a, c, header, body))
+                if (!device_sim_handle(c, &p))
                 {
                     return 0;
                 }
             }
-            if(c->in.error)
+            if(c->error)
             {
                 return 0;
             }          
@@ -206,20 +159,11 @@ internal b32 device_sim_run(Loop *l, Arena *a, MqttClient *c, u8 *buffer)
 
         if (loop_timer_fired(l, ping))
         {
-            if (!ping_answered)
+            if (!mqtt_client_ping(c))
             {
-                LOG_ERROR("no PINGRESP within %ds", DEVICE_SIM_KEEP_ALIVE);
                 return 0;
             }
-
-            MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
-            mqtt_write_pingreq(&w);
             printf("PINGREQ\n");
-            if (!mqtt_client_send(c, &w))
-            {
-                return 0;
-            }
-            ping_answered = 0;
             loop_timer_start(l, ping, interval_ms);
         }
     }
@@ -234,44 +178,35 @@ internal b32 device_sim_run(Loop *l, Arena *a, MqttClient *c, u8 *buffer)
 
 int main(const int argc, const char **argv)
 {
+    setvbuf(stdout, 0, _IOLBF, 0);
+
     Arena arena = arena_create(device_sim_memory, sizeof(device_sim_memory));
 
     u8 *rx_buffer = ARENA_PUSH_ARRAY(&arena, u8, DEVICE_SIM_RX_MAX);
-    if (!rx_buffer)
+    u8 *tx_buffer = ARENA_PUSH_ARRAY(&arena, u8, DEVICE_SIM_PACKET_MAX);
+    if (!rx_buffer || !tx_buffer)
     {
         return 1;
     }
 
-    u16 port = DEVICE_SIM_BROKER_PORT;
-    if(argc > 1)
+    u64 port = DEVICE_SIM_BROKER_PORT;
+    if(argc > 1 && !(str_to_u64(str_from_cstr(argv[1]), &port) && port >= 1 && port <= 65535))
     {
-        char *end = 0;
-        const long value = strtol(argv[1], &end, 10);
-        if (*end != '\0' || value < 1 || value > 65535)
-        {
-            LOG_ERROR("usage: %s [port(default '%d')]", argv[0], DEVICE_SIM_BROKER_PORT);
-            return 1;
-        }
-        port = (u16)value;
-    }
-
-    MqttClient client = mqtt_client_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX);
-    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, port, STR(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR(DEVICE_SIM_TOPIC "$state"), STR("lost")))
-    {
+        LOG_ERROR("usage: %s [port(default '%d')]", argv[0], DEVICE_SIM_BROKER_PORT);
         return 1;
     }
 
-    u8* buffer = ARENA_PUSH_ARRAY(&arena, u8, DEVICE_SIM_PACKET_MAX);
-    if (!buffer)
+    MqttClient client = mqtt_client_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX, tx_buffer, DEVICE_SIM_PACKET_MAX);
+    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, (u16)port, STR(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR(DEVICE_SIM_TOPIC "$state"), STR("lost")))
     {
-        goto error_handling;
+        return 1;
     }
 
     b32 ok = 1;
-    ok = ok && device_sim_publish(&arena, &client, STR(DEVICE_SIM_TOPIC "$state"), STR("init"), 1);
+    ok = ok && device_sim_publish(&client, STR(DEVICE_SIM_TOPIC "$state"), STR("init"));
     ok = ok && device_sim_publish_description(&arena, &client);
-    ok = ok && device_sim_light_publish(&arena, &client, STR("false"));
-    ok = ok && device_sim_subscribe(&client, buffer);
+    ok = ok && device_sim_light_publish(&client, STR("false"));
+    ok = ok && mqtt_client_subscribe(&client, STR(DEVICE_SIM_LIGHT_SET_TOPIC)) != 0;
     if (!ok)
     {
         goto error_handling;
@@ -280,24 +215,19 @@ int main(const int argc, const char **argv)
     printf("press Enter or Ctrl+C to disconnect\n");
     Loop loop = loop_create();
     loop_catch_signals();
-    if (!device_sim_run(&loop, &arena, &client, buffer))
+    if (!device_sim_run(&loop, &client))
     {
         goto error_handling;
     }
 
-    ok = device_sim_publish(&arena, &client, STR(DEVICE_SIM_TOPIC "$state"), STR("disconnected"), 1);
-    MqttWriter w = mqtt_writer_create(buffer, DEVICE_SIM_PACKET_MAX);
-    mqtt_write_disconnect(&w);
-    ok = ok && mqtt_client_send(&client, &w);
-
-    close(client.sock);
-    printf("disconnected\n");
-    return ok ? 0 : 1;
-
-    error_handling:
-    if (client.sock >= 0)
+    if (!device_sim_publish(&client, STR(DEVICE_SIM_TOPIC "$state"), STR("disconnected")) || !mqtt_client_disconnect(&client))
     {
-        close(client.sock);
+        goto error_handling;
     }
+    printf("disconnected\n");
+    return 0;
+
+error_handling:
+    mqtt_client_close(&client);
     return 1;
 }

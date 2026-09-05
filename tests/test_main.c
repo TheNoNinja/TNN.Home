@@ -19,6 +19,8 @@ internal const TestCase test_cases[] = {
     { .name = "base time mono",                      .function = base_test_time_mono },
     { .name = "base str equal",                      .function = base_test_str_equal },
     { .name = "base str cut",                        .function = base_test_str_cut },
+    { .name = "base str from cstr",                  .function = base_test_str_from_cstr },
+    { .name = "base str to u64",                     .function = base_test_str_to_u64 },
 
     { .name = "homie topic",                         .function = homie_test_topic },
     { .name = "homie invalid topic",                 .function = homie_test_topic_invalid },
@@ -57,6 +59,9 @@ internal const TestCase test_cases[] = {
     { .name = "mqtt stream several packets",         .function = mqtt_test_stream_burst },
     { .name = "mqtt stream oversized",               .function = mqtt_test_stream_oversized },
     { .name = "mqtt stream malformed",               .function = mqtt_test_stream_malformed },
+    { .name = "mqtt client send",                    .function = mqtt_test_client_send },
+    { .name = "mqtt client next",                    .function = mqtt_test_client_next },
+    { .name = "mqtt client refused",                 .function = mqtt_test_client_refused },
 };
 
 internal const char *test_current_name;

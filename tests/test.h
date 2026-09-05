@@ -1,5 +1,6 @@
 #ifndef TEST_H
 #define TEST_H
+#define BASE_LOG_DISABLE
 
 #include "base/base.h"
 
@@ -16,6 +17,8 @@ void base_test_time(void);
 void base_test_time_mono(void);
 void base_test_str_equal(void);
 void base_test_str_cut(void);
+void base_test_str_from_cstr(void);
+void base_test_str_to_u64(void);
 
 void homie_test_topic(void);
 void homie_test_topic_invalid(void);
@@ -54,5 +57,8 @@ void mqtt_test_stream_split(void);
 void mqtt_test_stream_burst(void);
 void mqtt_test_stream_oversized(void);
 void mqtt_test_stream_malformed(void);
+void mqtt_test_client_send(void);
+void mqtt_test_client_next(void);
+void mqtt_test_client_refused(void);
 
 #endif

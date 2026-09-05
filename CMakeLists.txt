@@ -69,6 +69,9 @@ add_executable(tnn_timer_lateness
 target_include_directories(tnn_timer_lateness PRIVATE src)
 
 add_executable(tnn_controller
+    src/apps/controller/controller_commands.c
+    src/apps/controller/controller_devices.c
+    src/apps/controller/controller_homie.c
     src/apps/controller/controller_main.c
     src/base/base_arena.c
     src/base/base_assert.c

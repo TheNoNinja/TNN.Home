@@ -16,5 +16,7 @@ struct str
 
 b32 str_equal(str a, str b);
 b32 str_cut(str s, u8 seperator, str *before, str *after);
+str str_from_cstr(const char *s);
+b32 str_to_u64(str s, u64 *value);
 
 #endif
