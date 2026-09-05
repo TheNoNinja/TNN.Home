@@ -1,4 +1,5 @@
 #include "homie/homie.h"
+#include "json/json.h"
 
 #include <string.h>
 
@@ -90,4 +91,76 @@ HomieState homie_state_parse(const str payload)
         }
     }
     return HOMIE_STATE_NONE;
+}
+
+str homie_datatype_name(const HomieDatatype datatype)
+{
+    switch (datatype)
+    {
+        case HOMIE_DATATYPE_NONE: return STR("none");
+        case HOMIE_DATATYPE_INTEGER: return STR("integer");
+        case HOMIE_DATATYPE_FLOAT: return STR("float");
+        case HOMIE_DATATYPE_BOOLEAN: return STR("boolean");
+        case HOMIE_DATATYPE_STRING: return STR("string");
+        case HOMIE_DATATYPE_ENUM: return STR("enum");
+        case HOMIE_DATATYPE_COLOR: return STR("color");
+        case HOMIE_DATATYPE_DATETIME: return STR("datetime");
+        case HOMIE_DATATYPE_DURATION: return STR("duration");
+        case HOMIE_DATATYPE_JSON: return STR("json");
+    }
+    return STR("none");
+}
+
+HomieDatatype homie_datatype_parse(const str name)
+{
+    for (u32 d = HOMIE_DATATYPE_INTEGER; d <= HOMIE_DATATYPE_JSON; d++)
+    {
+        if (str_equal(name, homie_datatype_name(d)))
+        {
+            return (HomieDatatype)d;
+        }
+    }
+    return HOMIE_DATATYPE_NONE;
+}
+
+b32 homie_description_read(const str json, HomieDescription *out)
+{
+    *out = (HomieDescription){0};
+    b32 is_homie_5 = 0;
+    b32 has_version = 0;
+
+    JsonReader r = json_reader_create(json.data, json.length);
+    json_read_object_begin(&r);
+    str key = STR_EMPTY;
+    while (json_read_key(&r, &key))
+    {
+        if (str_equal(key, STR("homie")))
+        {
+            str major = STR_EMPTY;
+            str minor = STR_EMPTY;
+            u64 number = 0;
+            is_homie_5 = str_cut(json_read_str(&r), '.', &major, &minor) && str_equal(major, STR("5")) && str_to_u64(minor, &number);
+        }
+        else if (str_equal(key, STR("version")))
+        {
+            out->version = json_read_i64(&r);
+            has_version = 1;
+        }
+        else
+        {
+            json_read_skip(&r);
+        }
+    }
+    json_read_end(&r);
+    if (r.has_error)
+    {
+        LOG_WARN("$description: not JSON, or a field or the wrong kind (at byte %llu)", (unsigned long long)r.position);
+        return 0;
+    }
+    if (!is_homie_5 || !has_version)
+    {
+        LOG_WARN("$description: no \"homie\" 5.x version, or no \"version\" provided");
+        return 0;
+    }
+    return 1;
 }

@@ -24,6 +24,9 @@ void homie_test_topic_invalid(void);
 void homie_test_topic_build(void);
 void homie_test_id(void);
 void homie_test_state(void);
+void homie_test_datatype(void);
+void homie_test_description(void);
+void homie_test_description_invalid(void);
 
 void histogram_test_index(void);
 void histogram_test_bounds(void);

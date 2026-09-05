@@ -79,6 +79,7 @@ add_executable(tnn_controller
     src/base/base_str.c
     src/base/base_time.c
     src/homie/homie.c
+    src/json/json_reader.c
     src/json/json_writer.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c
@@ -126,4 +127,15 @@ if(TNN_FUZZ)
     target_include_directories(tnn_fuzz_mqtt PRIVATE src)
     target_compile_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
     target_link_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
+
+    add_executable(tnn_fuzz_json
+            tests/json_fuzz.c
+            src/json/json_reader.c
+            src/base/base_assert.c
+            src/base/base_log.c
+            src/base/base_str.c
+    )
+    target_include_directories(tnn_fuzz_json PRIVATE src)
+    target_compile_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)
+    target_link_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)
 endif()

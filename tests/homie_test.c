@@ -60,3 +60,31 @@ void homie_test_state(void)
     TEST_EXPECT(homie_state_parse(STR_EMPTY) == HOMIE_STATE_NONE);
     TEST_EXPECT(str_equal(homie_state_name(HOMIE_STATE_SLEEPING), STR("sleeping")));
 }
+
+void homie_test_datatype(void)
+{
+    TEST_EXPECT(homie_datatype_parse(STR("boolean")) == HOMIE_DATATYPE_BOOLEAN);
+    TEST_EXPECT(homie_datatype_parse(STR("json")) == HOMIE_DATATYPE_JSON);
+    TEST_EXPECT(homie_datatype_parse(STR("bool")) == HOMIE_DATATYPE_NONE);
+    TEST_EXPECT(homie_datatype_parse(STR("Float")) == HOMIE_DATATYPE_NONE);
+    TEST_EXPECT(homie_datatype_parse(STR("none")) == HOMIE_DATATYPE_NONE);
+    TEST_EXPECT(str_equal(homie_datatype_name(HOMIE_DATATYPE_DURATION), STR("duration")));
+}
+
+void homie_test_description(void)
+{
+    const str light = STR("{\"homie\":\"5.0\",\"version\":2,\"name\":\"TNN virtual light\",\"nodes\":{\"light\":{\"name\":\"Light\",\"properties\":{\"on\":{\"name\":\"On\",\"datatype\":\"boolean\",\"settable\":true}}}}}");
+    HomieDescription d = {0};
+    TEST_EXPECT(homie_description_read(light, &d));
+    TEST_EXPECT(d.version == 2);
+}
+
+void homie_test_description_invalid(void)
+{
+    const str ignored[] = { STR("{\"homie\":\"4.0\",\"version\":1}"), STR("{\"homie\":\"5.0\"}"), STR("{\"homie\":\"5.0\",\"version\":\"2\"}"), STR("{\"homie\":\"5.0\",\"version\":2"), STR_EMPTY };
+    HomieDescription d = {0};
+    for (u32 i = 0; i < ARRAY_COUNT(ignored); i++)
+    {
+        TEST_EXPECT(!homie_description_read(ignored[i], &d));
+    }
+}
