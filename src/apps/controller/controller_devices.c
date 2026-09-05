@@ -37,7 +37,8 @@ void controller_list(const Controller *c)
     for (u32 i = 0; i < CONTROLLER_DEVICE_MAX; i++)
     {
         const ControllerDevice *d = &c->devices[i];
-        if (d->id.length == 0){
+        if (d->id.length == 0)
+        {
             continue;
         }
         const str id = homie_id_str(&d->id);

@@ -15,7 +15,7 @@
 internal u8 controller_rx_buffer[CONTROLLER_RX_MAX];
 internal u8 controller_tx_buffer[CONTROLLER_TX_MAX];
 
-internal b32 controller_receive(Controller *c)\
+internal b32 controller_receive(Controller *c)
 {
     if (!mqtt_client_receive(&c->client))
     {
@@ -30,7 +30,7 @@ internal b32 controller_receive(Controller *c)\
             return 0;
         }
     }
-    return !c->client.error;
+    return !c->client.has_error;
 }
 
 internal b32 controller_run(Controller *c)
@@ -75,7 +75,7 @@ int main(const int argc, char **argv)
     setvbuf(stdout, 0, _IOLBF, 0);
 
     u64 port = CONTROLLER_BROKER_PORT;
-    if (argc > 1 && (str_to_u64(str_from_cstr(argv[1]), &port) && port >= 1 && port <= 65535))
+    if (argc > 1 && !(str_to_u64(str_from_cstr(argv[1]), &port) && port >= 1 && port <= 65535))
     {
         LOG_ERROR("usage: %s [port(1 to 65535, default %d)]", argv[0], CONTROLLER_BROKER_PORT);
         return 1;
@@ -83,7 +83,8 @@ int main(const int argc, char **argv)
 
     Controller c = {0};
     c.client = mqtt_client_create(controller_rx_buffer, sizeof(controller_rx_buffer), CONTROLLER_RX_PACKET_MAX, controller_tx_buffer, sizeof(controller_tx_buffer));
-    if (!mqtt_client_connect(&c.client, CONTROLLER_BROKER_IP, (u16)port, STR(CONTROLLER_CLIENT_ID), CONTROLLER_KEEP_ALIVE, STR_EMPTY, STR_EMPTY)){
+    if (!mqtt_client_connect(&c.client, CONTROLLER_BROKER_IP, (u16)port, STR(CONTROLLER_CLIENT_ID), CONTROLLER_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    {
         return 1;
     }
 

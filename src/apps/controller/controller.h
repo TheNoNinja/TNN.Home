@@ -1,5 +1,5 @@
-#ifndef CONTROLLER_CONTROLLER_H
-#define CONTROLLER_CONTROLLER_H
+#ifndef CONTROLLER_H
+#define CONTROLLER_H
 
 #include "base/base.h"
 #include "homie/homie.h"
@@ -11,7 +11,8 @@
 #define CONTROLLER_LINE_MAX 128
 
 typedef struct ControllerDevice ControllerDevice;
-struct ControllerDevice {
+struct ControllerDevice
+{
     HomieId domain;
     HomieId id;
     HomieState state;

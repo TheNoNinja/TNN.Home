@@ -1,6 +1,5 @@
 #ifndef TEST_H
 #define TEST_H
-#define BASE_LOG_DISABLE
 
 #include "base/base.h"
 
@@ -33,6 +32,11 @@ void histogram_test_percentiles(void);
 void json_test_object(void);
 void json_test_escape(void);
 void json_test_overflow(void);
+void json_test_read(void);
+void json_test_read_numbers(void);
+void json_test_read_booleans(void);
+void json_test_read_skip(void);
+void json_test_read_invalid(void);
 
 void loop_test_timeout(void);
 void loop_test_timer_fires(void);

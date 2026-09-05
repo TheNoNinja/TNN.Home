@@ -13,8 +13,8 @@ struct MqttClient
     u8 *out;
     u64 out_capacity;
     u16 packet_id;
-    b32 ping_waiting;
-    b32 error;
+    b32 is_waiting_on_ping;
+    b32 has_error;
 };
 
 MqttClient mqtt_client_create(u8 *in_buffer, u64 in_capacity, u64 packet_max, u8 *out_buffer, u64 out_capacity);

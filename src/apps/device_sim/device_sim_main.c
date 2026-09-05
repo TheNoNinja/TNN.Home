@@ -25,6 +25,7 @@ internal u8 device_sim_memory[KB(16)];
 
 internal b32 device_sim_publish(const MqttClient *c, const str topic, const str payload)
 {
+    printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
     return mqtt_client_publish(c, topic, payload, 1);
 }
 
@@ -77,12 +78,12 @@ internal b32 device_sim_publish_description(Arena *arena, const MqttClient *c)
 
     JsonWriter w = json_writer_create(buffer, DEVICE_SIM_DESCRIPTION_MAX);
     device_sim_write_description(&w);
-    if (w.overflow)
+    if (w.has_overflown)
     {
         LOG_ERROR("the $description does not fit in %d bytes", DEVICE_SIM_DESCRIPTION_MAX);
     }
     const str description = { w.data, w.length };
-    const b32 ok = !w.overflow && device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$description"), description);
+    const b32 ok = !w.has_overflown && device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$description"), description);
     arena_pop_to(arena, mark);
     return ok;
     
@@ -151,7 +152,7 @@ internal b32 device_sim_run(Loop *l, MqttClient *c)
                     return 0;
                 }
             }
-            if(c->error)
+            if(c->has_error)
             {
                 return 0;
             }          

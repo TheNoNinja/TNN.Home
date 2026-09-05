@@ -18,7 +18,7 @@ void mqtt_write_u8(MqttWriter *w, const u8 value)
 {
     if (w->length + 1 > w->capacity)
     {
-        w->overflow = 1;
+        w->has_overflown = 1;
         return;
     }
     w->data[w->length] = value;
@@ -43,7 +43,7 @@ void mqtt_write_bytes(MqttWriter *w, const str value)
 {
     if (w->length + value.length > w->capacity)
     {
-        w->overflow = 1;
+        w->has_overflown = 1;
         return;
     }
     memcpy(w->data + w->length, value.data, value.length);
@@ -54,7 +54,7 @@ void mqtt_write_str(MqttWriter *w, str value)
 {
     if (value.length > 0xFFFF)
     {
-        w->overflow = 1;
+        w->has_overflown = 1;
         return;
     }
     mqtt_write_u16_be(w, (u16)value.length);
@@ -65,7 +65,7 @@ void mqtt_write_varint(MqttWriter *w, u32 value)
 {
     if (value > MQTT_VARINT_MAX)
     {
-        w->overflow = 1;
+        w->has_overflown = 1;
         return;
     }
 

@@ -142,7 +142,7 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
             MqttReader payload = mqtt_reader_create(message.data, message.length);
             const u64 sent_ns = mqtt_read_u64_be(&payload);
             const u64 sequence = mqtt_read_u64_be(&payload);
-            if (payload.error)
+            if (payload.has_error)
             {
                 LOG_ERROR("malformed echo of %llu bytes", (unsigned long long) message.length);
                 return 0;
@@ -188,7 +188,7 @@ internal b32 echo_probe_receive(EchoProbe *p)
         }
     }
 
-    return !p->client.error;
+    return !p->client.has_error;
 }
 
 internal void echo_probe_print(const EchoProbe *p, const u64 port)

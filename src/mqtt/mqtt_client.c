@@ -11,8 +11,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define MQTT_CLIENT_CONNECT_MAX 256
-
 MqttClient mqtt_client_create(u8 *in_buffer, const u64 in_capacity, const u64 packet_max, u8 *out_buffer, const u64 out_capacity)
 {
     MqttClient c = {0};
@@ -25,7 +23,7 @@ MqttClient mqtt_client_create(u8 *in_buffer, const u64 in_capacity, const u64 pa
 
 internal b32 mqtt_client_send(const MqttClient *c, const MqttWriter *w)
 {
-    if (w->overflow)
+    if (w->has_overflown)
     {
         LOG_ERROR("packet does not fit in the send buffer (%llu bytes)", (unsigned long long)w->capacity);
         return 0;
@@ -82,7 +80,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     str body = STR_EMPTY;
     while(!mqtt_stream_next(&c->in, &header, &body))
     {
-        if (c->in.error || !mqtt_client_receive(c))
+        if (c->in.has_error || !mqtt_client_receive(c))
         {
             goto error_handling;
         }
@@ -91,7 +89,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     MqttReader r = mqtt_reader_create(body.data, body.length);
     const u8 session = mqtt_read_u8(&r);
     const u8 return_code = mqtt_read_u8(&r);
-    if (r.error || header.type != MQTT_CONNECT_ACK || header.remaining_length != 2)
+    if (r.has_error || header.type != MQTT_CONNECT_ACK || header.remaining_length != 2)
     {
         LOG_ERROR("expected a CONNACK, got packet type %d with %u bytes", header.type, header.remaining_length);
         goto error_handling;
@@ -156,7 +154,7 @@ u16 mqtt_client_subscribe(MqttClient *c, const str filter)
 
 b32 mqtt_client_ping(MqttClient *c)
 {
-    if (c->ping_waiting)
+    if (c->is_waiting_on_ping)
     {
         LOG_ERROR("no PINGRESP to the last PINGREQ: the broker did not answer");
         return 0;
@@ -164,7 +162,7 @@ b32 mqtt_client_ping(MqttClient *c)
 
     MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
     mqtt_write_pingreq(&w);
-    c->ping_waiting = 1;
+    c->is_waiting_on_ping = 1;
     return mqtt_client_send(c, &w);
 }
 
@@ -190,7 +188,7 @@ b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
 {
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
-    while (!c->error && mqtt_stream_next(&c->in, &header, &body))
+    while (!c->has_error && mqtt_stream_next(&c->in, &header, &body))
     {
         MqttReader r = mqtt_reader_create(body.data, body.length);
         *packet = (MqttPacket){0};
@@ -201,10 +199,10 @@ b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
             case MQTT_PUBLISH:
             {
                 packet->publish = mqtt_read_publish(&r, header.flags);
-                if (r.error)
+                if (r.has_error)
                 {
                     LOG_ERROR("malformed PUBLISH of %llu bytes", (unsigned long long)body.length);
-                    c->error = 1;
+                    c->has_error = 1;
                     return 0;
                 }
                 return 1;
@@ -213,10 +211,10 @@ b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
             {
                 packet->packet_id = mqtt_read_u16_be(&r);
                 const u8 return_code = mqtt_read_u8(&r);
-                if (r.error || return_code != MQTT_SUBSCRIBE_ACK_QOS_0)
+                if (r.has_error || return_code != MQTT_SUBSCRIBE_ACK_QOS_0)
                 {
                     LOG_ERROR("SUBACK: refused (packet id %d, return code %d)", packet->packet_id, return_code);
-                    c->error = 1;
+                    c->has_error = 1;
                     return 0;
                 }
                 LOG_INFO("SUBACK (packet id %d)", packet->packet_id);
@@ -224,7 +222,7 @@ b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
             }
             case MQTT_PINGRESP:
             {
-                c->ping_waiting = 0;
+                c->is_waiting_on_ping = 0;
                 return 1;
             }
             default:
@@ -235,9 +233,9 @@ b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
         }
     }
 
-    if (c->in.error)
+    if (c->in.has_error)
     {
-        c->error = 1;
+        c->has_error = 1;
     }
     return 0;
 }

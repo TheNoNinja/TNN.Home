@@ -30,7 +30,7 @@ internal b32 mqtt_dump_receive(MqttClient *c)
         if (p.type == MQTT_PUBLISH)
         {
             const MqttPublish m = p.publish;
-            printf("%.*s = %.*s%s\n", STR_FMT(m.topic), STR_FMT(m.payload), m.retain ? " (retained)" : "");
+            printf("%.*s = %.*s%s\n", STR_FMT(m.topic), STR_FMT(m.payload), m.is_retained ? " (retained)" : "");
         }
     }
 
@@ -39,7 +39,7 @@ internal b32 mqtt_dump_receive(MqttClient *c)
     {
         LOG_INFO("(%llu bytes of a cut-off packet wait for the rest)", (unsigned long long) waiting);
     }
-    return !c->error;
+    return !c->has_error;
 }
 
 int main(const int argc, const char **argv) 

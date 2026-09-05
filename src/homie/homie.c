@@ -31,7 +31,7 @@ HomieId homie_id_copy(const str id)
 
 str homie_id_str(const HomieId *id)
 {
-    return (str){ (u8*)id->data, id->length };
+    return (str){ .data = (u8*)id->data, .length = id->length };
 }
 
 b32 homie_topic_parse(const str topic, HomieTopic *out)
@@ -63,7 +63,7 @@ str homie_topic_build(u8 *buffer, const u64 capacity, const str domain, const st
     at = homie_topic_put(at, device);
     at = homie_topic_put(at, STR("/"));
     homie_topic_put(at, rest);
-    return (str){ buffer, length };
+    return (str){ .data = buffer, .length = length };
 }
 
 str homie_state_name(const HomieState state)
@@ -80,7 +80,8 @@ str homie_state_name(const HomieState state)
     return STR("none");
 }
 
-HomieState homie_state_parse(const str payload){
+HomieState homie_state_parse(const str payload)
+{
     for (u32 s = HOMIE_STATE_INIT; s <= HOMIE_STATE_LOST; s++)
     {
         if (str_equal(payload, homie_state_name((HomieState)s)))

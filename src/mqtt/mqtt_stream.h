@@ -14,7 +14,7 @@ struct MqttStream
     u64 packet_max;
     u64 skip;
     u32 skipped;
-    b32 error;
+    b32 has_error;
 };
 
 MqttStream mqtt_stream_create(u8 *buffer, u64 capacity, u64 packet_max);

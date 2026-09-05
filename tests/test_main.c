@@ -35,6 +35,11 @@ internal const TestCase test_cases[] = {
     { .name = "json test object",                    .function = json_test_object },
     { .name = "json test escape",                    .function = json_test_escape },
     { .name = "json test overflow",                  .function = json_test_overflow },
+    { .name = "json test read",                      .function = json_test_read },
+    { .name = "json test read numbers",              .function = json_test_read_numbers },
+    { .name = "json test read booleans",             .function = json_test_read_booleans },
+    { .name = "json test read skip",                 .function = json_test_read_skip },
+    { .name = "json test read invalid",              .function = json_test_read_invalid },
 
     { .name = "loop timeout",                        .function = loop_test_timeout },
     { .name = "loop timer fires",                    .function = loop_test_timer_fires },

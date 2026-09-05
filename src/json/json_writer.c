@@ -16,7 +16,7 @@ internal void json_write_char(JsonWriter *w, const u8 c)
 {
     if (w->length + 1 > w->capacity)
     {
-        w->overflow = 1;
+        w->has_overflown = 1;
         return;
     }
     w->data[w->length] = c;
@@ -27,7 +27,7 @@ internal void json_write_bytes(JsonWriter *w, const str bytes)
 {
     if (w->length + bytes.length > w->capacity)
     {
-        w->overflow = 1;
+        w->has_overflown = 1;
         return;
     }
     memcpy(w->data + w->length, bytes.data, bytes.length);
@@ -36,7 +36,7 @@ internal void json_write_bytes(JsonWriter *w, const str bytes)
 
 internal void json_write_comma(JsonWriter *w)
 {
-    if (w->comma)
+    if (w->should_place_comma)
     {
         json_write_char(w, ',');
     }
@@ -46,20 +46,20 @@ void json_write_object_begin(JsonWriter *w)
 {
     json_write_comma(w);
     json_write_char(w, '{');
-    w->comma = 0;
+    w->should_place_comma = 0;
 }
 
 void json_write_object_end(JsonWriter *w)
 {
     json_write_char(w, '}');
-    w->comma = 1;
+    w->should_place_comma = 1;
 }
 
 void json_write_key(JsonWriter *w, const str key)
 {
     json_write_str(w, key);
     json_write_char(w, ':');
-    w->comma = 0;
+    w->should_place_comma = 0;
 }
 
 void json_write_str(JsonWriter *w, const str value)
@@ -87,7 +87,7 @@ void json_write_str(JsonWriter *w, const str value)
         }
     }
     json_write_char(w, '"');
-    w->comma = 1;
+    w->should_place_comma = 1;
 }
 
 void json_write_i64(JsonWriter *w, const i64 value)
@@ -108,12 +108,12 @@ void json_write_i64(JsonWriter *w, const i64 value)
         json_write_char(w, '-');
     }
     json_write_bytes(w, (str){digits + sizeof(digits) - count, count});
-    w->comma = 1;
+    w->should_place_comma = 1;
 }
 
 void json_write_bool(JsonWriter *w, const b32 value)
 {
     json_write_comma(w);
     json_write_bytes(w, value ? STR("true") : STR("false"));
-    w->comma = 1;
+    w->should_place_comma = 1;
 }

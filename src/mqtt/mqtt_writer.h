@@ -9,7 +9,7 @@ struct MqttWriter
     u8 *data;
     u64 capacity;
     u64 length;
-    b32 overflow;
+    b32 has_overflown;
 };
 
 MqttWriter mqtt_writer_create(u8 *buffer, u64 capacity);

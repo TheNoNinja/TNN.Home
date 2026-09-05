@@ -26,7 +26,7 @@ b32 mqtt_stream_next(MqttStream *s, MqttFixedHeader *header, str *body)
 {
     for (;;)
     {
-        if (s->error)
+        if (s->has_error)
         {
             return 0;
         }
@@ -47,12 +47,12 @@ b32 mqtt_stream_next(MqttStream *s, MqttFixedHeader *header, str *body)
 
         MqttReader r = mqtt_reader_create(s->data + s->position, unread);
         const MqttFixedHeader h = mqtt_read_fixed_header(&r);
-        if (r.error)
+        if (r.has_error)
         {
             if (unread >= MQTT_FIXED_HEADER_MAX)
             {
                 LOG_ERROR("malformed packet: the remaining length has more than 4 bytes");
-                s->error = 1;
+                s->has_error = 1;
             }
             return 0;
         }

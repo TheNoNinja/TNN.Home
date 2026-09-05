@@ -2,7 +2,6 @@
 #include "base/base_types.h"
 #include "mqtt/mqtt.h"
 
-#include <stddef.h>
 #include <string.h>
 
 int LLVMFuzzerTestOneInput(const u8 *data, size_t size);
@@ -32,7 +31,7 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
 
     const u64 piece = size % 8 + 1;
     u64 position = 0;
-    while (position < size && !s.error)
+    while (position < size && !s.has_error)
     {
         mqtt_stream_compact(&s);
         u64 count = size - position;
@@ -51,7 +50,7 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
             {
                 MqttReader r = mqtt_reader_create(body.data, body.length);
                 const MqttPublish m = mqtt_read_publish(&r, header.flags);
-                ASSERT(r.error || m.topic.length + m.payload.length <= body.length);
+                ASSERT(r.has_error || m.topic.length + m.payload.length <= body.length);
                 sum += mqtt_fuzz_touch(m.topic) + mqtt_fuzz_touch(m.payload);
             }
         }

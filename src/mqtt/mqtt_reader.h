@@ -9,7 +9,7 @@ struct MqttReader
     const u8 *data;
     u64 length;
     u64 position;
-    b32 error;
+    b32 has_error;
 };
 
 typedef struct MqttFixedHeader MqttFixedHeader;
@@ -25,7 +25,7 @@ struct MqttPublish
 {
     str topic;
     str payload;
-    b32 retain;
+    b32 is_retained;
     u8 qos;
 };
 

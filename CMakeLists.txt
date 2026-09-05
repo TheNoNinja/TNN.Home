@@ -103,6 +103,7 @@ add_executable(tnn_tests
     src/base/base_time.c
     src/histogram/histogram.c
     src/homie/homie.c
+    src/json/json_reader.c
     src/json/json_writer.c
     src/loop/loop.c
     src/mqtt/mqtt_client.c

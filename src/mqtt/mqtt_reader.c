@@ -13,9 +13,9 @@ MqttReader mqtt_reader_create(const u8 *data, const u64 length)
 
 u8 mqtt_read_u8(MqttReader *r) 
 {
-    if (r->error || r->position + 1 > r->length)
+    if (r->has_error || r->position + 1 > r->length)
     {
-        r->error = 1;
+        r->has_error = 1;
         return 0;
     }
     const u8 value = r->data[r->position];
@@ -42,9 +42,9 @@ u64 mqtt_read_u64_be(MqttReader *r)
 
 str mqtt_read_bytes(MqttReader *r, const u64 count)
 {
-    if (r->error || r->position + count > r->length)
+    if (r->has_error || r->position + count > r->length)
     {
-        r->error = 1;
+        r->has_error = 1;
         return STR_EMPTY;
     }
 
@@ -67,11 +67,11 @@ u32 mqtt_read_varint(MqttReader *r)
     {
         if (multiplier > 128 * 128 * 128)
         {
-            r->error = 1;
+            r->has_error = 1;
             return 0;
         }
         const u8 byte = mqtt_read_u8(r);
-        if (r->error)
+        if (r->has_error)
         {
             return 0;
         }
@@ -97,7 +97,7 @@ MqttFixedHeader mqtt_read_fixed_header(MqttReader *r)
 MqttPublish mqtt_read_publish(MqttReader *r, const u8 flags)
 {
     MqttPublish m = {0};
-    m.retain = (flags & MQTT_PUBLISH_FLAG_RETAIN) != 0;
+    m.is_retained = (flags & MQTT_PUBLISH_FLAG_RETAIN) != 0;
     m.qos = (flags >> 1) & 0x03;
 
     m.topic = mqtt_read_str(r);

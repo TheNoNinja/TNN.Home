@@ -9,8 +9,8 @@ struct JsonWriter
     u8 *data;
     u64 capacity;
     u64 length;
-    b32 overflow;
-    b32 comma;
+    b32 has_overflown;
+    b32 should_place_comma;
 };
 
 JsonWriter json_writer_create(u8 *buffer, u64 capacity);
