@@ -15,6 +15,8 @@
 internal u8 controller_rx_buffer[CONTROLLER_RX_MAX];
 internal u8 controller_tx_buffer[CONTROLLER_TX_MAX];
 
+internal Controller controller;
+
 internal b32 controller_receive(Controller *c)
 {
     if (!mqtt_client_receive(&c->client))
@@ -25,7 +27,7 @@ internal b32 controller_receive(Controller *c)
     MqttPacket p = {0};
     while(mqtt_client_next(&c->client, &p))
     {
-        if (p.type == MQTT_PUBLISH && !controller_on_publish(c, p.publish))
+        if (p.type == MQTT_PUB && !controller_on_publish(c, p.publish))
         {
             return 0;
         }
@@ -81,23 +83,23 @@ int main(const int argc, char **argv)
         return 1;
     }
 
-    Controller c = {0};
-    c.client = mqtt_client_create(controller_rx_buffer, sizeof(controller_rx_buffer), CONTROLLER_RX_PACKET_MAX, controller_tx_buffer, sizeof(controller_tx_buffer));
-    if (!mqtt_client_connect(&c.client, CONTROLLER_BROKER_IP, (u16)port, STR(CONTROLLER_CLIENT_ID), CONTROLLER_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    Controller *c = &controller;
+    c->client = mqtt_client_create(controller_rx_buffer, sizeof(controller_rx_buffer), CONTROLLER_RX_PACKET_MAX, controller_tx_buffer, sizeof(controller_tx_buffer));
+    if (!mqtt_client_connect(&c->client, CONTROLLER_BROKER_IP, (u16)port, STR(CONTROLLER_CLIENT_ID), CONTROLLER_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
 
-    b32 ok = mqtt_client_subscribe(&c.client, STR(CONTROLLER_STATE_FILTER));
+    b32 ok = mqtt_client_subscribe(&c->client, STR(CONTROLLER_STATE_FILTER));
     
-    c.loop = loop_create();
+    c->loop = loop_create();
     loop_catch_signals();
-    ok = ok && controller_run(&c);
+    ok = ok && controller_run(c);
 
     if (ok)
     {
-        return mqtt_client_disconnect(&c.client) ? 0 : 1;
+        return mqtt_client_disconnect(&c->client) ? 0 : 1;
     }
-    mqtt_client_close(&c.client);
+    mqtt_client_close(&c->client);
     return 1;
 }

@@ -129,11 +129,12 @@ if(TNN_FUZZ)
     target_link_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
 
     add_executable(tnn_fuzz_json
-            tests/json_fuzz.c
-            src/json/json_reader.c
-            src/base/base_assert.c
-            src/base/base_log.c
-            src/base/base_str.c
+        tests/json_fuzz.c
+        src/json/json_reader.c
+        src/base/base_assert.c
+        src/base/base_log.c
+        src/base/base_str.c
+        src/homie/homie.c
     )
     target_include_directories(tnn_fuzz_json PRIVATE src)
     target_compile_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)

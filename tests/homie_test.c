@@ -1,5 +1,6 @@
 #include "test.h"
 #include "homie/homie.h"
+#include "json/json.h"
 
 void homie_test_topic(void)
 {
@@ -76,7 +77,50 @@ void homie_test_description(void)
     const str light = STR("{\"homie\":\"5.0\",\"version\":2,\"name\":\"TNN virtual light\",\"nodes\":{\"light\":{\"name\":\"Light\",\"properties\":{\"on\":{\"name\":\"On\",\"datatype\":\"boolean\",\"settable\":true}}}}}");
     HomieDescription d = {0};
     TEST_EXPECT(homie_description_read(light, &d));
-    TEST_EXPECT(d.version == 2);
+    TEST_EXPECT(d.version == 2 && d.property_count == 1);
+    const HomieProperty *on = &d.properties[0];
+    TEST_EXPECT(str_equal(homie_id_str(&on->node), STR("light")) && str_equal(homie_id_str(&on->id), STR("on")));
+    TEST_EXPECT(on->datatype == HOMIE_DATATYPE_BOOLEAN && on->is_settable && on->is_retained);
+
+    const str two = STR("{\"homie\":\"5.1\",\"version\":-42,\"children\":[\"a\",\"b\"],\"nodes\":{\"sensor\":{\"properties\":{\"temp\":{\"datatype\":\"float\",\"unit\":\"C\",\"retained\":false},\"Bad\":{\"datatype\":\"integer\"},\"odd\":{\"datatype\":\"bool\"}}},\"switch\":{\"type\":\"relay\",\"properties\":{\"on\":{\"datatype\":\"boolean\",\"settable\":true}}}}}");
+    TEST_EXPECT(homie_description_read(two, &d));
+    TEST_EXPECT(d.version == -42 && d.property_count == 2);
+    const HomieProperty *temp = &d.properties[0];
+    TEST_EXPECT(str_equal(homie_id_str(&on->id), STR("temp")) && temp->datatype == HOMIE_DATATYPE_FLOAT);
+    TEST_EXPECT(!on->is_settable && !on->is_retained);
+    TEST_EXPECT(str_equal(homie_id_str(&d.properties[1].node), STR("switch")) && d.properties[1].is_settable);
+
+    u8 buffer[1024];
+    JsonWriter w = json_writer_create(buffer, sizeof(buffer));
+    json_write_object_begin(&w);
+    json_write_key(&w, STR("homie"));
+    json_write_str(&w, STR("5.0"));
+    json_write_key(&w, STR("version"));
+    json_write_i64(&w, 1);
+    json_write_key(&w, STR("nodes"));
+    json_write_object_begin(&w);
+    json_write_key(&w, STR("n"));
+    json_write_object_begin(&w);
+    json_write_key(&w, STR("properties"));
+    json_write_object_begin(&w);
+    for (u32 i = 0; i < HOMIE_PROPERTY_MAX + 1; i++)
+    {
+        u8 id[2] = { 'p', (u8)('a' + i) };
+        json_write_key(&w, (str){ id, sizeof(id) });
+        json_write_object_begin(&w);
+        json_write_key(&w, STR("datatype"));
+        json_write_str(&w, STR("string"));
+        json_write_object_end(&w);
+    }
+    json_write_object_end(&w);
+    json_write_object_end(&w);
+    json_write_object_end(&w);
+    json_write_object_end(&w);
+
+    TEST_EXPECT(!w.has_overflown);
+    TEST_EXPECT(homie_description_read((str) { w.data, w.length }, &d));
+    TEST_EXPECT(d.property_count == HOMIE_PROPERTY_MAX);
+    TEST_EXPECT(str_equal(homie_id_str(&d.properties[15].id), STR("pp")));
 }
 
 void homie_test_description_invalid(void)

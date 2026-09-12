@@ -56,6 +56,7 @@ internal const TestCase test_cases[] = {
     { .name = "mqtt connect golden bytes",           .function = mqtt_test_connect },
     { .name = "mqtt connect with will golden bytes", .function = mqtt_test_connect_will },
     { .name = "mqtt subscribe golden bytes",         .function = mqtt_test_subscribe },
+    { .name = "mqtt unsubscribe golden bytes",       .function = mqtt_test_unsubscribe },
     { .name = "mqtt pingreq golden bytes",           .function = mqtt_test_pingreq },
     { .name = "mqtt read str",                       .function = mqtt_test_read_str },
     { .name = "mqtt read past end",                  .function = mqtt_test_read_past_end },
@@ -70,6 +71,7 @@ internal const TestCase test_cases[] = {
     { .name = "mqtt client send",                    .function = mqtt_test_client_send },
     { .name = "mqtt client next",                    .function = mqtt_test_client_next },
     { .name = "mqtt client refused",                 .function = mqtt_test_client_refused },
+    { .name = "mqtt client unsubscribe",             .function = mqtt_test_client_unsubscribe },
 };
 
 internal const char *test_current_name;

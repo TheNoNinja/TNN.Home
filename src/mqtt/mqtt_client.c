@@ -89,7 +89,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     MqttReader r = mqtt_reader_create(body.data, body.length);
     const u8 session = mqtt_read_u8(&r);
     const u8 return_code = mqtt_read_u8(&r);
-    if (r.has_error || header.type != MQTT_CONNECT_ACK || header.remaining_length != 2)
+    if (r.has_error || header.type != MQTT_CONNECTACK || header.remaining_length != 2)
     {
         LOG_ERROR("expected a CONNACK, got packet type %d with %u bytes", header.type, header.remaining_length);
         goto error_handling;
@@ -139,17 +139,32 @@ b32 mqtt_client_publish(const MqttClient *c, const str topic, const str payload,
     return mqtt_client_send(c, &w);
 }
 
-u16 mqtt_client_subscribe(MqttClient *c, const str filter)
+internal u16 mqtt_client_next_packet_id(MqttClient *c)
 {
     c->packet_id += 1;
     if (c->packet_id == 0)
     {
         c->packet_id = 1;
     }
+    return c->packet_id;
+}
+
+u16 mqtt_client_subscribe(MqttClient *c, const str filter)
+{
+    const u16 packet_id = mqtt_client_next_packet_id(c);
     MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
-    mqtt_write_subscribe(&w, c->packet_id, filter);
-    LOG_INFO("SUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), c->packet_id);
-    return mqtt_client_send(c, &w) ? c->packet_id : 0;
+    mqtt_write_subscribe(&w, packet_id, filter);
+    LOG_INFO("SUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), packet_id);
+    return mqtt_client_send(c, &w) ? packet_id : 0;
+}
+
+u16 mqtt_client_unsubscribe(MqttClient *c, const str filter)
+{
+    const u16 packet_id = mqtt_client_next_packet_id(c);
+    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    mqtt_write_unsubscribe(&w, packet_id, filter);
+    LOG_INFO("UNSUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), packet_id);
+    return mqtt_client_send(c, &w) ? packet_id : 0;
 }
 
 b32 mqtt_client_ping(MqttClient *c)
@@ -196,7 +211,7 @@ b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
 
         switch (header.type)
         {
-            case MQTT_PUBLISH:
+            case MQTT_PUB:
             {
                 packet->publish = mqtt_read_publish(&r, header.flags);
                 if (r.has_error)
@@ -207,17 +222,29 @@ b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
                 }
                 return 1;
             }
-            case MQTT_SUBSCRIBE_ACK:
+            case MQTT_SUBACK:
             {
                 packet->packet_id = mqtt_read_u16_be(&r);
                 const u8 return_code = mqtt_read_u8(&r);
-                if (r.has_error || return_code != MQTT_SUBSCRIBE_ACK_QOS_0)
+                if (r.has_error || return_code != MQTT_SUBACK_QOS_0)
                 {
                     LOG_ERROR("SUBACK: refused (packet id %d, return code %d)", packet->packet_id, return_code);
                     c->has_error = 1;
                     return 0;
                 }
                 LOG_INFO("SUBACK (packet id %d)", packet->packet_id);
+                return 1;
+            }
+            case MQTT_UNSUBACK:
+            {
+                packet->packet_id = mqtt_read_u16_be(&r);
+                if (r.has_error)
+                {
+                    LOG_ERROR("malformed UNSUBACK of %llu bytes", (unsigned long long)body.length);
+                    c->has_error = 1;
+                    return 0;
+                }
+                LOG_INFO("UNSUBACK (packet id %d)", packet->packet_id);
                 return 1;
             }
             case MQTT_PINGRESP:

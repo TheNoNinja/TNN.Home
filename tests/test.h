@@ -53,6 +53,7 @@ void mqtt_test_varint_too_big(void);
 void mqtt_test_connect(void);
 void mqtt_test_connect_will(void);
 void mqtt_test_subscribe(void);
+void mqtt_test_unsubscribe(void);
 void mqtt_test_pingreq(void);
 void mqtt_test_read_str(void);
 void mqtt_test_read_past_end(void); 
@@ -67,5 +68,6 @@ void mqtt_test_stream_malformed(void);
 void mqtt_test_client_send(void);
 void mqtt_test_client_next(void);
 void mqtt_test_client_refused(void);
+void mqtt_test_client_unsubscribe(void);
 
 #endif

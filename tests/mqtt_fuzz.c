@@ -46,7 +46,7 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
             ASSERT(body.length == header.remaining_length);
             ASSERT(body.length < MQTT_FUZZ_PACKET_MAX);
             sum += mqtt_fuzz_touch(body);
-            if (header.type == MQTT_PUBLISH)
+            if (header.type == MQTT_PUB)
             {
                 MqttReader r = mqtt_reader_create(body.data, body.length);
                 const MqttPublish m = mqtt_read_publish(&r, header.flags);

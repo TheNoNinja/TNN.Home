@@ -97,7 +97,7 @@ MqttFixedHeader mqtt_read_fixed_header(MqttReader *r)
 MqttPublish mqtt_read_publish(MqttReader *r, const u8 flags)
 {
     MqttPublish m = {0};
-    m.is_retained = (flags & MQTT_PUBLISH_FLAG_RETAIN) != 0;
+    m.is_retained = (flags & MQTT_PUB_FLAG_RETAIN) != 0;
     m.qos = (flags >> 1) & 0x03;
 
     m.topic = mqtt_read_str(r);

@@ -22,6 +22,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, u16 port, str client_id, 
 b32 mqtt_client_receive(MqttClient *c);
 b32 mqtt_client_publish(const MqttClient *c, str topic, str payload, b32 retain);
 u16 mqtt_client_subscribe(MqttClient *c, str filter);
+u16 mqtt_client_unsubscribe(MqttClient *c, str filter);
 b32 mqtt_client_ping(MqttClient *c);
 b32 mqtt_client_disconnect(MqttClient *c);
 void mqtt_client_close(MqttClient *c);

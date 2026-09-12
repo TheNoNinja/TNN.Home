@@ -65,7 +65,7 @@ struct HomieProperty
 {
     HomieId node;
     HomieId id;
-    HomieDatatype type;
+    HomieDatatype datatype;
     b32 is_settable;
     b32 is_retained;
 };
@@ -75,7 +75,7 @@ struct HomieDescription
 {
     i64 version;
     u32 property_count;
-    HomieProperty property[HOMIE_PROPERTY_MAX];
+    HomieProperty properties[HOMIE_PROPERTY_MAX];
 };
 
 b32 homie_description_read(str json, HomieDescription *out);

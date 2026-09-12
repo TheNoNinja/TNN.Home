@@ -108,12 +108,12 @@ internal b32 device_sim_handle(const MqttClient *c, const MqttPacket *p)
 {
     switch (p->type)
     {
-        case MQTT_SUBSCRIBE_ACK:
+        case MQTT_SUBACK:
             return device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$state"), STR("ready"));
         case MQTT_PINGRESP:
             printf("PINGRESP\n");
             return 1;
-        case MQTT_PUBLISH:
+        case MQTT_PUB:
             printf("received %.*s = %.*s\n", STR_FMT(p->publish.topic), STR_FMT(p->publish.payload));
             return device_sim_set(c, p->publish);
         default:

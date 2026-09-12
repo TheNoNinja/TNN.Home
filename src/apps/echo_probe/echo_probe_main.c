@@ -123,7 +123,7 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
 {
     switch(packet->type)
     {
-        case MQTT_SUBSCRIBE_ACK:
+        case MQTT_SUBACK:
         {
             if (p->rate == 0)
             {
@@ -134,7 +134,7 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
             echo_probe_tick_start(p);
             return 1;
         }
-        case MQTT_PUBLISH:
+        case MQTT_PUB:
         {
             const u64 now_ns = time_now_raw_ns();
             const u64 now_mono_ns = time_now_mono_ns();

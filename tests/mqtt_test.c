@@ -117,7 +117,7 @@ void mqtt_test_subscribe(void)
     const u8 expected[] = {
         0x82, 0x0E,                                  // Subscribe + size
         0x00, 0x01,                                  // Packet id 1
-        0x00, 0x09,                                  // Topic filter lenght
+        0x00, 0x09,                                  // Topic filter length
         'h', 'o', 'm', 'i', 'e', '/', '5', '/', '#', // Topic filter
         0x00                                         // QoS 0
     };
@@ -125,6 +125,21 @@ void mqtt_test_subscribe(void)
     u8 buffer[32];
     MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
     mqtt_write_subscribe(&w, 1, STR("homie/5/#"));
+    TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
+}
+
+void mqtt_test_unsubscribe(void)
+{
+    const u8 expected[] = {
+        0xA2, 0x0D,                                 // Unsubscribe + size
+        0x00, 0x02,                                 // Packet id 2
+        0x00, 0x09,                                 // Topic filter length
+        'h', 'o', 'm', 'i', 'e', '/', '5', '/', '#' // Topic filter
+    };
+
+    u8 buffer[32];
+    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    mqtt_write_unsubscribe(&w, 2, STR("homie/5/#"));
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
 
@@ -196,7 +211,7 @@ void mqtt_test_read_fixed_header(void)
     MqttReader r = mqtt_reader_create(packet, sizeof(packet));
 
     MqttFixedHeader header = mqtt_read_fixed_header(&r);
-    TEST_EXPECT(header.type == MQTT_PUBLISH && header.flags == MQTT_PUBLISH_FLAG_RETAIN && header.remaining_length == 130);
+    TEST_EXPECT(header.type == MQTT_PUB && header.flags == MQTT_PUB_FLAG_RETAIN && header.remaining_length == 130);
     header = mqtt_read_fixed_header(&r);
     TEST_EXPECT(header.type == MQTT_PINGRESP && header.flags == 0 && header.remaining_length == 0);
     TEST_EXPECT(!r.has_error && r.position == sizeof(packet));
@@ -209,7 +224,7 @@ void mqtt_test_read_publish(void)
     const u8 payload[] = { 'o', 'n' };
 
     MqttReader r = mqtt_reader_create(packet, sizeof(packet));
-    MqttPublish m = mqtt_read_publish(&r, MQTT_PUBLISH_FLAG_RETAIN);
+    MqttPublish m = mqtt_read_publish(&r, MQTT_PUB_FLAG_RETAIN);
     TEST_EXPECT_BYTES(m.topic.data, m.topic.length, topic, sizeof(topic));
     TEST_EXPECT_BYTES(m.payload.data, m.payload.length, payload, sizeof(payload));
     TEST_EXPECT(m.is_retained && m.qos == 0);
@@ -250,7 +265,7 @@ void mqtt_test_stream_split(void)
 
     mqtt_test_stream_feed(&s, packet + sizeof(packet) - 1, 1);
     TEST_EXPECT(mqtt_stream_next(&s, &header, &body));
-    TEST_EXPECT(header.type == MQTT_PUBLISH && header.flags == MQTT_PUBLISH_FLAG_RETAIN);
+    TEST_EXPECT(header.type == MQTT_PUB && header.flags == MQTT_PUB_FLAG_RETAIN);
     TEST_EXPECT_BYTES(body.data, body.length, packet + 2, 7);
     TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.has_error);
 }
@@ -271,13 +286,13 @@ void mqtt_test_stream_burst(void)
     str body = STR_EMPTY;
 
     mqtt_test_stream_feed(&s, first, sizeof(first));
-    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PUBLISH && body.length == 7);
+    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PUB && body.length == 7);
     TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PINGRESP && body.length == 0);
     TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
 
     mqtt_test_stream_feed(&s, last, sizeof(last));
     TEST_EXPECT(s.position == 0 && s.length == 5);
-    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_SUBSCRIBE_ACK);
+    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_SUBACK);
     TEST_EXPECT_BYTES(body.data, body.length, expected, sizeof(expected));
     TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.has_error);
 }
@@ -377,8 +392,8 @@ void mqtt_test_client_next(void)
     mqtt_test_stream_feed(&c.in, bytes, sizeof(bytes));
     c.is_waiting_on_ping = 1;
     MqttPacket p = {0};
-    TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_SUBSCRIBE_ACK && p.packet_id == 1);
-    TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_PUBLISH && p.publish.is_retained);
+    TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_SUBACK && p.packet_id == 1);
+    TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_PUB && p.publish.is_retained);
     TEST_EXPECT(str_equal(p.publish.topic, STR("a/b")) && str_equal(p.publish.payload, STR("on")));
     TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_PINGRESP && !c.is_waiting_on_ping);
     TEST_EXPECT(!mqtt_client_next(&c, &p) && !c.has_error);
@@ -398,4 +413,29 @@ void mqtt_test_client_refused(void)
     c = mqtt_client_create(in, sizeof(in), sizeof(in), out, sizeof(out));
     mqtt_test_stream_feed(&c.in, liar, sizeof(liar));
     TEST_EXPECT(!mqtt_client_next(&c, &p) && c.has_error);
+}
+
+void mqtt_test_client_unsubscribe(void)
+{
+    int ends[2];
+    TEST_EXPECT(socketpair(AF_UNIX, SOCK_STREAM, 0, ends) == 0);
+    u8 in[16];
+    u8 out[16];
+    MqttClient c = mqtt_client_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    c.sock = ends[0];
+    u8 got[32];
+
+    const u8 unsubscribe[] = { 0xA2, 0x07, 0x00, 0x02, 0x00, 0x03, 'a', '/', '#' };
+    TEST_EXPECT(mqtt_client_subscribe(&c, STR("a/#")) == 1);
+    mqtt_test_client_sent(ends[1], got, sizeof(got));
+    TEST_EXPECT(mqtt_client_unsubscribe(&c, STR("a/#")) == 2);
+    const u64 length = mqtt_test_client_sent(ends[1], got, sizeof(got));
+    TEST_EXPECT_BYTES(got, length, unsubscribe, sizeof(unsubscribe));
+
+    const u8 unsuback[] = { 0xB0, 0x02, 0x00, 0x02 };
+    mqtt_test_stream_feed(&c.in, unsuback, sizeof(unsuback));
+    MqttPacket p = {0};
+    TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_UNSUBACK && p.packet_id == 2);
+    mqtt_client_close(&c);
+    close(ends[1]);
 }
