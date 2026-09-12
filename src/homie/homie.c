@@ -259,3 +259,50 @@ b32 homie_description_read(const str json, HomieDescription *out)
     }
     return 1;
 }
+
+internal b32 homie_value_take(str *s, const u8 c)
+{
+    if (s->length > 0 && s->data[0] == c)
+    {
+        *s = (str){ s->data + 1, s->length - 1 };
+        return 1;
+    }
+    return 0;
+}
+
+internal b32 homie_value_integer(const str value)
+{
+    str digits = value;
+    const b32 is_negative = homie_value_take(&digits, '-');
+    u64 magnitude = 0;
+    if (!str_to_u64(digits, &magnitude))
+    {
+        return 0;
+    }
+    const u64 limit = is_negative ? (u64)INT64_MAX + 1 : (u64)INT64_MAX;
+    return magnitude <= limit; 
+}
+
+b32 homie_value_valid(const HomieDatatype datatype, const str value)
+{
+    if (value.length == 0)
+    {
+        return 0;
+    }
+    
+    switch (datatype)
+    {
+        case HOMIE_DATATYPE_NONE: return 0;
+        case HOMIE_DATATYPE_BOOLEAN: return str_equal(value, STR("true")) || str_equal(value, STR("false"));
+        case HOMIE_DATATYPE_INTEGER: return homie_value_integer(value);
+        case HOMIE_DATATYPE_FLOAT:
+        case HOMIE_DATATYPE_JSON:
+        case HOMIE_DATATYPE_STRING:
+        case HOMIE_DATATYPE_ENUM:
+        case HOMIE_DATATYPE_COLOR:
+        case HOMIE_DATATYPE_DATETIME:
+        case HOMIE_DATATYPE_DURATION: return 1;
+    }
+    
+    return 0;
+}

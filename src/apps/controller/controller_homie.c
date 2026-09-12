@@ -152,12 +152,12 @@ internal void controller_on_value(Controller *c, const HomieTopic *t, const str 
     if(payload.length > CONTROLLER_VALUE_MAX)
     {
         LOG_WARN("%.*s: a value of %llu bytes for %.*s, more than %d: ignored", STR_FMT(t->device), (unsigned long long)payload.length, STR_FMT(t->rest), CONTROLLER_VALUE_MAX);
-        v->known = 0;
+        v->is_known = 0;
         return;
     }
     memcpy(v->bytes, payload.data, payload.length);
     v->length = payload.length;
-    v->known = payload.length > 0;
+    v->is_known = payload.length > 0;
     printf("%.*s: %.*s = %.*s\n", STR_FMT(t->device), STR_FMT(t->rest), STR_FMT(payload));
 }
 

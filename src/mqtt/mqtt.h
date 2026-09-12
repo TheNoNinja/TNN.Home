@@ -6,16 +6,16 @@
 #include "mqtt/mqtt_stream.h"
 #include "mqtt/mqtt_writer.h"
 
-#define MQTT_CONNECT    1
-#define MQTT_CONNECTACK 2
-#define MQTT_PUB        3
-#define MQTT_SUB        8
-#define MQTT_SUBACK     9
-#define MQTT_UNSUB      10
-#define MQTT_UNSUBACK   11
-#define MQTT_PINGREQ    12
-#define MQTT_PINGRESP   13
-#define MQTT_DISCONNECT 14
+#define MQTT_CONNECT     1
+#define MQTT_CONNACK     2
+#define MQTT_PUBLISH     3
+#define MQTT_SUBSCRIBE   8
+#define MQTT_SUBACK      9
+#define MQTT_UNSUBSCRIBE 10
+#define MQTT_UNSUBACK    11
+#define MQTT_PINGREQ     12
+#define MQTT_PINGRESP    13
+#define MQTT_DISCONNECT  14
 
 #define MQTT_VARINT_MAX  268435455
 
@@ -25,13 +25,13 @@
 #define MQTT_CONNECT_FLAG_WILL          0x04
 #define MQTT_CONNECT_FLAG_WILL_RETAIN   0x20
 
-#define MQTT_SUB_FLAG       0x02
+#define MQTT_SUBSCRIBE_FLAG 0x02
 #define MQTT_SUBACK_QOS_0   0x00
 #define MQTT_SUBACK_REFUSED 0x80
 
-#define MQTT_UNSUB_FLAG 0x02
+#define MQTT_UNSUBSCRIBE_FLAG 0x02
 
-#define MQTT_PUB_FLAG_RETAIN 0x01
+#define MQTT_PUBLISH_FLAG_RETAIN 0x01
 
 #define MQTT_PROTOCOL_3_1_1 4
 

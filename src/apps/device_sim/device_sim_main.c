@@ -113,7 +113,7 @@ internal b32 device_sim_handle(const MqttClient *c, const MqttPacket *p)
         case MQTT_PINGRESP:
             printf("PINGRESP\n");
             return 1;
-        case MQTT_PUB:
+        case MQTT_PUBLISH:
             printf("received %.*s = %.*s\n", STR_FMT(p->publish.topic), STR_FMT(p->publish.payload));
             return device_sim_set(c, p->publish);
         default:

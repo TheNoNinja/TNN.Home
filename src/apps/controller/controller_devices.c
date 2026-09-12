@@ -50,7 +50,7 @@ internal void controller_list_property(const HomieProperty *p, const ControllerV
     const str id = homie_id_str(&p->id);
     const str datatype = homie_datatype_name(p->datatype);
     printf("  %.*s/%.*s %.*s%s%s", STR_FMT(node), STR_FMT(id), STR_FMT(datatype), p->is_settable ? " settable" : "", p->is_retained ? "" : " not retained");
-    if(v->known)
+    if(v->is_known)
     {
         printf(" = %.*s\n", (int)v->length, (char *)v->bytes);
     }

@@ -16,7 +16,7 @@ struct ControllerValue
 {
     u8 bytes[CONTROLLER_VALUE_MAX];
     u64 length;
-    b32 known;
+    b32 is_known;
 };
 
 typedef struct ControllerDevice ControllerDevice;
@@ -25,7 +25,7 @@ struct ControllerDevice
     HomieId domain;
     HomieId id;
     HomieState state;
-    b32 is_described;;
+    b32 is_described;
     HomieDescription description;
     ControllerValue values[HOMIE_PROPERTY_MAX];
 };

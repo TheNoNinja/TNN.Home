@@ -30,6 +30,7 @@ internal const TestCase test_cases[] = {
     { .name = "homie datatype",                      .function = homie_test_datatype },
     { .name = "homie description",                   .function = homie_test_description },
     { .name = "homie description invalid",           .function = homie_test_description_invalid },
+    { .name = "homie value",                         .function = homie_test_value },
 
     { .name = "histogram index",                     .function = histogram_test_index },
     { .name = "histogram bound",                     .function = histogram_test_bounds },

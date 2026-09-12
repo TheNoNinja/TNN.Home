@@ -27,6 +27,7 @@ void homie_test_state(void);
 void homie_test_datatype(void);
 void homie_test_description(void);
 void homie_test_description_invalid(void);
+void homie_test_value(void);
 
 void histogram_test_index(void);
 void histogram_test_bounds(void);

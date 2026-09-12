@@ -87,7 +87,7 @@ void homie_test_description(void)
     TEST_EXPECT(d.version == -42 && d.property_count == 2);
     const HomieProperty *temp = &d.properties[0];
     TEST_EXPECT(str_equal(homie_id_str(&on->id), STR("temp")) && temp->datatype == HOMIE_DATATYPE_FLOAT);
-    TEST_EXPECT(!on->is_settable && !on->is_retained);
+    TEST_EXPECT(!temp->is_settable && !temp->is_retained);
     TEST_EXPECT(str_equal(homie_id_str(&d.properties[1].node), STR("switch")) && d.properties[1].is_settable);
 
     u8 buffer[1024];
@@ -131,4 +131,28 @@ void homie_test_description_invalid(void)
     {
         TEST_EXPECT(!homie_description_read(ignored[i], &d));
     }
+}
+
+void homie_test_value(void)
+{
+    TEST_EXPECT(homie_value_valid(HOMIE_DATATYPE_BOOLEAN, STR("true")));
+    TEST_EXPECT(homie_value_valid(HOMIE_DATATYPE_BOOLEAN, STR("false")));
+    const str not_booleans[] = { STR("True"), STR("FALSE"), STR("1"), STR("tru"), STR("true "), STR("maybe") };
+    for (u32 i = 0; i < ARRAY_COUNT(not_booleans); i++)
+    {
+        TEST_EXPECT(!homie_value_valid(HOMIE_DATATYPE_BOOLEAN, not_booleans[i]));
+    }
+
+    const str integers[] = { STR("0"), STR("42"), STR("-5"), STR("007"), STR("-0"), STR("9223372036854775807"), STR("-9223372036854775808") };
+    for (u32 i = 0; i < ARRAY_COUNT(integers); i++)
+    {
+        TEST_EXPECT(homie_value_valid(HOMIE_DATATYPE_INTEGER, integers[i]));
+    }
+    const str not_integers[] = { STR("21.5"), STR("1e3"), STR("+5"), STR(" 5"), STR("-"), STR("5-"), STR("--5"), STR("9223372036854775808"), STR("-9223372036854775809") };
+    for (u32 i = 0; i < ARRAY_COUNT(not_integers); i++)
+    {
+        TEST_EXPECT(!homie_value_valid(HOMIE_DATATYPE_INTEGER, not_integers[i]));
+    }
+
+    TEST_EXPECT(!homie_value_valid(HOMIE_DATATYPE_NONE, STR("true")));
 }

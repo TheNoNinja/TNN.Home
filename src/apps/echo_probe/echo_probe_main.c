@@ -134,7 +134,7 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
             echo_probe_tick_start(p);
             return 1;
         }
-        case MQTT_PUB:
+        case MQTT_PUBLISH:
         {
             const u64 now_ns = time_now_raw_ns();
             const u64 now_mono_ns = time_now_mono_ns();

@@ -22,7 +22,7 @@ void base_test_arena_full(void)
     Arena arena = arena_create(memory, sizeof(memory));
     TEST_EXPECT(ARENA_PUSH_ARRAY(&arena, u8, 16) != 0);
     TEST_EXPECT(ARENA_PUSH_ARRAY(&arena, u8, 1) == 0);
-    TEST_EXPECT(arena.overflow);
+    TEST_EXPECT(arena.has_overflown);
     TEST_EXPECT(arena.position == 16);
 }
 

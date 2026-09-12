@@ -27,7 +27,7 @@ internal b32 controller_receive(Controller *c)
     MqttPacket p = {0};
     while(mqtt_client_next(&c->client, &p))
     {
-        if (p.type == MQTT_PUB && !controller_on_publish(c, p.publish))
+        if (p.type == MQTT_PUBLISH && !controller_on_publish(c, p.publish))
         {
             return 0;
         }

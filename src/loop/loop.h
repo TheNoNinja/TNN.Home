@@ -11,8 +11,8 @@
 typedef struct LoopTimer LoopTimer;
 struct LoopTimer 
 {
-    b32 running;
-    b32 fired;
+    b32 is_running;
+    b32 has_fired;
     u64 deadline_ms;
 };
 

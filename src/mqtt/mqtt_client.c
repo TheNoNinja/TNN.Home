@@ -89,7 +89,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
     MqttReader r = mqtt_reader_create(body.data, body.length);
     const u8 session = mqtt_read_u8(&r);
     const u8 return_code = mqtt_read_u8(&r);
-    if (r.has_error || header.type != MQTT_CONNECTACK || header.remaining_length != 2)
+    if (r.has_error || header.type != MQTT_CONNACK || header.remaining_length != 2)
     {
         LOG_ERROR("expected a CONNACK, got packet type %d with %u bytes", header.type, header.remaining_length);
         goto error_handling;
@@ -211,7 +211,7 @@ b32 mqtt_client_next(MqttClient *c, MqttPacket *packet)
 
         switch (header.type)
         {
-            case MQTT_PUB:
+            case MQTT_PUBLISH:
             {
                 packet->publish = mqtt_read_publish(&r, header.flags);
                 if (r.has_error)

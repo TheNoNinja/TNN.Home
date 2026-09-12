@@ -20,7 +20,7 @@ void *arena_push(Arena *arena, const u64 size, const u64 align)
 
     if (padding + size > arena->capacity - arena->position)
     {
-        arena->overflow = 1;
+        arena->has_overflown = 1;
         LOG_ERROR("arena full: %llu bytes wanted, %llu free", (unsigned long long) size, (unsigned long long)(arena->capacity - arena->position));
         return 0;
     }

@@ -211,7 +211,7 @@ void mqtt_test_read_fixed_header(void)
     MqttReader r = mqtt_reader_create(packet, sizeof(packet));
 
     MqttFixedHeader header = mqtt_read_fixed_header(&r);
-    TEST_EXPECT(header.type == MQTT_PUB && header.flags == MQTT_PUB_FLAG_RETAIN && header.remaining_length == 130);
+    TEST_EXPECT(header.type == MQTT_PUBLISH && header.flags == MQTT_PUBLISH_FLAG_RETAIN && header.remaining_length == 130);
     header = mqtt_read_fixed_header(&r);
     TEST_EXPECT(header.type == MQTT_PINGRESP && header.flags == 0 && header.remaining_length == 0);
     TEST_EXPECT(!r.has_error && r.position == sizeof(packet));
@@ -224,7 +224,7 @@ void mqtt_test_read_publish(void)
     const u8 payload[] = { 'o', 'n' };
 
     MqttReader r = mqtt_reader_create(packet, sizeof(packet));
-    MqttPublish m = mqtt_read_publish(&r, MQTT_PUB_FLAG_RETAIN);
+    MqttPublish m = mqtt_read_publish(&r, MQTT_PUBLISH_FLAG_RETAIN);
     TEST_EXPECT_BYTES(m.topic.data, m.topic.length, topic, sizeof(topic));
     TEST_EXPECT_BYTES(m.payload.data, m.payload.length, payload, sizeof(payload));
     TEST_EXPECT(m.is_retained && m.qos == 0);
@@ -265,7 +265,7 @@ void mqtt_test_stream_split(void)
 
     mqtt_test_stream_feed(&s, packet + sizeof(packet) - 1, 1);
     TEST_EXPECT(mqtt_stream_next(&s, &header, &body));
-    TEST_EXPECT(header.type == MQTT_PUB && header.flags == MQTT_PUB_FLAG_RETAIN);
+    TEST_EXPECT(header.type == MQTT_PUBLISH && header.flags == MQTT_PUBLISH_FLAG_RETAIN);
     TEST_EXPECT_BYTES(body.data, body.length, packet + 2, 7);
     TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.has_error);
 }
@@ -286,7 +286,7 @@ void mqtt_test_stream_burst(void)
     str body = STR_EMPTY;
 
     mqtt_test_stream_feed(&s, first, sizeof(first));
-    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PUB && body.length == 7);
+    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PUBLISH && body.length == 7);
     TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PINGRESP && body.length == 0);
     TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
 
@@ -393,7 +393,7 @@ void mqtt_test_client_next(void)
     c.is_waiting_on_ping = 1;
     MqttPacket p = {0};
     TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_SUBACK && p.packet_id == 1);
-    TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_PUB && p.publish.is_retained);
+    TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_PUBLISH && p.publish.is_retained);
     TEST_EXPECT(str_equal(p.publish.topic, STR("a/b")) && str_equal(p.publish.payload, STR("on")));
     TEST_EXPECT(mqtt_client_next(&c, &p) && p.type == MQTT_PINGRESP && !c.is_waiting_on_ping);
     TEST_EXPECT(!mqtt_client_next(&c, &p) && !c.has_error);

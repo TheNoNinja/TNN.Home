@@ -65,16 +65,16 @@ u32 loop_timer_add(Loop *l)
 void loop_timer_start(Loop *l, const u32 timer, const u64 delay_ms)
 {
     ASSERT(timer < l->timer_count && delay_ms <= INT_MAX);
-    l->timers[timer].running = 1;
-    l->timers[timer].fired = 0;
+    l->timers[timer].is_running = 1;
+    l->timers[timer].has_fired = 0;
     l->timers[timer].deadline_ms = l->now_ms + delay_ms;
 }
 
 void loop_timer_stop(Loop *l, const u32 timer)
 {
     ASSERT(timer < l->timer_count);
-    l->timers[timer].running = 0;
-    l->timers[timer].fired = 0;
+    l->timers[timer].is_running = 0;
+    l->timers[timer].has_fired = 0;
 }
 
 int loop_timeout_ms(const Loop *l)
@@ -83,7 +83,7 @@ int loop_timeout_ms(const Loop *l)
     for (u32 i = 0; i < l->timer_count; i++)
     {
         const LoopTimer *t = &l->timers[i];
-        if (!t->running)
+        if (!t->is_running)
         {
             continue;
         }
@@ -102,10 +102,10 @@ void loop_fire_timers(Loop *l)
     for (u32 i = 0; i < l->timer_count; i++)
     {
         LoopTimer *t = &l->timers[i];
-        t->fired = t->running && t->deadline_ms <= l->now_ms;
-        if (t->fired)
+        t->has_fired = t->is_running && t->deadline_ms <= l->now_ms;
+        if (t->has_fired)
         {
-            t->running = 0;
+            t->is_running = 0;
         }
     }
 }
@@ -154,5 +154,5 @@ b32 loop_readable(const Loop *l, const int fd)
 b32 loop_timer_fired(const Loop *l, const u32 timer)
 {
     ASSERT(timer < l->timer_count);
-    return l->timers[timer].fired;
+    return l->timers[timer].has_fired;
 }

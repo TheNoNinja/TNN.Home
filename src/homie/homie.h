@@ -42,7 +42,7 @@ typedef enum HomieState HomieState;
 HomieState homie_state_parse(str payload);
 str homie_state_name(HomieState state);
 
-enum HomieDataType
+enum HomieDatatype
 {
     HOMIE_DATATYPE_NONE,
     HOMIE_DATATYPE_INTEGER,
@@ -55,7 +55,7 @@ enum HomieDataType
     HOMIE_DATATYPE_DURATION,
     HOMIE_DATATYPE_JSON,
 };
-typedef enum HomieDataType HomieDatatype;
+typedef enum HomieDatatype HomieDatatype;
 
 HomieDatatype homie_datatype_parse(str name);
 str homie_datatype_name(HomieDatatype datatype);
@@ -79,5 +79,6 @@ struct HomieDescription
 };
 
 b32 homie_description_read(str json, HomieDescription *out);
+b32 homie_value_valid(HomieDatatype datatype, str value);
 
 #endif

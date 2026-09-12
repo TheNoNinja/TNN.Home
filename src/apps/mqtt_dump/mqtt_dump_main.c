@@ -27,7 +27,7 @@ internal b32 mqtt_dump_receive(MqttClient *c)
     MqttPacket p = {0};
     while (mqtt_client_next(c, &p))
     {
-        if (p.type == MQTT_PUB)
+        if (p.type == MQTT_PUBLISH)
         {
             const MqttPublish m = p.publish;
             printf("%.*s = %.*s%s\n", STR_FMT(m.topic), STR_FMT(m.payload), m.is_retained ? " (retained)" : "");
