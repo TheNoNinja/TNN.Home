@@ -283,6 +283,53 @@ internal b32 homie_value_integer(const str value)
     return magnitude <= limit; 
 }
 
+internal u64 homie_value_take_digits(str *s)
+{
+    u64 count = 0;
+    while (count < s->length && s->data[count] >= '0' && s->data[count] <= '9')
+    {
+        count += 1;
+    }
+    *s = (str) { s->data + count, s->length - count };
+    return count;
+}
+
+internal b32 homie_value_float(const str value)
+{
+    str rest = value;
+    homie_value_take(&rest, '-');
+    if (homie_value_take_digits(&rest) == 0)
+    {
+        return 0;
+    }
+    if (homie_value_take(&rest, '.') && homie_value_take_digits(&rest) == 0)
+    {
+        return 0;
+    }
+    if (homie_value_take(&rest, 'e') || homie_value_take(&rest, 'E'))
+    {
+        homie_value_take(&rest, '-');
+        if (homie_value_take_digits(&rest) == 0)
+        {
+            return 0;
+        }
+    }
+    return rest.length == 0;
+}
+
+internal b32 homie_value_json(const str value)
+{
+    JsonReader r = json_reader_create(value.data, value.length);
+    json_read_skip(&r);
+    if (r.has_error)
+    {
+        return 0;
+    }
+    const u8 last = r.data[r.position - 1];
+    json_read_end(&r);
+    return !r.has_error && (last == '}' || last == ']');
+}
+
 b32 homie_value_valid(const HomieDatatype datatype, const str value)
 {
     if (value.length == 0)
@@ -292,11 +339,11 @@ b32 homie_value_valid(const HomieDatatype datatype, const str value)
     
     switch (datatype)
     {
-        case HOMIE_DATATYPE_NONE: return 0;
-        case HOMIE_DATATYPE_BOOLEAN: return str_equal(value, STR("true")) || str_equal(value, STR("false"));
-        case HOMIE_DATATYPE_INTEGER: return homie_value_integer(value);
-        case HOMIE_DATATYPE_FLOAT:
-        case HOMIE_DATATYPE_JSON:
+        case HOMIE_DATATYPE_NONE:     return 0;
+        case HOMIE_DATATYPE_BOOLEAN:  return str_equal(value, STR("true")) || str_equal(value, STR("false"));
+        case HOMIE_DATATYPE_INTEGER:  return homie_value_integer(value);
+        case HOMIE_DATATYPE_FLOAT:    return homie_value_float(value);
+        case HOMIE_DATATYPE_JSON:     return homie_value_json(value);
         case HOMIE_DATATYPE_STRING:
         case HOMIE_DATATYPE_ENUM:
         case HOMIE_DATATYPE_COLOR:

@@ -129,38 +129,6 @@ internal b32 controller_on_description(Controller *c, const HomieTopic *t, const
     return controller_subscribe_values(c, d);
 }
 
-internal void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
-{
-    str node = STR_EMPTY;
-    str property = STR_EMPTY;
-    if (!str_cut(t->rest, '/', &node, &property) || !homie_id_valid(node) || !homie_id_valid(property))
-    {
-        return;
-    }
-    ControllerDevice *d = controller_find(c, t);
-    if (!d)
-    {
-        return;
-    }
-    const i32 index = controller_property_find(d, node, property);
-    if (index < 0)
-    {
-        LOG_WARN("%.*s: %.*s is not in its $description, ignored", STR_FMT(t->device), STR_FMT(t->rest));
-        return;
-    }
-    ControllerValue *v = &d->values[index];
-    if(payload.length > CONTROLLER_VALUE_MAX)
-    {
-        LOG_WARN("%.*s: a value of %llu bytes for %.*s, more than %d: ignored", STR_FMT(t->device), (unsigned long long)payload.length, STR_FMT(t->rest), CONTROLLER_VALUE_MAX);
-        v->is_known = 0;
-        return;
-    }
-    memcpy(v->bytes, payload.data, payload.length);
-    v->length = payload.length;
-    v->is_known = payload.length > 0;
-    printf("%.*s: %.*s = %.*s\n", STR_FMT(t->device), STR_FMT(t->rest), STR_FMT(payload));
-}
-
 b32 controller_on_publish(Controller *c, const MqttPublish m)
 {
     HomieTopic t = {0};

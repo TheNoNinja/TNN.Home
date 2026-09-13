@@ -8,7 +8,7 @@
 #define CONTROLLER_BROKER_PORT   1883
 #define CONTROLLER_CLIENT_ID     "tnn-controller"
 #define CONTROLLER_KEEP_ALIVE    10
-#define CONTROLLER_TX_MAX        128
+#define CONTROLLER_TX_MAX        256
 #define CONTROLLER_RX_MAX        KB(64)
 #define CONTROLLER_RX_PACKET_MAX KB(64)
 
@@ -45,10 +45,18 @@ internal b32 controller_run(Controller *c)
 
     while(loop_wait(&c->loop))
     {
-        if (loop_readable(&c->loop, STDIN_FILENO) && !controller_read_input(c))
+        if (loop_readable(&c->loop, STDIN_FILENO))
         {
-            LOG_INFO("stdin closed: disconnecting");
-            return 1;
+            b32 is_closed = 0;
+            if (!controller_read_input(c, &is_closed))
+            {
+                return 0;
+            }
+            if (is_closed)
+            {
+                LOG_INFO("stdin closed: disconnecting");
+                return 1;
+            }
         }
         if (loop_readable(&c->loop, c->client.sock) && !controller_receive(c))
         {

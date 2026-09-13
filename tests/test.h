@@ -28,6 +28,10 @@ void homie_test_datatype(void);
 void homie_test_description(void);
 void homie_test_description_invalid(void);
 void homie_test_value(void);
+void homie_test_value_bool(void);
+void homie_test_value_integer(void);
+void homie_test_value_float(void);
+void homie_test_value_json(void);
 
 void histogram_test_index(void);
 void histogram_test_bounds(void);

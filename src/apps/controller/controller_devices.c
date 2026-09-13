@@ -31,6 +31,19 @@ ControllerDevice *controller_add(Controller *c, const HomieTopic *t)
     return 0;
 }
 
+ControllerDevice * controller_find_id(Controller *c, const str id)
+{
+    for (u32 i = 0; i < CONTROLLER_DEVICE_MAX; i++)
+    {
+        ControllerDevice *d = &c->devices[i];
+        if (d->id.length > 0 && str_equal(homie_id_str(&d->id), id))
+        {
+            return d;
+        }
+    }    
+    return 0;
+}
+
 i32 controller_property_find(const ControllerDevice *d, const str node, const str id)
 {
     for (u32 i = 0; i < d->description.property_count; i++)

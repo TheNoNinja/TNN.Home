@@ -25,6 +25,12 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
             ASSERT(p->datatype != HOMIE_DATATYPE_NONE);
         }
     }
-    
+
+    const str value = { (u8*)data, size };
+    for (u32 d = HOMIE_DATATYPE_INTEGER; d <= HOMIE_DATATYPE_JSON; d++)
+    {
+        homie_value_valid((HomieDatatype)d, value);
+    }
+    ASSERT(!homie_value_valid(HOMIE_DATATYPE_INTEGER, value) || homie_value_valid(HOMIE_DATATYPE_FLOAT, value));
     return 0;
 }

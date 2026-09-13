@@ -31,6 +31,10 @@ internal const TestCase test_cases[] = {
     { .name = "homie description",                   .function = homie_test_description },
     { .name = "homie description invalid",           .function = homie_test_description_invalid },
     { .name = "homie value",                         .function = homie_test_value },
+    { .name = "homie value bool",                    .function = homie_test_value_bool },
+    { .name = "homie value integer",                 .function = homie_test_value_integer },
+    { .name = "homie value float",                   .function = homie_test_value_float },
+    { .name = "homie value json",                    .function = homie_test_value_json },
 
     { .name = "histogram index",                     .function = histogram_test_index },
     { .name = "histogram bound",                     .function = histogram_test_bounds },

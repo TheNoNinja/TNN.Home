@@ -8,7 +8,7 @@
 
 #define CONTROLLER_STATE_FILTER "+/5/+/$state"
 #define CONTROLLER_DEVICE_MAX 64
-#define CONTROLLER_LINE_MAX 128
+#define CONTROLLER_LINE_MAX 256
 #define CONTROLLER_VALUE_MAX 64
 
 typedef struct ControllerValue ControllerValue;
@@ -41,11 +41,14 @@ struct Controller
 };
 
 ControllerDevice *controller_find(Controller *c, const HomieTopic *t);
+ControllerDevice *controller_find_id(Controller *c, str id);
 ControllerDevice *controller_add(Controller *c, const HomieTopic *t);
 i32 controller_property_find(const ControllerDevice *d, str node, str id);
 void controller_list(const Controller *c);
+b32 controller_set(Controller *c, str device, str property, str value);
 
 b32 controller_on_publish(Controller *c, MqttPublish m);
-b32 controller_read_input(Controller *c);
+void controller_on_value(Controller *c, const HomieTopic *t, str payload);
+b32 controller_read_input(Controller *c, b32 *is_closed);
 
 #endif

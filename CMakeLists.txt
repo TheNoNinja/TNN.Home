@@ -73,6 +73,7 @@ add_executable(tnn_controller
     src/apps/controller/controller_devices.c
     src/apps/controller/controller_homie.c
     src/apps/controller/controller_main.c
+    src/apps/controller/controller_values.c
     src/base/base_arena.c
     src/base/base_assert.c
     src/base/base_log.c
