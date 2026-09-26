@@ -95,6 +95,7 @@ add_executable(tnn_tests
     tests/base_test.c
     tests/histogram_test.c
     tests/homie_test.c
+    tests/http_test.c
     tests/json_test.c
     tests/loop_test.c
     tests/test_main.c
@@ -106,6 +107,7 @@ add_executable(tnn_tests
     src/base/base_time.c
     src/histogram/histogram.c
     src/homie/homie.c
+    src/http/http_request.c
     src/json/json_reader.c
     src/json/json_writer.c
     src/loop/loop.c

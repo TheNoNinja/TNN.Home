@@ -19,6 +19,10 @@ void base_test_str_cut(void);
 void base_test_str_from_cstr(void);
 void base_test_str_to_u64(void);
 
+void histogram_test_index(void);
+void histogram_test_bounds(void);
+void histogram_test_percentiles(void);
+
 void homie_test_topic(void);
 void homie_test_topic_invalid(void);
 void homie_test_topic_build(void);
@@ -33,9 +37,8 @@ void homie_test_value_integer(void);
 void homie_test_value_float(void);
 void homie_test_value_json(void);
 
-void histogram_test_index(void);
-void histogram_test_bounds(void);
-void histogram_test_percentiles(void);
+void http_test_request_peices(void);
+void http_test_request_line(void);
 
 void json_test_object(void);
 void json_test_escape(void);
