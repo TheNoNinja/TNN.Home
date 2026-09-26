@@ -33,7 +33,7 @@ internal b32 controller_command(Controller *c, const str line)
     }
     else if (line.length > 0)
     {
-        printf("unknown command '%.*s'; the commands are: list, set", STR_FMT(line));
+        printf("unknown command '%.*s'; the commands are: list, set\n", STR_FMT(line));
     }
     return 1;
 }
@@ -45,7 +45,7 @@ b32 controller_read_input(Controller *c, b32 *is_closed)
     if (count <= 0)
     {
         *is_closed = 1;
-        return 0;
+        return 1;
     }
     for (u64 i = 0; i < (u64)count; i++)
     {

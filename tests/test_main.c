@@ -53,6 +53,7 @@ internal const TestCase test_cases[] = {
     { .name = "loop timer fires",                    .function = loop_test_timer_fires },
     { .name = "loop pipe",                           .function = loop_test_pipe },
     { .name = "loop signal",                         .function = loop_test_signal },
+    { .name = "loop unwatch",                        .function = loop_test_unwatch },
 
     { .name = "mqtt string golden bytes",            .function = mqtt_test_str },
     { .name = "mqtt u64 golden bytes",               .function = mqtt_test_u64 },

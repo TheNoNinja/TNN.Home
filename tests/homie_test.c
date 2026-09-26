@@ -86,7 +86,7 @@ void homie_test_description(void)
     TEST_EXPECT(homie_description_read(two, &d));
     TEST_EXPECT(d.version == -42 && d.property_count == 2);
     const HomieProperty *temp = &d.properties[0];
-    TEST_EXPECT(str_equal(homie_id_str(&on->id), STR("temp")) && temp->datatype == HOMIE_DATATYPE_FLOAT);
+    TEST_EXPECT(str_equal(homie_id_str(&temp->id), STR("temp")) && temp->datatype == HOMIE_DATATYPE_FLOAT);
     TEST_EXPECT(!temp->is_settable && !temp->is_retained);
     TEST_EXPECT(str_equal(homie_id_str(&d.properties[1].node), STR("switch")) && d.properties[1].is_settable);
 

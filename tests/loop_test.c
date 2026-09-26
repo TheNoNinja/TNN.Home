@@ -70,3 +70,30 @@ void loop_test_signal(void)
     loop_timer_start(&l, t, 0);
     TEST_EXPECT(loop_wait(&l) && loop_timer_fired(&l, t));
 }
+
+void loop_test_unwatch(void)
+{
+    int a[2];
+    int b[2];
+    TEST_EXPECT(pipe(a) == 0 && pipe(b) == 0);
+    Loop l = loop_create();
+    loop_watch(&l, a[0]);
+    loop_watch(&l, b[0]);
+    TEST_EXPECT(write(a[1], "x", 1) == 1 && write(b[1], "x", 1) == 1);
+    TEST_EXPECT(loop_wait(&l));
+    TEST_EXPECT(loop_readable(&l, a[0]) && loop_readable(&l, b[0]));
+
+    loop_unwatch(&l, a[0]);
+    TEST_EXPECT(l.fd_count == 1 && !loop_readable(&l, a[0]) && loop_readable(&l, b[0]));
+
+    loop_watch(&l, a[0]);
+    TEST_EXPECT(l.fd_count == 2 && !loop_readable(&l, a[0]));
+    TEST_EXPECT(loop_wait(&l) && loop_readable(&l, a[0]));
+
+    loop_unwatch(&l, a[1]);
+    TEST_EXPECT(l.fd_count == 2);
+    close(a[0]);
+    close(a[1]);
+    close(b[0]);
+    close(b[1]);
+}

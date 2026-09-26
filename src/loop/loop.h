@@ -5,7 +5,7 @@
 
 #include <poll.h>
 
-#define LOOP_FDS_MAX 4
+#define LOOP_FDS_MAX 16
 #define LOOP_TIMERS_MAX 4
 
 typedef struct LoopTimer LoopTimer;
@@ -32,6 +32,7 @@ Loop loop_create(void);
 void loop_catch_signals(void);
 
 void loop_watch(Loop *l, int fd);
+void loop_unwatch(Loop *l, int fd);
 
 u32 loop_timer_add(Loop *l);
 void loop_timer_start(Loop *l, u32 timer, u64 delay_ms);

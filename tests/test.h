@@ -50,6 +50,7 @@ void loop_test_timeout(void);
 void loop_test_timer_fires(void);
 void loop_test_pipe(void);
 void loop_test_signal(void);
+void loop_test_unwatch(void);
 
 void mqtt_test_str(void);
 void mqtt_test_u64(void);

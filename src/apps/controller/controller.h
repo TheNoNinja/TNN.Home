@@ -10,6 +10,7 @@
 #define CONTROLLER_DEVICE_MAX 64
 #define CONTROLLER_LINE_MAX 256
 #define CONTROLLER_VALUE_MAX 64
+#define CONTROLLER_HTTP_CONNECTION_MAX 8
 
 typedef struct ControllerValue ControllerValue;
 struct ControllerValue 
@@ -30,6 +31,15 @@ struct ControllerDevice
     ControllerValue values[HOMIE_PROPERTY_MAX];
 };
 
+typedef struct ControllerHttpConnection ControllerHttpConnection;
+struct ControllerHttpConnection 
+{
+    b32 is_open;
+    int sock;
+    u64 opened_ms;
+};
+
+
 typedef struct Controller Controller;
 struct Controller
 {
@@ -38,6 +48,8 @@ struct Controller
     ControllerDevice devices[CONTROLLER_DEVICE_MAX];
     u8 line[CONTROLLER_LINE_MAX];
     u64 line_length;
+    int http_sock;
+    ControllerHttpConnection http[CONTROLLER_HTTP_CONNECTION_MAX];
 };
 
 ControllerDevice *controller_find(Controller *c, const HomieTopic *t);
@@ -50,5 +62,8 @@ b32 controller_set(Controller *c, str device, str property, str value);
 b32 controller_on_publish(Controller *c, MqttPublish m);
 void controller_on_value(Controller *c, const HomieTopic *t, str payload);
 b32 controller_read_input(Controller *c, b32 *is_closed);
+
+b32 controller_http_listen(Controller *c, const char *ip, u16 port);
+void controller_http_handle(Controller *c);
 
 #endif

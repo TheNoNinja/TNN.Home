@@ -15,7 +15,7 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
     ASSERT(r.has_error || r.position == r.length);
     
     HomieDescription description;
-    if (homie_description_read((str){ (u8 *)data, size }, &description))\
+    if (homie_description_read((str){ (u8 *)data, size }, &description))
     {
         ASSERT(description.property_count <= HOMIE_PROPERTY_MAX);
         for (u32 i = 0; i < description.property_count; i++)

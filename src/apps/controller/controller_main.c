@@ -6,6 +6,8 @@
 
 #define CONTROLLER_BROKER_IP     "127.0.0.1"
 #define CONTROLLER_BROKER_PORT   1883
+#define CONTROLLER_HTTP_IP       "127.0.0.1"
+#define CONTROLLER_HTTP_PORT     8080
 #define CONTROLLER_CLIENT_ID     "tnn-controller"
 #define CONTROLLER_KEEP_ALIVE    10
 #define CONTROLLER_TX_MAX        256
@@ -58,10 +60,14 @@ internal b32 controller_run(Controller *c)
                 return 1;
             }
         }
+        
         if (loop_readable(&c->loop, c->client.sock) && !controller_receive(c))
         {
             return 0;
         }
+
+        controller_http_handle(c);
+        
         if (loop_timer_fired(&c->loop, ping))
         {
             if (!mqtt_client_ping(&c->client))
@@ -80,20 +86,26 @@ internal b32 controller_run(Controller *c)
     return 1;
 }
 
+internal b32 controller_port_read(const char *argument, u64 *port)
+{
+    return str_to_u64(str_from_cstr(argument), port) && *port >= 1 && *port <= 65535;
+}
+
 int main(const int argc, char **argv)
 {
     setvbuf(stdout, 0, _IOLBF, 0);
 
-    u64 port = CONTROLLER_BROKER_PORT;
-    if (argc > 1 && !(str_to_u64(str_from_cstr(argv[1]), &port) && port >= 1 && port <= 65535))
+    u64 broker_port = CONTROLLER_BROKER_PORT;
+    u64 http_port = CONTROLLER_HTTP_PORT;
+    if ((argc > 1 && !controller_port_read(argv[1], &broker_port)) || (argc > 2 && !controller_port_read(argv[2], &http_port)) || argc > 3) 
     {
-        LOG_ERROR("usage: %s [port(1 to 65535, default %d)]", argv[0], CONTROLLER_BROKER_PORT);
+        LOG_ERROR("usage: %s [broker port(1 to 65535, default %d)] [http port(1 to 65535, default %d)]", argv[0], CONTROLLER_BROKER_PORT, CONTROLLER_HTTP_PORT);
         return 1;
     }
 
     Controller *c = &controller;
     c->client = mqtt_client_create(controller_rx_buffer, sizeof(controller_rx_buffer), CONTROLLER_RX_PACKET_MAX, controller_tx_buffer, sizeof(controller_tx_buffer));
-    if (!mqtt_client_connect(&c->client, CONTROLLER_BROKER_IP, (u16)port, STR(CONTROLLER_CLIENT_ID), CONTROLLER_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    if (!mqtt_client_connect(&c->client, CONTROLLER_BROKER_IP, (u16)broker_port, STR(CONTROLLER_CLIENT_ID), CONTROLLER_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
@@ -102,6 +114,7 @@ int main(const int argc, char **argv)
     
     c->loop = loop_create();
     loop_catch_signals();
+    ok = ok && controller_http_listen(c, CONTROLLER_HTTP_IP, (u16)http_port);
     ok = ok && controller_run(c);
 
     if (ok)

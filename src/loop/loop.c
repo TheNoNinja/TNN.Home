@@ -52,7 +52,21 @@ void loop_watch(Loop *l, const int fd)
     ASSERT(l->fd_count < LOOP_FDS_MAX);
     l->fds[l->fd_count].fd = fd;
     l->fds[l->fd_count].events = POLLIN;
+    l->fds[l->fd_count].revents = 0;
     l->fd_count += 1;
+}
+
+void loop_unwatch(Loop *l, const int fd)
+{
+    for (u32 i = 0; i < l->fd_count; i++)
+    {
+        if (l->fds[i].fd == fd)
+        {
+            l->fds[i] = l->fds[l->fd_count - 1];
+            l->fd_count -= 1;
+            return;
+        }
+    }
 }
 
 u32 loop_timer_add(Loop *l)
