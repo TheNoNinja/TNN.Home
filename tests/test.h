@@ -37,8 +37,10 @@ void homie_test_value_integer(void);
 void homie_test_value_float(void);
 void homie_test_value_json(void);
 
+void http_test_request(void);
 void http_test_request_peices(void);
 void http_test_request_line(void);
+void http_test_request_headers(void);
 
 void json_test_object(void);
 void json_test_escape(void);

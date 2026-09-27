@@ -16,6 +16,8 @@ struct HttpRequest
 {
     str method;
     str target;
+    str host;
+    u64 content_length;
     u64 head_length;
 };
 

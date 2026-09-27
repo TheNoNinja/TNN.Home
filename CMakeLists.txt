@@ -143,4 +143,15 @@ if(TNN_FUZZ)
     target_include_directories(tnn_fuzz_json PRIVATE src)
     target_compile_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)
     target_link_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)
+
+    add_executable(tnn_fuzz_http
+        tests/http_fuzz.c
+        src/http/http_request.c
+        src/base/base_assert.c
+        src/base/base_log.c
+        src/base/base_str.c
+    )
+    target_include_directories(tnn_fuzz_http PRIVATE src)
+    target_compile_options(tnn_fuzz_http PRIVATE -fsanitize=fuzzer)
+    target_link_options(tnn_fuzz_http PRIVATE -fsanitize=fuzzer)
 endif()

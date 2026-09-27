@@ -40,8 +40,10 @@ internal const TestCase test_cases[] = {
     { .name = "homie value float",                   .function = homie_test_value_float },
     { .name = "homie value json",                    .function = homie_test_value_json },
 
+    { .name = "http request",                        .function = http_test_request },
     { .name = "http request peices",                 .function = http_test_request_peices },
     { .name = "http request line",                   .function = http_test_request_line },
+    { .name = "http request headers",                .function = http_test_request_headers },
 
     { .name = "json object",                         .function = json_test_object },
     { .name = "json escape",                         .function = json_test_escape },

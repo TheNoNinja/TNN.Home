@@ -47,6 +47,55 @@ internal b32 http_visible(const str s)
     return 1;
 }
 
+internal str http_trim (const str s)
+{
+    str trimmed = s;
+    while (trimmed.length > 0 && (trimmed.data[0] == ' ' || trimmed.data[0] == '\t'))
+    {
+        trimmed = (str){ trimmed.data + 1, trimmed.length - 1 };
+    }
+    while (trimmed.length > 0 && (trimmed.data[trimmed.length - 1] == ' ' || trimmed.data[trimmed.length - 1] == '\t'))
+    {
+        trimmed.length -= 1;
+    }
+    return trimmed;
+}
+
+internal b32 http_value_valid(const str s)
+{
+    for (u64 i = 0; i < s.length; i++)
+    {
+        const u8 c = s.data[i];
+        if ((c < 0x20 && c != '\t') || c == 0x7F)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+internal b32 http_name_is(const str name, const str lower)
+{
+    if (name.length != lower.length)
+    {
+        return 0;
+    }
+
+    for(u64 i = 0; i < name.length; i++)
+    {
+        u8 c = name.data[i];
+        if (c >= 'A' && c <= 'Z')
+        {
+            c = (u8)(c + ('a' - 'A'));
+        }
+        if (c != lower.data[i])
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 HttpRead http_request_read(const str bytes, HttpRequest *request)
 {
     u64 head_length = 0;
@@ -76,6 +125,49 @@ HttpRead http_request_read(const str bytes, HttpRequest *request)
     }
     const b32 is_target_ok = r.target.length > 0 && r.target.data[0] == '/' && http_visible(r.target);
     if (!http_token_valid(r.method) || !is_target_ok || !str_equal(version, STR("HTTP/1.1")))
+    {
+        return HTTP_READ_BAD;
+    }
+
+    b32 has_host = 0;
+    b32 has_length = 0;
+    while(http_next_line(&lines, &line))
+    {
+        str name = STR_EMPTY;
+        str value = STR_EMPTY;
+        if (!str_cut(line, ':', &name, &value) || !http_token_valid(name))
+        {
+            return HTTP_READ_BAD;
+        }
+        value = http_trim(value);
+        if (!http_value_valid(value))
+        {
+            return HTTP_READ_BAD;
+        }
+        if (http_name_is(name, STR("host")))
+        {
+            if (has_host || value.length == 0 || !http_visible(value))
+            {
+                return HTTP_READ_BAD;
+            }
+            has_host = 1;
+            r.host = value;
+        }
+        else if ( http_name_is(name, STR("content-length")))
+        {
+            if (has_length || !str_to_u64(value, &r.content_length))
+            {
+                return HTTP_READ_BAD;
+            }
+            has_length = 1;
+        }
+        else if (http_name_is(name, STR("transfer-encoding")))
+        {
+            return HTTP_READ_BAD;
+        }
+    }
+
+    if (!has_host)
     {
         return HTTP_READ_BAD;
     }
