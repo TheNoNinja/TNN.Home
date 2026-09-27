@@ -74,6 +74,7 @@ add_executable(tnn_controller
     src/apps/controller/controller_homie.c
     src/apps/controller/controller_http.c
     src/apps/controller/controller_main.c
+    src/apps/controller/controller_page.c
     src/apps/controller/controller_values.c
     src/base/base_arena.c
     src/base/base_assert.c
@@ -81,6 +82,8 @@ add_executable(tnn_controller
     src/base/base_str.c
     src/base/base_time.c
     src/homie/homie.c
+    src/http/http_request.c
+    src/http/http_writer.c
     src/json/json_reader.c
     src/json/json_writer.c
     src/loop/loop.c
@@ -108,6 +111,7 @@ add_executable(tnn_tests
     src/histogram/histogram.c
     src/homie/homie.c
     src/http/http_request.c
+    src/http/http_writer.c
     src/json/json_reader.c
     src/json/json_writer.c
     src/loop/loop.c

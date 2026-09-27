@@ -44,6 +44,9 @@ internal const TestCase test_cases[] = {
     { .name = "http request peices",                 .function = http_test_request_peices },
     { .name = "http request line",                   .function = http_test_request_line },
     { .name = "http request headers",                .function = http_test_request_headers },
+    { .name = "http write head",                     .function = http_test_write_head },
+    { .name = "http write escaped",                  .function = http_test_write_escaped },
+    { .name = "http write overflow",                 .function = http_test_write_overflow },
 
     { .name = "json object",                         .function = json_test_object },
     { .name = "json escape",                         .function = json_test_escape },

@@ -9,14 +9,11 @@
 #include <unistd.h>
 
 #define CONTROLLER_HTTP_BACKLOG 16
+#define CONTROLLER_HTTP_HEAD_MAX 256
+#define CONTROLLER_HTTP_BODY_MAX KB(1024)
 
-internal const char controller_http_hello[] = 
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/plain; charset=utf-8\r\n"
-    "Content-Lenght: 20\r\n"
-    "Connection: close\r\n"
-    "\r\n"
-    "TNN.Home controller\r\n";
+internal u8 controller_http_response[CONTROLLER_HTTP_HEAD_MAX + CONTROLLER_HTTP_BODY_MAX];
+internal u8 controller_http_page[CONTROLLER_HTTP_BODY_MAX];
 
 b32 controller_http_listen(Controller *c, const char* ip, const u16 port)
 {
@@ -102,23 +99,114 @@ internal void controller_http_accept(Controller *c)
     h->is_open = 1;
     h->sock = sock;
     h->opened_ms = c->loop.now_ms;
+    h->length = 0;
     loop_watch(&c->loop, sock);
+}
+
+internal void controller_http_respond(Controller *c, ControllerHttpConnection *h, const u32 status, const str content_type, const str body)
+{
+    HttpWriter w = http_writer_create(controller_http_response, sizeof(controller_http_response));
+    http_write_status(&w, status);
+    http_write_header(&w, STR("Content-Type"), content_type);
+    http_write_header_u64(&w, STR("Content-Length"), body.length);
+    http_write_header(&w, STR("Cache-Control"), STR("no-store"));
+    http_write_header(&w, STR("Connection"), STR("Close"));
+    if (status == 405)
+    {
+        http_write_header(&w, STR("Allow"), STR("GET"));
+    }
+    http_write_head_end(&w);
+    http_write_str(&w, body);
+    ASSERT(!w.has_overflown);
+    const ssize_t sent = send(h->sock, w.data, w.length, MSG_NOSIGNAL);
+    if (sent < 0)
+    {
+        LOG_WARN("http send: %s", strerror(errno));
+    }
+    else if ((u64)sent != w.length)
+    {
+        LOG_WARN("http send: only %lld of %llu bytes went out (the send buffer is full)", (long long) sent, (unsigned long long)w.length);
+    }
+    controller_http_close(c, h);
+}
+
+internal void controller_http_respond_status(Controller *c, ControllerHttpConnection *h, const u32 status)
+{
+    u8 buffer[64];
+    HttpWriter body = http_writer_create(buffer, sizeof(buffer));
+    http_write_u64(&body, status);
+    http_write_str(&body, STR(" "));
+    http_write_str(&body, http_status_reason(status));
+    http_write_str(&body, STR("\n"));
+    controller_http_respond(c, h, status, STR("text/plain; charset=utf-8"), http_writer_str(&body));
+}
+
+internal void controller_http_request(Controller *c, ControllerHttpConnection *h, const HttpRequest *request)
+{
+    u32 status = 200;
+    HttpWriter page = http_writer_create(controller_http_page, sizeof(controller_http_page));
+    if (!str_equal(request->target, STR("/")))
+    {
+        status = 404;
+    }
+    else if (!str_equal(request->method, STR("GET")))
+    {
+        status = 405;
+    }
+    else 
+    {
+        controller_page_write(c, &page);
+        if (page.has_overflown)
+        {
+            LOG_ERROR("the page does not fit in %llu bytes", (unsigned long long)page.capacity);
+            status = 500;
+        }    
+    }
+
+    LOG_INFO("%.*s %.*s -> %u", STR_FMT(request->method), STR_FMT(request->target), status);
+    if (status == 200)
+    {
+        controller_http_respond(c, h, status, STR("text/html; charset=utf-8"), http_writer_str(&page));
+    }
+    else 
+    {
+        controller_http_respond_status(c, h, status);
+    }
 }
 
 internal void controller_http_receive(Controller *c, ControllerHttpConnection *h)
 {
-    u8 bytes[1024];
-    const ssize_t received = recv(h->sock, bytes, sizeof(bytes), 0);
+    const ssize_t received = recv(h->sock, h->request + h->length, sizeof(h->request) - h->length, 0);
     if (received < 0 && (errno == EAGAIN || errno == EINTR))
     {
         return;
     }
-    if(received > 0)
+    if (received <= 0)
     {
-        const ssize_t sent = send(h->sock, controller_http_hello, sizeof(controller_http_hello) - 1, MSG_NOSIGNAL);
-        LOG_INFO("a request of %lld bytes, answered with %lld bytes", (long long)received, (long long)sent);
+        controller_http_close(c, h);
+        return;
     }
-    controller_http_close(c, h);
+
+    h->length += (u64)received;
+    
+    HttpRequest request = {0};
+    switch (http_request_read((str){ h->request, h->length }, &request))
+    {
+        case HTTP_READ_OK:
+            controller_http_request(c, h, &request);
+            break;
+        case HTTP_READ_BAD:
+            LOG_WARN("a request that breaks the rules of HTTP/1.1 -> 400");
+            controller_http_respond_status(c, h, 400);
+            break;
+        case HTTP_READ_INCOMPLETE:
+            if (h->length == sizeof(h->request))
+            {
+                LOG_WARN("a request head of more than %llu bytes -> 431", (unsigned long long)sizeof(h->request));
+                controller_http_respond_status(c, h, 431);
+            }
+            break;
+    }
 }
 
 void controller_http_handle(Controller *c)

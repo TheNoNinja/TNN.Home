@@ -41,6 +41,9 @@ void http_test_request(void);
 void http_test_request_peices(void);
 void http_test_request_line(void);
 void http_test_request_headers(void);
+void http_test_write_head(void);
+void http_test_write_escaped(void);
+void http_test_write_overflow(void);
 
 void json_test_object(void);
 void json_test_escape(void);

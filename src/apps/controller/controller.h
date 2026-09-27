@@ -5,12 +5,14 @@
 #include "homie/homie.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
+#include "http/http.h"
 
 #define CONTROLLER_STATE_FILTER "+/5/+/$state"
 #define CONTROLLER_DEVICE_MAX 64
 #define CONTROLLER_LINE_MAX 256
 #define CONTROLLER_VALUE_MAX 64
 #define CONTROLLER_HTTP_CONNECTION_MAX 8
+#define CONTROLLER_HTTP_REQUEST_MAX KB(8)
 
 typedef struct ControllerValue ControllerValue;
 struct ControllerValue 
@@ -37,6 +39,8 @@ struct ControllerHttpConnection
     b32 is_open;
     int sock;
     u64 opened_ms;
+    u64 length;
+    u8 request[CONTROLLER_HTTP_REQUEST_MAX];
 };
 
 
@@ -65,5 +69,7 @@ b32 controller_read_input(Controller *c, b32 *is_closed);
 
 b32 controller_http_listen(Controller *c, const char *ip, u16 port);
 void controller_http_handle(Controller *c);
+
+void controller_page_write(const Controller *c, HttpWriter *w);
 
 #endif

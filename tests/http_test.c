@@ -111,3 +111,70 @@ void http_test_request_headers(void)
         TEST_EXPECT(http_request_read(bad[i], &request) == HTTP_READ_BAD);
     }
 }
+
+void http_test_write_head(void)
+{
+    u8 buffer[128];
+    HttpWriter w = http_writer_create(buffer, sizeof(buffer));
+    http_write_status(&w, 404);
+    http_write_header(&w, STR("Content-Type"), STR("text/plain"));
+    http_write_header_u64(&w, STR("Content-Length"), 14);
+    http_write_head_end(&w);
+    http_write_str(&w, STR("404 Not Found\n"));
+
+    const str expected = STR(
+        "HTTP/1.1 404 Not Found\r\n"
+        "Content-Type: text/plain\r\n"
+        "Content-Length: 14\r\n"
+        "\r\n"
+        "404 Not Found\n"
+    );
+    TEST_EXPECT(!w.has_overflown);
+    TEST_EXPECT_BYTES(w.data, w.length, expected.data, expected.length);
+    TEST_EXPECT(str_equal(http_writer_str(&w), expected));
+
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_u64(&w, 0);
+    http_write_str(&w, STR(" "));
+    http_write_u64(&w, UINT64_MAX);
+    TEST_EXPECT(str_equal(http_writer_str(&w), STR("0 18446744073709551615")));
+    
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_status(&w, 299);
+    TEST_EXPECT(str_equal(http_writer_str(&w), STR("HTTP/1.1 299 \r\n")));
+}
+
+void http_test_write_escaped(void)
+{
+    u8 buffer[128];
+    HttpWriter w = http_writer_create(buffer, sizeof(buffer));
+    http_write_escaped(&w, STR("<b>\"Ben & Jerry's\"</b>"));
+    TEST_EXPECT(str_equal(http_writer_str(&w), STR("&lt;b&gt;&quot;Ben &amp; Jerry&#39;s&quot;&lt;/b&gt;")));
+
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_escaped(&w, STR("21.5 \xC2\xB0" "C"));
+    http_write_escaped(&w, STR_EMPTY);
+    TEST_EXPECT(str_equal(http_writer_str(&w), STR("21.5 \xC2\xB0" "C")) && !w.has_overflown);
+}
+
+void http_test_write_overflow(void)
+{
+    u8 buffer[8];
+    HttpWriter w = http_writer_create(buffer, sizeof(buffer));
+    http_write_str(&w, STR("12345678"));
+    TEST_EXPECT(!w.has_overflown && w.length == 8);
+    http_write_str(&w, STR("9"));
+    TEST_EXPECT(w.has_overflown && w.length == 8);
+
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_str(&w, STR("1234"));
+    http_write_escaped(&w, STR("a<"));
+    TEST_EXPECT(w.has_overflown && str_equal(http_writer_str(&w), STR("1234a")));
+
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_u64(&w, 123456789);
+    TEST_EXPECT(w.has_overflown && w.length == 0);
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_status(&w, 200);
+    TEST_EXPECT(w.has_overflown);
+}
