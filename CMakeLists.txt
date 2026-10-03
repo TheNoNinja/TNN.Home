@@ -71,6 +71,7 @@ target_include_directories(tnn_timer_lateness PRIVATE src)
 add_executable(tnn_controller
     src/apps/controller/controller_commands.c
     src/apps/controller/controller_devices.c
+    src/apps/controller/controller_events.c
     src/apps/controller/controller_homie.c
     src/apps/controller/controller_http.c
     src/apps/controller/controller_main.c

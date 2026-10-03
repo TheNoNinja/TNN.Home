@@ -10,7 +10,6 @@
 
 #define CONTROLLER_HTTP_BACKLOG 16
 #define CONTROLLER_HTTP_HEAD_MAX 256
-#define CONTROLLER_HTTP_BODY_MAX KB(1024)
 
 internal u8 controller_http_response[CONTROLLER_HTTP_HEAD_MAX + CONTROLLER_HTTP_BODY_MAX];
 internal u8 controller_http_page[CONTROLLER_HTTP_BODY_MAX];
@@ -45,6 +44,8 @@ b32 controller_http_listen(Controller *c, const char* ip, const u16 port)
 
     fcntl(c->http_sock, F_SETFL, fcntl(c->http_sock, F_GETFL) | O_NONBLOCK);
     loop_watch(&c->loop, c->http_sock);
+    c->http_ip = str_from_cstr(ip);
+    c->http_port = port;
     LOG_INFO("listening on http://%s:%d/", ip, port);
     return 1;
 
@@ -54,16 +55,21 @@ error_handling:
     return 0;
 }
 
-internal void controller_http_close(Controller *c, ControllerHttpConnection *h)
+void controller_http_close(Controller *c, ControllerHttpConnection *h)
 {
+    if (h->is_stream)
+    {
+        LOG_INFO("an event stream closed");
+    }
     loop_unwatch(&c->loop, h->sock);
     close(h->sock);
     h->is_open = 0;
+    h->is_stream = 0;
 }
 
 internal ControllerHttpConnection *controller_http_slot(Controller *c)
 {
-    ControllerHttpConnection *oldest = &c->http[0];
+    ControllerHttpConnection *oldest = 0;
     for (u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
     {
         ControllerHttpConnection *h = &c->http[i];
@@ -71,15 +77,60 @@ internal ControllerHttpConnection *controller_http_slot(Controller *c)
         {
             return h;
         }
-        if (h->opened_ms < oldest->opened_ms)
+        if (!h->is_stream && (!oldest || h->opened_ms < oldest->opened_ms))
         {
             oldest = h;
         }
+    }
+    if (!oldest)
+    {
+        return 0;
     }
 
     LOG_WARN("%d conenctions are open: the oldest one is closing", CONTROLLER_HTTP_CONNECTION_MAX);
     controller_http_close(c, oldest);
     return oldest;
+}
+
+internal void controller_http_send(const int sock, const u32 status, const str allow, const str content_type, const str body)
+{
+    HttpWriter w = http_writer_create(controller_http_response, sizeof(controller_http_response));
+    http_write_status(&w, status);
+    if (status != 204)
+    {
+        http_write_header(&w, STR("Content-Type"), content_type);
+        http_write_header_u64(&w, STR("Content-Length"), body.length);
+    }
+    http_write_header(&w, STR("Cache-Control"), STR("no-store"));
+    http_write_header(&w, STR("Connection"), STR("close"));
+    if (status == 405)
+    {
+        http_write_header(&w, STR("Allow"), allow);
+    }
+    http_write_head_end(&w);
+    http_write_str(&w, body);
+    ASSERT(!w.has_overflown);
+
+    const ssize_t sent = send(sock, w.data, w.length, MSG_NOSIGNAL);
+    if (sent < 0)
+    {
+        LOG_WARN("send: %s", strerror(errno));
+    } 
+    else if ((u64)sent != w.length)
+    {
+        LOG_WARN("send: only %lld of %llu bytes went out (the buffer is full)", (long long)sent, (unsigned long long)w.length);
+    }
+}
+
+internal void controller_http_send_status(const int sock, const u32 status, const str allow)
+{
+    u8 buffer[64];
+    HttpWriter body = http_writer_create(buffer, sizeof(buffer));
+    http_write_u64(&body, status);
+    http_write_str(&body, STR(" "));
+    http_write_str(&body, http_status_reason(status));
+    http_write_str(&body, STR("\n"));
+    controller_http_send(sock, status, allow, STR("test/plain; charset=utf-8"), http_writer_str(&body));
 }
 
 internal void controller_http_accept(Controller *c)
@@ -96,6 +147,13 @@ internal void controller_http_accept(Controller *c)
     fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) | O_NONBLOCK);
 
     ControllerHttpConnection *h = controller_http_slot(c);
+    if (!h)
+    {
+        LOG_WARN("%d event streams are open: a new connection gets 503", CONTROLLER_HTTP_CONNECTION_MAX);
+        controller_http_send_status(sock, 503, STR_EMPTY);
+        close(sock);
+        return;
+    }
     h->is_open = 1;
     h->sock = sock;
     h->opened_ms = c->loop.now_ms;
@@ -103,49 +161,14 @@ internal void controller_http_accept(Controller *c)
     loop_watch(&c->loop, sock);
 }
 
-internal void controller_http_respond(Controller *c, ControllerHttpConnection *h, const u32 status, const str content_type, const str body)
-{
-    HttpWriter w = http_writer_create(controller_http_response, sizeof(controller_http_response));
-    http_write_status(&w, status);
-    http_write_header(&w, STR("Content-Type"), content_type);
-    http_write_header_u64(&w, STR("Content-Length"), body.length);
-    http_write_header(&w, STR("Cache-Control"), STR("no-store"));
-    http_write_header(&w, STR("Connection"), STR("Close"));
-    if (status == 405)
-    {
-        http_write_header(&w, STR("Allow"), STR("GET"));
-    }
-    http_write_head_end(&w);
-    http_write_str(&w, body);
-    ASSERT(!w.has_overflown);
-    const ssize_t sent = send(h->sock, w.data, w.length, MSG_NOSIGNAL);
-    if (sent < 0)
-    {
-        LOG_WARN("http send: %s", strerror(errno));
-    }
-    else if ((u64)sent != w.length)
-    {
-        LOG_WARN("http send: only %lld of %llu bytes went out (the send buffer is full)", (long long) sent, (unsigned long long)w.length);
-    }
-    controller_http_close(c, h);
-}
-
-internal void controller_http_respond_status(Controller *c, ControllerHttpConnection *h, const u32 status)
-{
-    u8 buffer[64];
-    HttpWriter body = http_writer_create(buffer, sizeof(buffer));
-    http_write_u64(&body, status);
-    http_write_str(&body, STR(" "));
-    http_write_str(&body, http_status_reason(status));
-    http_write_str(&body, STR("\n"));
-    controller_http_respond(c, h, status, STR("text/plain; charset=utf-8"), http_writer_str(&body));
-}
-
 internal void controller_http_request(Controller *c, ControllerHttpConnection *h, const HttpRequest *request)
 {
+    const b32 is_page = str_equal(request->target, STR("/"));
+    const b32 is_events = str_equal(request->target, STR("/events"));
+
     u32 status = 200;
     HttpWriter page = http_writer_create(controller_http_page, sizeof(controller_http_page));
-    if (!str_equal(request->target, STR("/")))
+    if (!is_page && !is_events)
     {
         status = 404;
     }
@@ -153,7 +176,7 @@ internal void controller_http_request(Controller *c, ControllerHttpConnection *h
     {
         status = 405;
     }
-    else 
+    else if (is_page)
     {
         controller_page_write(c, &page);
         if (page.has_overflown)
@@ -164,18 +187,34 @@ internal void controller_http_request(Controller *c, ControllerHttpConnection *h
     }
 
     LOG_INFO("%.*s %.*s -> %u", STR_FMT(request->method), STR_FMT(request->target), status);
-    if (status == 200)
+    if (status == 200 && is_events)
     {
-        controller_http_respond(c, h, status, STR("text/html; charset=utf-8"), http_writer_str(&page));
+        controller_events_open(c, h);
+        return;
+    }
+    else if(status == 200)
+    {
+        controller_http_send(h->sock, status, STR_EMPTY, STR("text/html; charset=utf-8"), http_writer_str(&page));
     }
     else 
     {
-        controller_http_respond_status(c, h, status);
+        controller_http_send_status(h->sock, status, STR("GET"));
     }
+    controller_http_close(c, h);
 }
 
 internal void controller_http_receive(Controller *c, ControllerHttpConnection *h)
 {
+    if (h->is_stream)
+    {
+        const ssize_t received = recv(h->sock, h->request, sizeof(h->request), 0);
+        if (received == 0 || (received < 0 && errno == EAGAIN && errno != EINTR))
+        {
+            controller_http_close(c, h);
+        }
+        return;
+    }
+
     const ssize_t received = recv(h->sock, h->request + h->length, sizeof(h->request) - h->length, 0);
     if (received < 0 && (errno == EAGAIN || errno == EINTR))
     {
@@ -197,13 +236,14 @@ internal void controller_http_receive(Controller *c, ControllerHttpConnection *h
             break;
         case HTTP_READ_BAD:
             LOG_WARN("a request that breaks the rules of HTTP/1.1 -> 400");
-            controller_http_respond_status(c, h, 400);
+            controller_http_send_status(h->sock, 400, STR_EMPTY);
+            controller_http_close(c, h);
             break;
         case HTTP_READ_INCOMPLETE:
             if (h->length == sizeof(h->request))
             {
                 LOG_WARN("a request head of more than %llu bytes -> 431", (unsigned long long)sizeof(h->request));
-                controller_http_respond_status(c, h, 431);
+                controller_http_send_status(h->sock, 431, STR_EMPTY);
             }
             break;
     }

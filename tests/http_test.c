@@ -178,3 +178,23 @@ void http_test_write_overflow(void)
     http_write_status(&w, 200);
     TEST_EXPECT(w.has_overflown);
 }
+
+void http_test_write_event(void)
+{
+    u8 buffer[128];
+    HttpWriter w = http_writer_create(buffer, sizeof(buffer));
+    http_write_event(&w, STR("<p>\nhi</p>"));
+    TEST_EXPECT(str_equal(http_writer_str(&w), STR("data: <p>\ndata: hi</p>\n\n")));
+
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_event(&w, STR("a\r\nb\rc\n"));
+    TEST_EXPECT(str_equal(http_writer_str(&w), STR("data: a\ndata: b\ndata: c\ndata: \n\n")));
+
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_event(&w, STR("x\rretry: 1"));
+    TEST_EXPECT(str_equal(http_writer_str(&w), STR("data: x\ndata: retry: 1\n\n")));
+
+    w = http_writer_create(buffer, sizeof(buffer));
+    http_write_event(&w, STR_EMPTY);
+    TEST_EXPECT(str_equal(http_writer_str(&w), STR("data: \n\n")));
+}

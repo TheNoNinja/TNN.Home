@@ -55,6 +55,7 @@ str http_status_reason(const u32 status)
         case 418: return STR("I'm a teapot");
         case 431: return STR("Request Header Fields Too Large");
         case 500: return STR("Internal Server Error");
+        case 503: return STR("Service Unavailable");
         default: return STR_EMPTY;
     }
 }
@@ -103,4 +104,29 @@ void http_write_escaped(HttpWriter *w, const str text)
             default: http_write_str(w, (str){ text.data + i, 1 }); break;
         }
     }
+}
+
+void http_write_event(HttpWriter *w, const str data)
+{
+    u64 start = 0;
+    for (u64 i = 0; i <= data.length; i++)
+    {
+        const b32 is_end = i == data.length;
+        if (!is_end && data.data[i] != '\r' && data.data[i] != '\n')
+        {
+            continue;
+        }
+        http_write_str(w, STR("data: "));
+        if (i > start)
+        {
+            http_write_str(w, (str){ data.data + start, i - start });
+        }
+        http_write_str(w, STR("\n"));
+        if (!is_end && data.data[i] == '\r' && i + 1 < data.length && data.data[i + 1] == '\n')
+        {
+            i += 1;
+        }
+        start = i + 1;
+    }
+    http_write_str(w, STR("\n"));
 }

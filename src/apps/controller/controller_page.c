@@ -22,16 +22,26 @@ internal void controller_page_value(HttpWriter *w, const ControllerDevice *d, co
     http_write_str(w, STR("</span>"));
 }
 
-internal void controller_page_device(HttpWriter *w, const ControllerDevice *d)
+internal void controller_page_section(HttpWriter *w, const ControllerDevice *d)
 {
-    http_write_str(w, STR("<h2>"));
+    http_write_str(w, STR("<section id =\""));
+    http_write_str(w, homie_id_str(&d->domain));
+    http_write_str(w, STR("/"));
+    http_write_str(w, homie_id_str(&d->id));
+    http_write_str(w, STR("\">"));
+}
+
+void controller_page_device(HttpWriter *w, const ControllerDevice *d)
+{
+    controller_page_section(w, d);
+    http_write_str(w, STR("\n<h2>"));
     http_write_str(w, homie_id_str(&d->id));
     http_write_str(w, STR(" <small>"));
     http_write_str(w, homie_state_name(d->state));
     http_write_str(w, STR("</small></h2>\n"));
     if (!d->is_described)
     {
-        http_write_str(w, STR("<p>no $description yet</p>\n"));
+        http_write_str(w, STR("<p>no $description yet</p>\n</section>\n"));
         return;
     }
     http_write_str(w, STR("<table>\n"));
@@ -49,7 +59,13 @@ internal void controller_page_device(HttpWriter *w, const ControllerDevice *d)
         controller_page_value(w, d, p, &d->values[i]);
         http_write_str(w, STR("</td></tr>\n"));
     }
-    http_write_str(w, STR("</table>\n"));
+    http_write_str(w, STR("</table>\n</section>\n"));
+}
+
+void controller_page_removed(HttpWriter *w, const ControllerDevice *d)
+{
+    controller_page_section(w, d);
+    http_write_str(w, STR("</section>\n"));
 }
 
 void controller_page_write(const Controller *c, HttpWriter *w)
@@ -70,20 +86,19 @@ void controller_page_write(const Controller *c, HttpWriter *w)
         "</head>\n"
         "<body>\n"
         "<h1>TNN.Home</h1>\n"
+        "<main id=\"devices\">\n"
     ));
-    u32 count = 0;
     for (u32 i = 0; i < CONTROLLER_DEVICE_MAX; i++)
     {
         const ControllerDevice *d = &c->devices[i];
-        if (d->id.length == 0)
+        if (d->id.length > 0)
         {
-            continue;
+            controller_page_device(w, d);
         }
-        controller_page_device(w, d);
-        count += 1;
     }
-    http_write_str(w, STR("<p>"));
-    http_write_u64(w, count);
-    http_write_str(w, count == 1 ? STR(" device") : STR(" devices"));
-    http_write_str(w, STR("</p>\n</body>\n</html>\n"));
+    http_write_str(w, STR(
+        "</main>\n"
+        "</body>\n"
+        "</html>\n")
+    );
 }

@@ -23,6 +23,7 @@ void http_write_header(HttpWriter *w, str name, str value);
 void http_write_header_u64(HttpWriter *w, str name, u64 value);
 void http_write_head_end(HttpWriter *w);
 void http_write_escaped(HttpWriter *w, str text);
+void http_write_event(HttpWriter *w, str data);
 
 str http_status_reason(u32 status);
 #endif

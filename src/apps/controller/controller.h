@@ -13,6 +13,7 @@
 #define CONTROLLER_VALUE_MAX 64
 #define CONTROLLER_HTTP_CONNECTION_MAX 8
 #define CONTROLLER_HTTP_REQUEST_MAX KB(8)
+#define CONTROLLER_HTTP_BODY_MAX KB(1024)
 
 typedef struct ControllerValue ControllerValue;
 struct ControllerValue 
@@ -37,6 +38,7 @@ typedef struct ControllerHttpConnection ControllerHttpConnection;
 struct ControllerHttpConnection 
 {
     b32 is_open;
+    b32 is_stream;
     int sock;
     u64 opened_ms;
     u64 length;
@@ -53,6 +55,8 @@ struct Controller
     u8 line[CONTROLLER_LINE_MAX];
     u64 line_length;
     int http_sock;
+    str http_ip;
+    u16 http_port;
     ControllerHttpConnection http[CONTROLLER_HTTP_CONNECTION_MAX];
 };
 
@@ -69,7 +73,12 @@ b32 controller_read_input(Controller *c, b32 *is_closed);
 
 b32 controller_http_listen(Controller *c, const char *ip, u16 port);
 void controller_http_handle(Controller *c);
+void controller_http_close(Controller *c, ControllerHttpConnection *h);
+
+void controller_events_open(Controller *c, ControllerHttpConnection *h);
 
 void controller_page_write(const Controller *c, HttpWriter *w);
+void controller_page_device(HttpWriter *w, const ControllerDevice *d);
+void controller_page_removed(HttpWriter *w, const ControllerDevice *d);
 
 #endif

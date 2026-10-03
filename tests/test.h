@@ -44,6 +44,7 @@ void http_test_request_headers(void);
 void http_test_write_head(void);
 void http_test_write_escaped(void);
 void http_test_write_overflow(void);
+void http_test_write_event(void);
 
 void json_test_object(void);
 void json_test_escape(void);
