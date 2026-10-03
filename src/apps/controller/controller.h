@@ -76,6 +76,9 @@ void controller_http_handle(Controller *c);
 void controller_http_close(Controller *c, ControllerHttpConnection *h);
 
 void controller_events_open(Controller *c, ControllerHttpConnection *h);
+void controller_events_device(Controller *c, const ControllerDevice *d);
+void controller_events_removed(Controller *c, const ControllerDevice *d);
+void controller_events_heartbeat(Controller *c);
 
 void controller_page_write(const Controller *c, HttpWriter *w);
 void controller_page_device(HttpWriter *w, const ControllerDevice *d);

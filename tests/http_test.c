@@ -64,7 +64,7 @@ void http_test_request_line(void)
         STR("GET /a\t/b HTTP/1.1\r\nHost: x\r\n\r\n"),
         STR("GET / HTTP/1.0\r\nHost: x\r\n\r\n"),
         STR("GET / http/1.1\r\nHost: x\r\n\r\n"),
-        STR("GET / hTTP/1.1\nHost: x\r\n\r\n"),
+        STR("GET / HTTP/1.1\nHost: x\r\n\r\n"),
         STR("GET /caf\xC3\xA9 HTTP/1.1\r\nHost: x\r\n\r\n"),
         STR("\r\n\r\n"),
     };
@@ -81,12 +81,15 @@ void http_test_request_headers(void)
         "GET / HTTP/1.1\r\n"
         "X-Anything: a value, with (signs) and \t a tab\r\n"
         "hOsT:example.org  \r\n"
+        "origin: example.org\r\n"
         "CONTENT-LENGTH: \t 5\r\n"
         "\r\n"
         "hello"
     );
     TEST_EXPECT(http_request_read(loose, &request) == HTTP_READ_OK);
     TEST_EXPECT(str_equal(request.host, STR("example.org")) && request.content_length == 5);
+    TEST_EXPECT(http_request_read(STR("GET / HTTP/1.1\r\nHost: x\r\n\r\n"), &request) == HTTP_READ_OK);
+    TEST_EXPECT(request.origin.length == 0);
 
     const str bad[] = {
         STR("GET / HTTP/1.1\r\n\r\n"),
@@ -105,6 +108,8 @@ void http_test_request_headers(void)
         STR("GET / HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\nContent-Length: 5\r\n\r\n"),
         STR("GET / HTTP/1.1\r\nHost: x\r\nContent-Length: 18446744073709551616\r\n\r\n"),
         STR("GET / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n"),
+        STR("GET / HTTP/1.1\r\nHost: x\r\nOrigin: https://a\r\nOrigin: https://b\r\n\r\n"),
+        STR("GET / HTTP/1.1\r\nHost: x\r\nOrigin: \r\n\r\n"),
     };
     for (u32 i = 0; i < ARRAY_COUNT(bad); i++)
     {
@@ -119,6 +124,7 @@ void http_test_write_head(void)
     http_write_status(&w, 404);
     http_write_header(&w, STR("Content-Type"), STR("text/plain"));
     http_write_header_u64(&w, STR("Content-Length"), 14);
+    http_write_header(&w, STR("Origin"), STR("example.org"));
     http_write_head_end(&w);
     http_write_str(&w, STR("404 Not Found\n"));
 
@@ -126,6 +132,7 @@ void http_test_write_head(void)
         "HTTP/1.1 404 Not Found\r\n"
         "Content-Type: text/plain\r\n"
         "Content-Length: 14\r\n"
+        "Origin: example.org\r\n"
         "\r\n"
         "404 Not Found\n"
     );

@@ -33,11 +33,12 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
     ASSERT(http_fuzz_word(request.method, data, head));
     ASSERT(http_fuzz_word(request.target, data, head) && request.target.data[0] == '/');
     ASSERT(http_fuzz_word(request.host, data, head));
+    ASSERT(request.origin.length == 0 || http_fuzz_word(request.origin, data, head));
 
     HttpRequest again = {0};
-    ASSERT(http_request_read((str){ (u8 *)data, size }, &again) == HTTP_READ_OK);
+    ASSERT(http_request_read((str){ (u8 *)data, head }, &again) == HTTP_READ_OK);
     ASSERT(again.head_length == head && again.content_length == request.content_length);
-    ASSERT(str_equal(again.method, request.method) && str_equal(again.target, again.target) && str_equal(again.host, request.host));
+    ASSERT(str_equal(again.method, request.method) && str_equal(again.target, request.target) && str_equal(again.host, request.host) && str_equal(again.origin, request.origin));
     ASSERT(http_request_read((str){ (u8 *)data, head - 1 }, &again) == HTTP_READ_INCOMPLETE);
     return 0;
 }

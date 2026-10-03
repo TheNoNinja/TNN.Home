@@ -131,6 +131,7 @@ HttpRead http_request_read(const str bytes, HttpRequest *request)
 
     b32 has_host = 0;
     b32 has_length = 0;
+    b32 has_origin = 0;
     while(http_next_line(&lines, &line))
     {
         str name = STR_EMPTY;
@@ -164,6 +165,15 @@ HttpRead http_request_read(const str bytes, HttpRequest *request)
         else if (http_name_is(name, STR("transfer-encoding")))
         {
             return HTTP_READ_BAD;
+        }
+        else if (http_name_is(name, STR("origin")))
+        {
+            if (has_origin || value.length == 0 || !http_visible(value))
+            {
+                return HTTP_READ_BAD;
+            }
+            has_origin = 1;
+            r.origin = value;
         }
     }
 

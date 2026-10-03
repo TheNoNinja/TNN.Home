@@ -25,25 +25,26 @@ void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
         return;
     }
     ControllerValue *v = &d->values[index];
+    const HomieProperty *p = &d->description.properties[index];
     if(payload.length > CONTROLLER_VALUE_MAX)
     {
         LOG_WARN("%.*s: a value of %llu bytes for %.*s, more than %d: ignored", STR_FMT(t->device), (unsigned long long)payload.length, STR_FMT(t->rest), CONTROLLER_VALUE_MAX);
         v->is_known = 0;
-        return;
-    }
-
-    const HomieProperty *p = &d->description.properties[index];
-    if (payload.length > 0 && !homie_value_valid(p->datatype, payload))
+    } 
+    else if (payload.length > 0 && !homie_value_valid(p->datatype, payload))
     {
         const str datatype = homie_datatype_name(p->datatype);
         LOG_WARN("%.*s: '%.*s' is not a valid %.*s for %.*s: ignored", STR_FMT(t->device), STR_FMT(payload), STR_FMT(datatype), STR_FMT(t->rest));
         v->is_known = 0;
-        return;
     }
-    memcpy(v->bytes, payload.data, payload.length);
-    v->length = payload.length;
-    v->is_known = payload.length > 0;
-    printf("%.*s: %.*s = %.*s\n", STR_FMT(t->device), STR_FMT(t->rest), STR_FMT(payload));
+    else 
+    {
+        memcpy(v->bytes, payload.data, payload.length);
+        v->length = payload.length;
+        v->is_known = payload.length > 0;
+        printf("%.*s: %.*s = %.*s\n", STR_FMT(t->device), STR_FMT(t->rest), STR_FMT(payload));
+    }
+    controller_events_device(c, d);
 }
 
 b32 controller_set(Controller *c, const str device, const str property, const str value)

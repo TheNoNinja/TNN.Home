@@ -13,6 +13,7 @@
 #define CONTROLLER_TX_MAX        256
 #define CONTROLLER_RX_MAX        KB(64)
 #define CONTROLLER_RX_PACKET_MAX KB(64)
+#define CONTROLLER_HEARTBEAT 15
 
 internal u8 controller_rx_buffer[CONTROLLER_RX_MAX];
 internal u8 controller_tx_buffer[CONTROLLER_TX_MAX];
@@ -41,6 +42,8 @@ internal b32 controller_run(Controller *c)
 {
     const u32 ping = loop_timer_add(&c->loop);
     loop_timer_start(&c->loop, ping, CONTROLLER_KEEP_ALIVE * 1000);
+    const u32 heartbeat = loop_timer_add(&c->loop);
+    loop_timer_start(&c->loop, heartbeat, CONTROLLER_HEARTBEAT * 1000);
     loop_watch(&c->loop, STDIN_FILENO);
     loop_watch(&c->loop, c->client.sock);
     
@@ -75,6 +78,12 @@ internal b32 controller_run(Controller *c)
                 return 0;
             }
             loop_timer_start(&c->loop, ping, CONTROLLER_KEEP_ALIVE * 1000);
+        }
+
+        if (loop_timer_fired(&c->loop, heartbeat))
+        {
+            controller_events_heartbeat(c);
+            loop_timer_start(&c->loop, heartbeat, CONTROLLER_KEEP_ALIVE * 1000);
         }
     }
 

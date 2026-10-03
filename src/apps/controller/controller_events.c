@@ -26,10 +26,16 @@ internal void controller_events_send(Controller *c, ControllerHttpConnection *h,
     }
 }
 
-internal void controller_events_write_device(HttpWriter *w, const ControllerDevice *d)
+internal void controller_events_write_device(HttpWriter *w, const ControllerDevice *d, const b32 is_removed)
 {
     HttpWriter section = http_writer_create(controller_events_section, sizeof(controller_events_section));
-    controller_page_device(&section, d);
+    if (is_removed)
+    {
+        controller_page_removed(&section, d);
+    }
+    else {
+        controller_page_device(&section, d);
+    }
     ASSERT(!section.has_overflown);
     http_write_event(w, http_writer_str(&section));
 }
@@ -51,7 +57,7 @@ void controller_events_open(Controller *c, ControllerHttpConnection *h)
         const ControllerDevice *d = &c->devices[i];
         if (d->id.length > 0)
         {
-            controller_events_write_device(&w, d);
+            controller_events_write_device(&w, d, 0);
         }
     }
     if (w.has_overflown)
@@ -62,4 +68,53 @@ void controller_events_open(Controller *c, ControllerHttpConnection *h)
     }
     h->is_stream = 1;
     controller_events_send(c, h, http_writer_str(&w));
+}
+
+internal void controller_events_broadcast(Controller *c, const ControllerDevice *d, const b32 is_removed)
+{
+    b32 has_stream = 0;
+    for(u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
+    {
+        if(c->http[i].is_open)
+        {
+            has_stream = 1;
+            break;
+        }
+    }
+    if(!has_stream)
+    {
+        return;
+    }
+    HttpWriter w = http_writer_create(controller_events_buffer, sizeof(controller_events_buffer));
+    controller_events_write_device(&w, d, is_removed);
+    for (u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
+    {
+        ControllerHttpConnection *h = &c->http[i];
+        if (h->is_stream)
+        {
+            controller_events_send(c, h, http_writer_str(&w));
+        }
+    }
+}
+
+void controller_events_device(Controller *c, const ControllerDevice *d)
+{
+    controller_events_broadcast(c, d, 0);
+}
+
+void controller_events_removed(Controller *c, const ControllerDevice *d)
+{
+    controller_events_broadcast(c, d, 1);
+}
+
+void controller_events_heartbeat(Controller *c)
+{
+    for (u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
+    {
+        ControllerHttpConnection *h = &c->http[i];
+        if (h->is_stream)
+        {
+            controller_events_send(c, h, STR(": heartbeat\n\n"));
+        }
+    }
 }

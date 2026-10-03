@@ -48,6 +48,7 @@ internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str p
             return 1;
         }
         printf("%.*s: removed\n", STR_FMT(t->device));
+        controller_events_removed(c, d);
         const b32 ok = controller_unsubscribe_device(c, d);
         *d = (ControllerDevice){0};
         return ok;
@@ -83,6 +84,7 @@ internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str p
             return 0;
         }
     }
+    controller_events_device(c, d);
 
     // This fixes a problem with NanoMQ
     // TODO(tnn): I'm considering using mosquitto exclusively and not supporting NanoMQ altogether
@@ -108,6 +110,7 @@ internal b32 controller_on_description(Controller *c, const HomieTopic *t, const
         }
         d->is_described = 0;
         d->description = (HomieDescription){0};
+        controller_events_device(c, d);
         return 1;
     }
 
@@ -126,6 +129,7 @@ internal b32 controller_on_description(Controller *c, const HomieTopic *t, const
     memset(d->values, 0, sizeof(d->values));
     const u32 count = description.property_count;
     printf("%.*s: $description version %lld, %u propert%s\n", STR_FMT(t->device), (long long)description.version, count, count == 1 ? "y" : "ies");
+    controller_events_device(c, d);
     return controller_subscribe_values(c, d);
 }
 
