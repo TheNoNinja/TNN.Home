@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-internal str controller_next_word(str *line)
+str controller_next_word(str *line)
 {
     str word = STR_EMPTY;
     str rest = STR_EMPTY;
@@ -29,7 +29,7 @@ internal b32 controller_command(Controller *c, const str line)
             printf("usage: set <device> <node>/<property> <value>\n");
             return 1;
         }
-        return controller_set(c, device, property, rest);
+        return controller_set(c, device, property, rest) != CONTROLLER_SET_LOST;
     }
     else if (line.length > 0)
     {

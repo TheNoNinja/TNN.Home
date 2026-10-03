@@ -161,20 +161,76 @@ internal void controller_http_accept(Controller *c)
     loop_watch(&c->loop, sock);
 }
 
-internal void controller_http_request(Controller *c, ControllerHttpConnection *h, const HttpRequest *request)
+internal b32 controller_http_host_valid(const Controller *c, const str host)
+{
+    str name = STR_EMPTY;
+    str digits = STR_EMPTY;
+    u64 port = 0;
+    if (!str_cut(host, ':', &name, &digits) || !str_to_u64(digits, &port) || port != c->http_port)
+    {
+        return 0;
+    }
+    return str_equal(name, c->http_ip) || str_equal(name, STR("localhost"));
+}
+
+internal b32 controller_http_origin_valid(const HttpRequest *request)
+{
+    const str scheme = STR("http://");
+    const str origin = request->origin;
+    if (origin.length == 0)
+    {
+        return 1;
+    }
+    return origin.length == scheme.length + request->host.length && str_equal((str){ origin.data, scheme.length }, scheme) && str_equal((str){origin.data + scheme.length, request->host.length }, request->host);
+}
+
+internal u32 controller_http_set(Controller *c, const HttpRequest *request, const str body, b32 *is_connected)
+{
+    if (!controller_http_origin_valid(request))
+    {
+        return 403;
+    }
+    str rest = body;
+    const str device = controller_next_word(&rest);
+    const str property = controller_next_word(&rest);
+    if (device.length == 0 || property.length == 0 || rest.length == 0)
+    {
+        return 400;
+    }
+    const ControllerSetResult set_result = controller_set(c, device, property, rest);
+    if (set_result == CONTROLLER_SET_LOST)
+    {
+        *is_connected = 0;
+        return 500;
+    }
+    return set_result == CONTROLLER_SET_SENT ? 204 : 422;
+}
+
+internal b32 controller_http_request(Controller *c, ControllerHttpConnection *h, const HttpRequest *request, const str body)
 {
     const b32 is_page = str_equal(request->target, STR("/"));
     const b32 is_events = str_equal(request->target, STR("/events"));
+    const b32 is_set = str_equal(request->target, STR("/set"));
+    const str method = is_set ? STR("POST") : STR("GET");
 
     u32 status = 200;
+    b32 is_connected = 1;
     HttpWriter page = http_writer_create(controller_http_page, sizeof(controller_http_page));
-    if (!is_page && !is_events)
+    if (!controller_http_host_valid(c, request->host))
+    {
+        status = 403;
+    } 
+    else if (!is_page && !is_events && !is_set)
     {
         status = 404;
     }
-    else if (!str_equal(request->method, STR("GET")))
+    else if (!str_equal(request->method, method))
     {
         status = 405;
+    }
+    else if (is_set)
+    {
+        status = controller_http_set(c, request, body, &is_connected);
     }
     else if (is_page)
     {
@@ -190,20 +246,25 @@ internal void controller_http_request(Controller *c, ControllerHttpConnection *h
     if (status == 200 && is_events)
     {
         controller_events_open(c, h);
-        return;
+        return 1;
     }
     else if(status == 200)
     {
         controller_http_send(h->sock, status, STR_EMPTY, STR("text/html; charset=utf-8"), http_writer_str(&page));
     }
+    else if (status == 204)
+    {
+        controller_http_send(h->sock, status, STR_EMPTY, STR_EMPTY, STR_EMPTY);
+    }
     else 
     {
-        controller_http_send_status(h->sock, status, STR("GET"));
+        controller_http_send_status(h->sock, status, method);
     }
     controller_http_close(c, h);
+    return is_connected;
 }
 
-internal void controller_http_receive(Controller *c, ControllerHttpConnection *h)
+internal b32 controller_http_receive(Controller *c, ControllerHttpConnection *h)
 {
     if (h->is_stream)
     {
@@ -212,18 +273,18 @@ internal void controller_http_receive(Controller *c, ControllerHttpConnection *h
         {
             controller_http_close(c, h);
         }
-        return;
+        return 1;
     }
 
     const ssize_t received = recv(h->sock, h->request + h->length, sizeof(h->request) - h->length, 0);
     if (received < 0 && (errno == EAGAIN || errno == EINTR))
     {
-        return;
+        return 1;
     }
     if (received <= 0)
     {
         controller_http_close(c, h);
-        return;
+        return 1;
     }
 
     h->length += (u64)received;
@@ -232,8 +293,21 @@ internal void controller_http_receive(Controller *c, ControllerHttpConnection *h
     switch (http_request_read((str){ h->request, h->length }, &request))
     {
         case HTTP_READ_OK:
-            controller_http_request(c, h, &request);
-            break;
+        {
+            const u64 length = request.content_length;
+            if (length > CONTROLLER_LINE_MAX || request.head_length + length > sizeof(h->request))
+            {
+                LOG_WARN("a request body of %llu bytes -> 413", (unsigned long long)length);
+                controller_http_send_status(h->sock, 413, STR_EMPTY);
+                controller_http_close(c, h);
+                break;
+            }
+            if (h->length < request.head_length + length)
+            {
+                break;
+            }
+            return controller_http_request(c, h, &request, (str){ h->request + request.head_length, length });
+        }
         case HTTP_READ_BAD:
             LOG_WARN("a request that breaks the rules of HTTP/1.1 -> 400");
             controller_http_send_status(h->sock, 400, STR_EMPTY);
@@ -247,20 +321,23 @@ internal void controller_http_receive(Controller *c, ControllerHttpConnection *h
             }
             break;
     }
+    return 1;
 }
 
-void controller_http_handle(Controller *c)
+b32 controller_http_handle(Controller *c)
 {
     for (u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
     {
         ControllerHttpConnection *h = &c->http[i];
-        if(h->is_open && loop_readable(&c->loop, h->sock))
+        if(h->is_open && loop_readable(&c->loop, h->sock) && !controller_http_receive(c, h))
         {
-            controller_http_receive(c, h);
+            return 0;
         }
     }
     if (loop_readable(&c->loop, c->http_sock))
     {
         controller_http_accept(c);
     }
+    return 1;
 }
+

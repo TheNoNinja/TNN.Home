@@ -49,10 +49,14 @@ str http_status_reason(const u32 status)
     switch (status)
     {
         case 200: return STR("OK");
+        case 204: return STR("No Content");
         case 400: return STR("Bad Request");
+        case 403: return STR("Forbidden");
         case 404: return STR("Not Found");
         case 405: return STR("Method Not Allowed");
+        case 413: return STR("Content Too Large");
         case 418: return STR("I'm a teapot");
+        case 422: return STR("Unprocessable Content");
         case 431: return STR("Request Header Fields Too Large");
         case 500: return STR("Internal Server Error");
         case 503: return STR("Service Unavailable");

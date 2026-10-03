@@ -69,7 +69,10 @@ internal b32 controller_run(Controller *c)
             return 0;
         }
 
-        controller_http_handle(c);
+        if (!controller_http_handle(c))
+        {
+            return 0;
+        }
         
         if (loop_timer_fired(&c->loop, ping))
         {

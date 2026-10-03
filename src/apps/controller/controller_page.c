@@ -22,6 +22,21 @@ internal void controller_page_value(HttpWriter *w, const ControllerDevice *d, co
     http_write_str(w, STR("</span>"));
 }
 
+internal void controller_page_toggle(HttpWriter *w, const ControllerDevice *d, const HomieProperty *p, const ControllerValue *v)
+{
+    const b32 is_on = v->is_known && str_equal((str){ (u8 *)v->bytes, v->length }, STR("true"));
+    http_write_str(w, STR("<button data-set=\""));
+    http_write_str(w, homie_id_str(&d->id));
+    http_write_str(w, STR(" "));
+    http_write_str(w, homie_id_str(&p->node));
+    http_write_str(w, STR("/"));
+    http_write_str(w, homie_id_str(&p->id));
+    http_write_str(w, is_on ? STR(" false") : STR(" true"));
+    http_write_str(w, d->state == HOMIE_STATE_READY ? STR("\">") : STR("\" disabled>"));
+    http_write_str(w, is_on ? STR("turn off") : STR("turn on"));
+    http_write_str(w, STR("</button>"));
+}
+
 internal void controller_page_section(HttpWriter *w, const ControllerDevice *d)
 {
     http_write_str(w, STR("<section id =\""));
@@ -57,6 +72,11 @@ void controller_page_device(HttpWriter *w, const ControllerDevice *d)
         http_write_str(w, p->is_settable ? STR(", settable") : STR_EMPTY);
         http_write_str(w, STR("</td><td>"));
         controller_page_value(w, d, p, &d->values[i]);
+        http_write_str(w, STR("</td><td>"));
+        if (p->is_settable && p->datatype == HOMIE_DATATYPE_BOOLEAN)
+        {
+            controller_page_toggle(w, d, p, &d->values[i]);
+        }
         http_write_str(w, STR("</td></tr>\n"));
     }
     http_write_str(w, STR("</table>\n</section>\n"));
@@ -98,6 +118,23 @@ void controller_page_write(const Controller *c, HttpWriter *w)
     }
     http_write_str(w, STR(
         "</main>\n"
+        "<script>\n"
+        "const devices = document.getElementById('devices');\n"
+        "const events = new EventSource('/events');\n"
+        "events.onmessage = (event) => {\n"
+        "   const template = document.createElement('template');\n"
+        "   template.innerHTML = event.data;\n"
+        "   const fresh = template.content.firstElementChild;\n"
+        "   const old = document.getElementById(fresh.id);\n"
+        "   if (!fresh.firstElementChild) {old?.remove(); }\n"
+        "   else if (old) {old.replaceWith(fresh)}\n"
+        "   else { devices.append(fresh); }\n"
+        "};\n"
+        "document.addEventListener('click', (event) => {\n"
+        "   const button = event.target.closest('button[data-set]');\n"
+        "   if (button) { fetch('/set', { method: 'post', body: button.dataset.set }); }\n"
+        "});\n"
+        "</script>\n"
         "</body>\n"
         "</html>\n")
     );

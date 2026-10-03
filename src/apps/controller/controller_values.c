@@ -47,20 +47,20 @@ void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
     controller_events_device(c, d);
 }
 
-b32 controller_set(Controller *c, const str device, const str property, const str value)
+ControllerSetResult controller_set(Controller *c, const str device, const str property, const str value)
 {
     const ControllerDevice *d = controller_find_id(c, device);
     if (!d)
     {
         printf("set: no device '%.*s'\n", STR_FMT(device));
-        return 1;
+        return CONTROLLER_SET_REFUSED;
     }
     
     if (d->state != HOMIE_STATE_READY)
     {
         const str state = homie_state_name(d->state);
         printf("set: %.*s is %.*s, only a ready device can be set\n", STR_FMT(device), STR_FMT(state));
-        return 1; 
+        return CONTROLLER_SET_REFUSED; 
     }
 
     str node = STR_EMPTY;
@@ -70,26 +70,26 @@ b32 controller_set(Controller *c, const str device, const str property, const st
     if (index < 0)
     {
         printf("set: %.*s has no property '%.*s'\n", STR_FMT(device), STR_FMT(property));
-        return 1;
+        return CONTROLLER_SET_REFUSED;
     }
 
     const HomieProperty *p = &d->description.properties[index];
     if (!p->is_settable)
     {
         printf("set: %.*s %.*s is not settable\n", STR_FMT(device), STR_FMT(property));
-        return 1;
+        return CONTROLLER_SET_REFUSED;
     }
 
     if (value.length > CONTROLLER_VALUE_MAX)
     {
         printf("set: a value of %llu bytes, more than %d\n", (unsigned long long)value.length, CONTROLLER_VALUE_MAX);
-        return 1;
+        return CONTROLLER_SET_REFUSED;
     }
     if(!homie_value_valid(p->datatype, value))
     {
         const str datatype = homie_datatype_name(p->datatype);
         printf("set: '%.*s' is not a valid for %.*s\n", STR_FMT(value), STR_FMT(datatype));
-        return 1;
+        return CONTROLLER_SET_REFUSED;
     }
 
     u8 rest[2 * HOMIE_ID_MAX + 1 + 4];
@@ -100,8 +100,8 @@ b32 controller_set(Controller *c, const str device, const str property, const st
     ASSERT(topic.length > 0);
     if (!mqtt_client_publish(&c->client, topic, value, 0))
     {
-        return 0;
+        return CONTROLLER_SET_LOST;
     }
     printf("%.*s: %.*s set to %.*s (sent)\n", STR_FMT(device), STR_FMT(property), STR_FMT(value));
-    return 1;
+    return CONTROLLER_SET_SENT;
 }
