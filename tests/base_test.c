@@ -110,6 +110,62 @@ void base_test_str_to_u64(void)
     TEST_EXPECT(value == 42);
 }
 
+void base_test_str_find(void)
+{
+    const str url = STR("http://127.0.0.1:8080");
+    TEST_EXPECT(str_starts_with(url, STR("http://")));
+    TEST_EXPECT(str_starts_with(url, STR_EMPTY));
+    TEST_EXPECT(!str_starts_with(url, STR("https://")));
+    TEST_EXPECT(!str_starts_with(STR("http"), STR("http://")));
+
+    u64 index = 42;
+    TEST_EXPECT(str_find(STR("a\r\nb\r\n\r\n"), STR("\r\n"), &index) && index == 1);
+    TEST_EXPECT(str_find(STR("a\r\nb\r\n\r\n"), STR("\r\n\r\n"), &index) && index == 4);
+    index = 42;
+    TEST_EXPECT(!str_find(STR("a\r\nb\r\n"), STR("\r\n\r\n"), &index) && index == 42);
+    TEST_EXPECT(!str_find(STR_EMPTY, STR("x"), &index) && index == 42);
+
+}
+
+void base_test_str_next(void)
+{
+    str rest = STR("set tnn-sim-1 light/on hello world");
+    TEST_EXPECT_STR(str_next(&rest, ' '), STR("set"));
+    TEST_EXPECT_STR(str_next(&rest, ' '), STR("tnn-sim-1"));
+    TEST_EXPECT_STR(str_next(&rest, ' '), STR("light/on"));
+    TEST_EXPECT_STR(rest, STR("hello world"));
+
+    rest = STR("list");
+    TEST_EXPECT_STR(str_next(&rest, ' '), STR("list"));
+    TEST_EXPECT(rest.length == 0);
+    TEST_EXPECT(str_next(&rest, ' ').length == 0);
+
+    rest = STR("a  b");
+    TEST_EXPECT_STR(str_next(&rest, ' '), STR("a"));
+    TEST_EXPECT_STR(str_next(&rest, ' '), STR_EMPTY);
+    TEST_EXPECT_STR(rest, STR("b"));
+}
+
+void base_test_str_to_i64(void)
+{
+    i64 value = 0;
+    TEST_EXPECT(str_to_i64(STR("42"), &value) && value == 42);
+    TEST_EXPECT(str_to_i64(STR("-5"), &value) && value == -5);
+    TEST_EXPECT(str_to_i64(STR("-0"), &value) && value == 0);
+    TEST_EXPECT(str_to_i64(STR("9223372036854775807"), &value) && value == INT64_MAX);
+    TEST_EXPECT(str_to_i64(STR("-9223372036854775808"), &value) && value == INT64_MIN);
+
+    value = 42;
+    TEST_EXPECT(!str_to_i64(STR("9223372036854775808"), &value));
+    TEST_EXPECT(!str_to_i64(STR("-9223372036854775809"), &value));
+    TEST_EXPECT(!str_to_i64(STR("-"), &value));
+    TEST_EXPECT(!str_to_i64(STR("+5"), &value));
+    TEST_EXPECT(!str_to_i64(STR("--5"), &value));
+    TEST_EXPECT(!str_to_i64(STR("1.5"), &value));
+    TEST_EXPECT(!str_to_i64(STR_EMPTY, &value));
+    TEST_EXPECT(value == 42);
+}
+
 void base_test_writer(void)
 {
     u8 buffer[8];

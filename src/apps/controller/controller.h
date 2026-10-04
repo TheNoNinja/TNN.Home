@@ -71,7 +71,6 @@ ControllerDevice *controller_find(Controller *c, const HomieTopic *t);
 ControllerDevice *controller_find_id(Controller *c, str id);
 ControllerDevice *controller_add(Controller *c, const HomieTopic *t);
 i32 controller_property_find(const ControllerDevice *d, str node, str id);
-str controller_next_word(str *line);
 void controller_list(const Controller *c);
 ControllerSetResult controller_set(Controller *c, str device, str property, str value);
 

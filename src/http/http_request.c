@@ -1,19 +1,15 @@
 #include "http/http_request.h"
 
-#include <string.h>
-
 internal b32 http_next_line(str *text, str *line)
 {
-    for (u64 i = 0; i + 2 <= text->length; i++)
+    u64 end = 0;
+    if (!str_find(*text, STR("\r\n"), &end))
     {
-        if (text->data[i] == '\r' && text->data[i + 1] == '\n')
-        {
-            *line = (str) { text->data, i };
-            *text = (str) { text->data + i + 2, text->length - i - 2 };
-            return 1;
-        }
+        return 0;
     }
-    return 0;
+    *line = (str){ text->data, end };
+    *text = str_skip(*text, end + 2);
+    return 1;
 }
 
 internal b32 http_token_valid(const str s)
@@ -45,20 +41,6 @@ internal b32 http_visible(const str s)
         }
     }
     return 1;
-}
-
-internal str http_trim (const str s)
-{
-    str trimmed = s;
-    while (trimmed.length > 0 && (trimmed.data[0] == ' ' || trimmed.data[0] == '\t'))
-    {
-        trimmed = (str){ trimmed.data + 1, trimmed.length - 1 };
-    }
-    while (trimmed.length > 0 && (trimmed.data[trimmed.length - 1] == ' ' || trimmed.data[trimmed.length - 1] == '\t'))
-    {
-        trimmed.length -= 1;
-    }
-    return trimmed;
 }
 
 internal b32 http_value_valid(const str s)
@@ -98,19 +80,12 @@ internal b32 http_name_is(const str name, const str lower)
 
 HttpRead http_request_read(const str bytes, HttpRequest *request)
 {
-    u64 head_length = 0;
-    for (u64 i = 0; i + 4 <= bytes.length; i++)
-    {
-        if (memcmp(bytes.data + i, "\r\n\r\n", 4) == 0)
-        {
-            head_length = i + 4;
-            break;
-        }
-    }
-    if (head_length == 0)
+    u64 end = 0;
+    if (!str_find(bytes, STR("\r\n\r\n"), &end))
     {
         return HTTP_READ_INCOMPLETE;
     }
+    const u64 head_length = end + 4;
 
     str lines = { bytes.data, head_length - 2};
     str line = STR_EMPTY;
@@ -140,7 +115,7 @@ HttpRead http_request_read(const str bytes, HttpRequest *request)
         {
             return HTTP_READ_BAD;
         }
-        value = http_trim(value);
+        value = str_trim(value);
         if (!http_value_valid(value))
         {
             return HTTP_READ_BAD;

@@ -252,7 +252,7 @@ internal b32 homie_value_take(str *s, const u8 c)
 {
     if (s->length > 0 && s->data[0] == c)
     {
-        *s = (str){ s->data + 1, s->length - 1 };
+        *s = str_skip(*s, 1);
         return 1;
     }
     return 0;
@@ -260,15 +260,8 @@ internal b32 homie_value_take(str *s, const u8 c)
 
 internal b32 homie_value_integer(const str value)
 {
-    str digits = value;
-    const b32 is_negative = homie_value_take(&digits, '-');
-    u64 magnitude = 0;
-    if (!str_to_u64(digits, &magnitude))
-    {
-        return 0;
-    }
-    const u64 limit = is_negative ? (u64)INT64_MAX + 1 : (u64)INT64_MAX;
-    return magnitude <= limit; 
+    i64 number = 0;
+    return str_to_i64(value, &number);
 }
 
 internal u64 homie_value_take_digits(str *s)
@@ -278,7 +271,7 @@ internal u64 homie_value_take_digits(str *s)
     {
         count += 1;
     }
-    *s = (str) { s->data + count, s->length - count };
+    *s = str_skip(*s, count);
     return count;
 }
 

@@ -181,7 +181,7 @@ internal b32 controller_http_origin_valid(const HttpRequest *request)
     {
         return 1;
     }
-    return origin.length == scheme.length + request->host.length && str_equal((str){ origin.data, scheme.length }, scheme) && str_equal((str){origin.data + scheme.length, request->host.length }, request->host);
+    return str_starts_with(origin, scheme) && str_equal(str_skip(origin, scheme.length), request->host);
 }
 
 internal u32 controller_http_set(Controller *c, const HttpRequest *request, const str body, b32 *is_connected)
@@ -191,8 +191,8 @@ internal u32 controller_http_set(Controller *c, const HttpRequest *request, cons
         return 403;
     }
     str rest = body;
-    const str device = controller_next_word(&rest);
-    const str property = controller_next_word(&rest);
+    const str device = str_next(&rest, ' ');
+    const str property = str_next(&rest, ' ');
     if (device.length == 0 || property.length == 0 || rest.length == 0)
     {
         return 400;

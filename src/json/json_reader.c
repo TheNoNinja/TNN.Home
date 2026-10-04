@@ -172,27 +172,20 @@ internal str json_read_number(JsonReader *r)
 i64 json_read_i64(JsonReader *r)
 {
     const str text = json_read_number(r);
-    const b32 negative = text.length > 0 && text.data[0] == '-';
-    const str digits = negative ? (str){ .data = text.data + 1, .length = text.length - 1 } : text;
-    const u64 limit = negative ? (u64)INT64_MAX + 1 : (u64)INT64_MAX;
-    u64 magnitude = 0;
-    if (r->has_error || !str_to_u64(digits, &magnitude) || magnitude > limit)
+    i64 value = 0;
+    if (r->has_error || !str_to_i64(text, &value))
     {
         r->has_error = 1;
         return 0;
     }
-    if (!negative || magnitude == 0)
-    {
-        return (i64)magnitude;
-    }
-    return -(i64)(magnitude - 1) - 1;
+    return value;
 }
 
 internal void json_read_word(JsonReader *r, const str word)
 {
     json_peek(r);
     const str next = { .data = (u8 *)(r->data + r->position), .length = r->length - r->position };
-    if (r->has_error || next.length < word.length || !str_equal((str) { .data = next.data, .length = word.length }, word))
+    if (r->has_error || !str_starts_with(next, word))
     {
         r->has_error = 1;
         return;

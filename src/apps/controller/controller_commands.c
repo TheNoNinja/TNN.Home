@@ -3,27 +3,18 @@
 #include <stdio.h>
 #include <unistd.h>
 
-str controller_next_word(str *line)
-{
-    str word = STR_EMPTY;
-    str rest = STR_EMPTY;
-    str_cut(*line, ' ', &word, &rest);
-    *line = rest;
-    return word;
-}
-
 internal b32 controller_command(Controller *c, const str line)
 {
     str rest = line;
-    const str command = controller_next_word(&rest);
+    const str command = str_next(&rest, ' ');
     if (str_equal(command, STR("list")))
     {
         controller_list(c);
     }
     else if (str_equal(command, STR("set")))
     {
-        const str device = controller_next_word(&rest);
-        const str property = controller_next_word(&rest);
+        const str device = str_next(&rest, ' ');
+        const str property = str_next(&rest, ' ');
         if (device.length == 0 || property.length == 0 || rest.length == 0)
         {
             printf("usage: set <device> <node>/<property> <value>\n");
