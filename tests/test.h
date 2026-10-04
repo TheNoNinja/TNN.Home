@@ -5,84 +5,90 @@
 
 #define TEST_EXPECT(condition) test_expect((condition), #condition, __FILE__, __LINE__)
 #define TEST_EXPECT_BYTES(data, length, expected, expected_length) test_expect_bytes((data), (length), (expected), (expected_length), __FILE__, __LINE__)
+#define TEST_EXPECT_STR(actual, expected) test_expect_str((actual), (expected), #actual, __FILE__, __LINE__)
 
 void test_expect(b32 ok, const char *condition, const char *file, int line);
 void test_expect_bytes(const u8 *data, u64 length, const u8 *expected, u64 expected_length, const char *file, int line);
+void test_expect_str(str actual, str expected, const char *text, const char *file, int line);
 
-void base_test_arena_push(void);
-void base_test_arena_full(void);
-void base_test_arena_pop(void);
-void base_test_time(void);
-void base_test_time_mono(void);
-void base_test_str_equal(void);
-void base_test_str_cut(void);
-void base_test_str_from_cstr(void);
-void base_test_str_to_u64(void);
+#define TEST_LIST(X) \
+    X(base_test_arena_push,    "base arena push") \
+	X(base_test_arena_full,    "base arena full") \
+	X(base_test_arena_pop,     "base arena pop") \
+	X(base_test_time,          "base time") \
+	X(base_test_time_mono,     "base time mono") \
+	X(base_test_str_equal,     "base str equal") \
+	X(base_test_str_cut,       "base str cut") \
+	X(base_test_str_from_cstr, "base str cstr") \
+	X(base_test_str_to_u64,    "base str to u64") \
+\
+	X(histogram_test_index,       "histogram index") \
+	X(histogram_test_bounds,      "histogram bounds") \
+	X(histogram_test_percentiles, "histogram percentiles") \
+\
+	X(homie_test_topic,               "homie topic") \
+	X(homie_test_topic_invalid,       "homie topic invalid") \
+	X(homie_test_topic_build,         "homie topic build") \
+	X(homie_test_id,                  "homie id") \
+	X(homie_test_state,               "homie state") \
+	X(homie_test_datatype,            "homie datatype") \
+	X(homie_test_description,         "homie description") \
+	X(homie_test_description_invalid, "homie description invalid") \
+	X(homie_test_value,               "homie value") \
+	X(homie_test_value_bool,          "homie value bool") \
+	X(homie_test_value_integer,       "homie value integer") \
+	X(homie_test_value_float,         "homie value float") \
+	X(homie_test_value_json,          "homie value json") \
+\
+	X(http_test_request,         "http request") \
+	X(http_test_request_peices,  "http request peices") \
+	X(http_test_request_line,    "http request line") \
+	X(http_test_request_headers, "http request headers") \
+	X(http_test_write_head,      "http write head") \
+	X(http_test_write_escaped,   "http write escaped") \
+	X(http_test_write_overflow,  "http write overflow") \
+	X(http_test_write_event,     "http write event") \
+\
+	X(json_test_object,        "json object") \
+	X(json_test_escape,        "json escape") \
+	X(json_test_overflow,      "json overflow") \
+	X(json_test_read,          "json read") \
+	X(json_test_read_numbers,  "json read numbers") \
+	X(json_test_read_booleans, "json read booleans") \
+	X(json_test_read_skip,     "json read skip") \
+	X(json_test_read_invalid,  "json read invalid") \
+\
+	X(loop_test_timeout,     "loop timeout") \
+	X(loop_test_timer_fires, "loop timer fires") \
+	X(loop_test_pipe,        "loop pipe") \
+	X(loop_test_signal,      "loop signal") \
+	X(loop_test_unwatch,     "loop unwatch") \
+\
+	X(mqtt_test_str,                  "mqtt str") \
+	X(mqtt_test_u64,                  "mqtt u64") \
+	X(mqtt_test_varint,               "mqtt varint") \
+	X(mqtt_test_varint_too_big,       "mqtt var int too big") \
+	X(mqtt_test_connect,              "mqtt connect") \
+	X(mqtt_test_connect_will,         "mqtt connect will") \
+	X(mqtt_test_subscribe,            "mqtt subscribe") \
+	X(mqtt_test_unsubscribe,          "mqtt unsubscribe") \
+	X(mqtt_test_pingreq,              "mqtt pingreq") \
+	X(mqtt_test_read_str,             "mqtt read str") \
+	X(mqtt_test_read_past_end,        "mqtt read past end") \
+	X(mqtt_test_read_varint,          "mqtt read var int") \
+	X(mqtt_test_read_varint_too_long, "mqtt read varint too long") \
+	X(mqtt_test_read_fixed_header,    "mqtt read fixed header") \
+	X(mqtt_test_read_publish,         "mqtt read publish") \
+	X(mqtt_test_stream_split,         "mqtt stream split") \
+	X(mqtt_test_stream_burst,         "mqtt stream burst") \
+	X(mqtt_test_stream_oversized,     "mqtt stream oversized") \
+	X(mqtt_test_stream_malformed,     "mqtt stream malformed") \
+	X(mqtt_test_client_send,          "mqtt client send") \
+	X(mqtt_test_client_next,          "mqtt client next") \
+	X(mqtt_test_client_refused,       "mqtt client refused") \
+	X(mqtt_test_client_unsubscribe,   "mqtt client unsubscribe")
 
-void histogram_test_index(void);
-void histogram_test_bounds(void);
-void histogram_test_percentiles(void);
-
-void homie_test_topic(void);
-void homie_test_topic_invalid(void);
-void homie_test_topic_build(void);
-void homie_test_id(void);
-void homie_test_state(void);
-void homie_test_datatype(void);
-void homie_test_description(void);
-void homie_test_description_invalid(void);
-void homie_test_value(void);
-void homie_test_value_bool(void);
-void homie_test_value_integer(void);
-void homie_test_value_float(void);
-void homie_test_value_json(void);
-
-void http_test_request(void);
-void http_test_request_peices(void);
-void http_test_request_line(void);
-void http_test_request_headers(void);
-void http_test_write_head(void);
-void http_test_write_escaped(void);
-void http_test_write_overflow(void);
-void http_test_write_event(void);
-
-void json_test_object(void);
-void json_test_escape(void);
-void json_test_overflow(void);
-void json_test_read(void);
-void json_test_read_numbers(void);
-void json_test_read_booleans(void);
-void json_test_read_skip(void);
-void json_test_read_invalid(void);
-
-void loop_test_timeout(void);
-void loop_test_timer_fires(void);
-void loop_test_pipe(void);
-void loop_test_signal(void);
-void loop_test_unwatch(void);
-
-void mqtt_test_str(void);
-void mqtt_test_u64(void);
-void mqtt_test_varint(void);
-void mqtt_test_varint_too_big(void);
-void mqtt_test_connect(void);
-void mqtt_test_connect_will(void);
-void mqtt_test_subscribe(void);
-void mqtt_test_unsubscribe(void);
-void mqtt_test_pingreq(void);
-void mqtt_test_read_str(void);
-void mqtt_test_read_past_end(void); 
-void mqtt_test_read_varint(void);
-void mqtt_test_read_varint_too_long(void);
-void mqtt_test_read_fixed_header(void);
-void mqtt_test_read_publish(void);
-void mqtt_test_stream_split(void);
-void mqtt_test_stream_burst(void);
-void mqtt_test_stream_oversized(void);
-void mqtt_test_stream_malformed(void);
-void mqtt_test_client_send(void);
-void mqtt_test_client_next(void);
-void mqtt_test_client_refused(void);
-void mqtt_test_client_unsubscribe(void);
+#define TEST_DECLARE(function, name) void function(void);
+TEST_LIST(TEST_DECLARE)
 
 #endif

@@ -1,5 +1,4 @@
-#include "base/base_assert.h"
-#include "base/base_types.h"
+#include "base/base.h"
 #include "mqtt/mqtt.h"
 
 #include <string.h>

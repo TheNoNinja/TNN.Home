@@ -1,6 +1,5 @@
 #include "test.h"
 #include "mqtt/mqtt.h"
-#include "mqtt/mqtt_reader.h"
 
 #include <string.h>
 #include <sys/socket.h>

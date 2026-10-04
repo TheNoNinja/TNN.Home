@@ -6,12 +6,12 @@ void homie_test_topic(void)
 {
     HomieTopic t = {0};
     TEST_EXPECT(homie_topic_parse(STR("homie/5/tnn-sim-1/$state"), &t));
-    TEST_EXPECT(str_equal(t.domain, STR("homie")));
-    TEST_EXPECT(str_equal(t.device, STR("tnn-sim-1")));
-    TEST_EXPECT(str_equal(t.rest, STR("$state")));
+    TEST_EXPECT_STR(t.domain, STR("homie"));
+    TEST_EXPECT_STR(t.device, STR("tnn-sim-1"));
+    TEST_EXPECT_STR(t.rest, STR("$state"));
 
     TEST_EXPECT(homie_topic_parse(STR("homie/5/tnn-sim-1/light/on/set"), &t));
-    TEST_EXPECT(str_equal(t.rest, STR("light/on/set")));
+    TEST_EXPECT_STR(t.rest, STR("light/on/set"));
 
     TEST_EXPECT(homie_topic_parse(STR("test-2/5/a/$description"), &t));
     TEST_EXPECT(str_equal(t.domain, STR("test-2")) && str_equal(t.device, STR("a")));
@@ -26,6 +26,7 @@ void homie_test_topic_invalid(void)
     TEST_EXPECT(!homie_topic_parse(STR("homie/5//$state"), &t));
     TEST_EXPECT(!homie_topic_parse(STR("homie/5/Tnn-sim-1/$state"), &t));
     TEST_EXPECT(!homie_topic_parse(STR("homie/5/tnn_sim_1/$state"), &t));
+    TEST_EXPECT(!homie_topic_parse(STR("homie/5/$tnn/$state"), &t));
     TEST_EXPECT(!homie_topic_parse(STR("tnn/echo-probe"), &t));
     TEST_EXPECT(homie_topic_parse(STR("homie/5/abcdefghijklmnopqrstuvwxyz012345/$state"), &t));
     TEST_EXPECT(!homie_topic_parse(STR("homie/5/abcdefghijklmnopqrstuvwxyz0123456/$state"), &t));
@@ -35,7 +36,7 @@ void homie_test_topic_build(void)
 {
     u8 buffer[64];
     const str topic = homie_topic_build(buffer, sizeof(buffer), STR("homie"), STR("tnn-sim-1"), STR("$description"));
-    TEST_EXPECT(str_equal(topic, STR("homie/5/tnn-sim-1/$description")));
+    TEST_EXPECT_STR(topic, STR("homie/5/tnn-sim-1/$description"));
 
     HomieTopic t = {0};
     TEST_EXPECT(homie_topic_parse(topic, &t));
@@ -49,7 +50,7 @@ void homie_test_id(void)
     u8 bytes[] = "tnn-sim-1";
     const HomieId id = homie_id_copy((str){ bytes, sizeof(bytes) - 1 });
     bytes[0] = 'X';
-    TEST_EXPECT(str_equal(homie_id_str(&id), STR("tnn-sim-1")));
+    TEST_EXPECT_STR(homie_id_str(&id), STR("tnn-sim-1"));
 }
 
 void homie_test_state(void)
@@ -59,7 +60,7 @@ void homie_test_state(void)
     TEST_EXPECT(homie_state_parse(STR("lost")) == HOMIE_STATE_LOST);
     TEST_EXPECT(homie_state_parse(STR("Ready")) == HOMIE_STATE_NONE);
     TEST_EXPECT(homie_state_parse(STR_EMPTY) == HOMIE_STATE_NONE);
-    TEST_EXPECT(str_equal(homie_state_name(HOMIE_STATE_SLEEPING), STR("sleeping")));
+    TEST_EXPECT_STR(homie_state_name(HOMIE_STATE_SLEEPING), STR("sleeping"));
 }
 
 void homie_test_datatype(void)
@@ -69,7 +70,7 @@ void homie_test_datatype(void)
     TEST_EXPECT(homie_datatype_parse(STR("bool")) == HOMIE_DATATYPE_NONE);
     TEST_EXPECT(homie_datatype_parse(STR("Float")) == HOMIE_DATATYPE_NONE);
     TEST_EXPECT(homie_datatype_parse(STR("none")) == HOMIE_DATATYPE_NONE);
-    TEST_EXPECT(str_equal(homie_datatype_name(HOMIE_DATATYPE_DURATION), STR("duration")));
+    TEST_EXPECT_STR(homie_datatype_name(HOMIE_DATATYPE_DURATION), STR("duration"));
 }
 
 void homie_test_description(void)
@@ -120,7 +121,7 @@ void homie_test_description(void)
     TEST_EXPECT(!w.has_overflown);
     TEST_EXPECT(homie_description_read((str) { w.data, w.length }, &d));
     TEST_EXPECT(d.property_count == HOMIE_PROPERTY_MAX);
-    TEST_EXPECT(str_equal(homie_id_str(&d.properties[15].id), STR("pp")));
+    TEST_EXPECT_STR(homie_id_str(&d.properties[15].id), STR("pp"));
 }
 
 void homie_test_description_invalid(void)

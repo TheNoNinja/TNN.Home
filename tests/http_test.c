@@ -13,7 +13,7 @@ void http_test_request(void)
     HttpRequest request = {0};
     TEST_EXPECT(http_request_read(curl, &request) == HTTP_READ_OK);
     TEST_EXPECT(str_equal(request.method, STR("GET")) && str_equal(request.target, STR("/")));
-    TEST_EXPECT(str_equal(request.host, STR("127.0.0.1:8080")));
+    TEST_EXPECT_STR(request.host, STR("127.0.0.1:8080"));
     TEST_EXPECT(request.content_length == 0 && request.head_length == curl.length);
     TEST_EXPECT(request.method.data == curl.data && request.target.data == curl.data + 4);
 
@@ -88,7 +88,7 @@ void http_test_request_headers(void)
     );
     TEST_EXPECT(http_request_read(loose, &request) == HTTP_READ_OK);
     TEST_EXPECT(str_equal(request.host, STR("example.org")) && request.content_length == 5);
-    TEST_EXPECT(str_equal(request.origin, STR("example.org")));
+    TEST_EXPECT_STR(request.origin, STR("example.org"));
     TEST_EXPECT(http_request_read(STR("GET / HTTP/1.1\r\nHost: x\r\n\r\n"), &request) == HTTP_READ_OK);
     TEST_EXPECT(request.origin.length == 0);
 
@@ -138,18 +138,17 @@ void http_test_write_head(void)
         "404 Not Found\n"
     );
     TEST_EXPECT(!w.has_overflown);
-    TEST_EXPECT_BYTES(w.data, w.length, expected.data, expected.length);
-    TEST_EXPECT(str_equal(http_writer_str(&w), expected));
+    TEST_EXPECT_STR(http_writer_str(&w), expected);
 
     w = http_writer_create(buffer, sizeof(buffer));
     http_write_u64(&w, 0);
     http_write_str(&w, STR(" "));
     http_write_u64(&w, UINT64_MAX);
-    TEST_EXPECT(str_equal(http_writer_str(&w), STR("0 18446744073709551615")));
+    TEST_EXPECT_STR(http_writer_str(&w), STR("0 18446744073709551615"));
     
     w = http_writer_create(buffer, sizeof(buffer));
     http_write_status(&w, 299);
-    TEST_EXPECT(str_equal(http_writer_str(&w), STR("HTTP/1.1 299 \r\n")));
+    TEST_EXPECT_STR(http_writer_str(&w), STR("HTTP/1.1 299 \r\n"));
 }
 
 void http_test_write_escaped(void)
@@ -157,7 +156,7 @@ void http_test_write_escaped(void)
     u8 buffer[128];
     HttpWriter w = http_writer_create(buffer, sizeof(buffer));
     http_write_escaped(&w, STR("<b>\"Ben & Jerry's\"</b>"));
-    TEST_EXPECT(str_equal(http_writer_str(&w), STR("&lt;b&gt;&quot;Ben &amp; Jerry&#39;s&quot;&lt;/b&gt;")));
+    TEST_EXPECT_STR(http_writer_str(&w), STR("&lt;b&gt;&quot;Ben &amp; Jerry&#39;s&quot;&lt;/b&gt;"));
 
     w = http_writer_create(buffer, sizeof(buffer));
     http_write_escaped(&w, STR("21.5 \xC2\xB0" "C"));
@@ -192,17 +191,17 @@ void http_test_write_event(void)
     u8 buffer[128];
     HttpWriter w = http_writer_create(buffer, sizeof(buffer));
     http_write_event(&w, STR("<p>\nhi</p>"));
-    TEST_EXPECT(str_equal(http_writer_str(&w), STR("data: <p>\ndata: hi</p>\n\n")));
+    TEST_EXPECT_STR(http_writer_str(&w), STR("data: <p>\ndata: hi</p>\n\n"));
 
     w = http_writer_create(buffer, sizeof(buffer));
     http_write_event(&w, STR("a\r\nb\rc\n"));
-    TEST_EXPECT(str_equal(http_writer_str(&w), STR("data: a\ndata: b\ndata: c\ndata: \n\n")));
+    TEST_EXPECT_STR(http_writer_str(&w), STR("data: a\ndata: b\ndata: c\ndata: \n\n"));
 
     w = http_writer_create(buffer, sizeof(buffer));
     http_write_event(&w, STR("x\rretry: 1"));
-    TEST_EXPECT(str_equal(http_writer_str(&w), STR("data: x\ndata: retry: 1\n\n")));
+    TEST_EXPECT_STR(http_writer_str(&w), STR("data: x\ndata: retry: 1\n\n"));
 
     w = http_writer_create(buffer, sizeof(buffer));
     http_write_event(&w, STR_EMPTY);
-    TEST_EXPECT(str_equal(http_writer_str(&w), STR("data: \n\n")));
+    TEST_EXPECT_STR(http_writer_str(&w), STR("data: \n\n"));
 }

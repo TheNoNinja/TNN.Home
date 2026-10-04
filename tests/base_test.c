@@ -91,7 +91,7 @@ void base_test_str_cut(void)
 
 void base_test_str_from_cstr(void)
 {
-    TEST_EXPECT(str_equal(str_from_cstr("1884"), STR("1884")));
+    TEST_EXPECT_STR(str_from_cstr("1884"), STR("1884"));
 }
 
 void base_test_str_to_u64(void)

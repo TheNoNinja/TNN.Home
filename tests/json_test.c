@@ -76,7 +76,7 @@ void json_test_read(void)
     json_read_object_begin(&r);
     TEST_EXPECT(!json_read_key(&r, &key));
     TEST_EXPECT(json_read_key(&r, &key) && str_equal(key, STR("e")));
-    TEST_EXPECT(str_equal(json_read_str(&r), STR("\\u00e9")));
+    TEST_EXPECT_STR(json_read_str(&r), STR("\\u00e9"));
     TEST_EXPECT(!json_read_key(&r, &key));
     TEST_EXPECT(!json_read_key(&r, &key));
     json_read_end(&r);
