@@ -19,7 +19,7 @@ b32 controller_http_listen(Controller *c, const char* ip, const u16 port)
     c->http_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (c->http_sock < 0)
     {
-        LOG_ERROR("http socket: %s", strerror(errno));
+        LOG_ERROR("socket: %s", strerror(errno));
         return 0;
     }
 
@@ -32,7 +32,7 @@ b32 controller_http_listen(Controller *c, const char* ip, const u16 port)
     inet_pton(AF_INET, ip, &address.sin_addr);
     if (bind(c->http_sock, (struct sockaddr *)&address, sizeof(address)) < 0)
     {
-        LOG_ERROR("http bind to %s:%d: %s", ip, port, strerror(errno));
+        LOG_ERROR("bind to %s:%d: %s", ip, port, strerror(errno));
         goto error_handling;
     }
 
@@ -130,7 +130,7 @@ internal void controller_http_send_status(const int sock, const u32 status, cons
     http_write_str(&body, STR(" "));
     http_write_str(&body, http_status_reason(status));
     http_write_str(&body, STR("\n"));
-    controller_http_send(sock, status, allow, STR("test/plain; charset=utf-8"), http_writer_str(&body));
+    controller_http_send(sock, status, allow, STR("text/plain; charset=utf-8"), http_writer_str(&body));
 }
 
 internal void controller_http_accept(Controller *c)
@@ -140,7 +140,7 @@ internal void controller_http_accept(Controller *c)
     {
         if (errno != EAGAIN && errno != EINTR)
         {
-            LOG_WARN("http accept: %s", strerror(errno));
+            LOG_WARN("accept: %s", strerror(errno));
         }
         return;
     }
@@ -269,7 +269,7 @@ internal b32 controller_http_receive(Controller *c, ControllerHttpConnection *h)
     if (h->is_stream)
     {
         const ssize_t received = recv(h->sock, h->request, sizeof(h->request), 0);
-        if (received == 0 || (received < 0 && errno == EAGAIN && errno != EINTR))
+        if (received == 0 || (received < 0 && errno != EAGAIN && errno != EINTR))
         {
             controller_http_close(c, h);
         }
@@ -318,6 +318,7 @@ internal b32 controller_http_receive(Controller *c, ControllerHttpConnection *h)
             {
                 LOG_WARN("a request head of more than %llu bytes -> 431", (unsigned long long)sizeof(h->request));
                 controller_http_send_status(h->sock, 431, STR_EMPTY);
+                controller_http_close(c, h);
             }
             break;
     }

@@ -33,7 +33,8 @@ internal void controller_events_write_device(HttpWriter *w, const ControllerDevi
     {
         controller_page_removed(&section, d);
     }
-    else {
+    else 
+    {
         controller_page_device(&section, d);
     }
     ASSERT(!section.has_overflown);
@@ -75,7 +76,7 @@ internal void controller_events_broadcast(Controller *c, const ControllerDevice 
     b32 has_stream = 0;
     for(u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
     {
-        if(c->http[i].is_open)
+        if(c->http[i].is_stream)
         {
             has_stream = 1;
             break;

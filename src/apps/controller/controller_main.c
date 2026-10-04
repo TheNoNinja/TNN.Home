@@ -86,7 +86,7 @@ internal b32 controller_run(Controller *c)
         if (loop_timer_fired(&c->loop, heartbeat))
         {
             controller_events_heartbeat(c);
-            loop_timer_start(&c->loop, heartbeat, CONTROLLER_KEEP_ALIVE * 1000);
+            loop_timer_start(&c->loop, heartbeat, CONTROLLER_HEARTBEAT * 1000);
         }
     }
 

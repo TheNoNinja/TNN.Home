@@ -13,150 +13,136 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_link_options(-fsanitize=address,undefined)
 endif()
 
-add_executable(tnn_device_sim
-    src/apps/device_sim/device_sim_main.c
+###########
+# Modules #
+###########
+
+add_library(tnn_base INTERFACE)
+target_sources(tnn_base INTERFACE
     src/base/base_arena.c
     src/base/base_assert.c
     src/base/base_log.c
     src/base/base_str.c
     src/base/base_time.c
+)
+target_include_directories(tnn_base INTERFACE src)
+
+add_library(tnn_histogram INTERFACE)
+target_sources(tnn_histogram INTERFACE
+    src/histogram/histogram.c
+)
+target_link_libraries(tnn_histogram INTERFACE tnn_base)
+
+add_library(tnn_homie INTERFACE)
+target_sources(tnn_homie INTERFACE
+    src/homie/homie.c
+)
+target_link_libraries(tnn_homie INTERFACE tnn_json)
+
+add_library(tnn_http INTERFACE)
+target_sources(tnn_http INTERFACE
+    src/http/http_request.c
+    src/http/http_writer.c
+)
+target_link_libraries(tnn_http INTERFACE tnn_base)
+
+add_library(tnn_json INTERFACE)
+target_sources(tnn_json INTERFACE
+    src/json/json_reader.c
     src/json/json_writer.c
+)
+target_link_libraries(tnn_json INTERFACE tnn_base)
+
+add_library(tnn_loop INTERFACE)
+target_sources(tnn_loop INTERFACE
     src/loop/loop.c
+)
+target_link_libraries(tnn_loop INTERFACE tnn_base)
+
+add_library(tnn_mqtt INTERFACE)
+target_sources(tnn_mqtt INTERFACE
     src/mqtt/mqtt_client.c
     src/mqtt/mqtt_reader.c
     src/mqtt/mqtt_stream.c
     src/mqtt/mqtt_writer.c
 )
-target_include_directories(tnn_device_sim PRIVATE src)
+target_link_libraries(tnn_mqtt INTERFACE tnn_base)
 
-add_executable(tnn_echo_probe 
-    src/apps/echo_probe/echo_probe_main.c
-    src/base/base_assert.c
-    src/base/base_log.c
-    src/base/base_str.c
-    src/base/base_time.c
-    src/histogram/histogram.c
-    src/loop/loop.c
-    src/mqtt/mqtt_client.c
-    src/mqtt/mqtt_reader.c
-    src/mqtt/mqtt_stream.c
-    src/mqtt/mqtt_writer.c    
-)
-target_include_directories(tnn_echo_probe PRIVATE src)
 
-add_executable(tnn_mqtt_dump
-    src/apps/mqtt_dump/mqtt_dump_main.c
-    src/base/base_assert.c
-    src/base/base_log.c
-    src/base/base_str.c
-    src/base/base_time.c
-    src/loop/loop.c
-    src/mqtt/mqtt_client.c
-    src/mqtt/mqtt_reader.c
-    src/mqtt/mqtt_stream.c
-    src/mqtt/mqtt_writer.c
-)
-target_include_directories(tnn_mqtt_dump PRIVATE src)
-
-add_executable(tnn_timer_lateness
-    src/apps/timer_lateness/timer_lateness_main.c
-    src/base/base_assert.c
-    src/base/base_log.c
-    src/base/base_str.c
-    src/base/base_time.c
-    src/histogram/histogram.c
-)
-target_include_directories(tnn_timer_lateness PRIVATE src)
+################
+# Applications #
+################
 
 add_executable(tnn_controller
+    src/apps/controller/controller_main.c
     src/apps/controller/controller_commands.c
     src/apps/controller/controller_devices.c
     src/apps/controller/controller_events.c
     src/apps/controller/controller_homie.c
     src/apps/controller/controller_http.c
-    src/apps/controller/controller_main.c
     src/apps/controller/controller_page.c
     src/apps/controller/controller_values.c
-    src/base/base_arena.c
-    src/base/base_assert.c
-    src/base/base_log.c
-    src/base/base_str.c
-    src/base/base_time.c
-    src/homie/homie.c
-    src/http/http_request.c
-    src/http/http_writer.c
-    src/json/json_reader.c
-    src/json/json_writer.c
-    src/loop/loop.c
-    src/mqtt/mqtt_client.c
-    src/mqtt/mqtt_reader.c
-    src/mqtt/mqtt_stream.c
-    src/mqtt/mqtt_writer.c
 )
-target_include_directories(tnn_controller PRIVATE src)
+target_link_libraries(tnn_controller PRIVATE tnn_homie tnn_http tnn_loop tnn_mqtt)
+
+add_executable(tnn_device_sim 
+    src/apps/device_sim/device_sim_main.c
+)
+target_link_libraries(tnn_device_sim PRIVATE tnn_json tnn_loop tnn_mqtt)
+
+add_executable(tnn_echo_probe
+    src/apps/echo_probe/echo_probe_main.c
+)
+target_link_libraries(tnn_echo_probe PRIVATE tnn_histogram tnn_loop tnn_mqtt)
+
+add_executable(tnn_mqtt_dump
+    src/apps/mqtt_dump/mqtt_dump_main.c
+)
+target_link_libraries(tnn_mqtt_dump PRIVATE tnn_loop tnn_mqtt)
+
+add_executable(tnn_timer_lateness
+    src/apps/timer_lateness/timer_lateness_main.c
+)
+target_link_libraries(tnn_timer_lateness PRIVATE tnn_histogram)
+
+
+#########
+# Tests #
+#########
 
 add_executable(tnn_tests
+    tests/test_main.c
     tests/base_test.c
     tests/histogram_test.c
     tests/homie_test.c
     tests/http_test.c
     tests/json_test.c
     tests/loop_test.c
-    tests/test_main.c
     tests/mqtt_test.c
-    src/base/base_assert.c
-    src/base/base_arena.c
-    src/base/base_log.c
-    src/base/base_str.c
-    src/base/base_time.c
-    src/histogram/histogram.c
-    src/homie/homie.c
-    src/http/http_request.c
-    src/http/http_writer.c
-    src/json/json_reader.c
-    src/json/json_writer.c
-    src/loop/loop.c
-    src/mqtt/mqtt_client.c
-    src/mqtt/mqtt_reader.c
-    src/mqtt/mqtt_stream.c
-    src/mqtt/mqtt_writer.c
 )
-target_include_directories(tnn_tests PRIVATE src)
+target_include_directories(tnn_tests PRIVATE tests)
+target_link_libraries(tnn_tests PRIVATE tnn_histogram tnn_homie tnn_http tnn_loop tnn_mqtt)
 
 option (TNN_FUZZ "Build the libFuzzer target (Clang only)" OFF)
 if(TNN_FUZZ)
     add_executable(tnn_fuzz_mqtt
         tests/mqtt_fuzz.c
-        src/mqtt/mqtt_reader.c
-        src/mqtt/mqtt_stream.c
-        src/base/base_assert.c
-        src/base/base_log.c
-        src/base/base_str.c
     )
-    target_include_directories(tnn_fuzz_mqtt PRIVATE src)
+    target_link_libraries(tnn_fuzz_mqtt PRIVATE tnn_mqtt)
     target_compile_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
     target_link_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
 
     add_executable(tnn_fuzz_json
         tests/json_fuzz.c
-        src/json/json_reader.c
-        src/base/base_assert.c
-        src/base/base_log.c
-        src/base/base_str.c
-        src/homie/homie.c
     )
-    target_include_directories(tnn_fuzz_json PRIVATE src)
+    target_link_libraries(tnn_fuzz_json PRIVATE tnn_homie)
     target_compile_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)
     target_link_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)
 
     add_executable(tnn_fuzz_http
         tests/http_fuzz.c
-        src/http/http_request.c
-        src/base/base_assert.c
-        src/base/base_log.c
-        src/base/base_str.c
     )
-    target_include_directories(tnn_fuzz_http PRIVATE src)
+    target_link_libraries(tnn_fuzz_http PRIVATE tnn_http)
     target_compile_options(tnn_fuzz_http PRIVATE -fsanitize=fuzzer)
     target_link_options(tnn_fuzz_http PRIVATE -fsanitize=fuzzer)
 endif()

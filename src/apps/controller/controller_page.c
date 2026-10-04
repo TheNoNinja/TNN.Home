@@ -39,7 +39,7 @@ internal void controller_page_toggle(HttpWriter *w, const ControllerDevice *d, c
 
 internal void controller_page_section(HttpWriter *w, const ControllerDevice *d)
 {
-    http_write_str(w, STR("<section id =\""));
+    http_write_str(w, STR("<section id=\""));
     http_write_str(w, homie_id_str(&d->domain));
     http_write_str(w, STR("/"));
     http_write_str(w, homie_id_str(&d->id));

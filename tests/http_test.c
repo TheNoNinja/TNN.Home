@@ -88,6 +88,7 @@ void http_test_request_headers(void)
     );
     TEST_EXPECT(http_request_read(loose, &request) == HTTP_READ_OK);
     TEST_EXPECT(str_equal(request.host, STR("example.org")) && request.content_length == 5);
+    TEST_EXPECT(str_equal(request.origin, STR("example.org")));
     TEST_EXPECT(http_request_read(STR("GET / HTTP/1.1\r\nHost: x\r\n\r\n"), &request) == HTTP_READ_OK);
     TEST_EXPECT(request.origin.length == 0);
 
