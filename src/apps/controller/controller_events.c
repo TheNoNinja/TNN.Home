@@ -26,9 +26,9 @@ internal void controller_events_send(Controller *c, ControllerHttpConnection *h,
     }
 }
 
-internal void controller_events_write_device(HttpWriter *w, const ControllerDevice *d, const b32 is_removed)
+internal void controller_events_write_device(Writer *w, const ControllerDevice *d, const b32 is_removed)
 {
-    HttpWriter section = http_writer_create(controller_events_section, sizeof(controller_events_section));
+    Writer section = writer_create(controller_events_section, sizeof(controller_events_section));
     if (is_removed)
     {
         controller_page_removed(&section, d);
@@ -38,7 +38,7 @@ internal void controller_events_write_device(HttpWriter *w, const ControllerDevi
         controller_page_device(&section, d);
     }
     ASSERT(!section.has_overflown);
-    http_write_event(w, http_writer_str(&section));
+    http_write_event(w, writer_to_str(&section));
 }
 
 void controller_events_open(Controller *c, ControllerHttpConnection *h)
@@ -46,7 +46,7 @@ void controller_events_open(Controller *c, ControllerHttpConnection *h)
     const int one = 1;
     setsockopt(h->sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
-    HttpWriter w = http_writer_create(controller_events_buffer, sizeof(controller_events_buffer));
+    Writer w = writer_create(controller_events_buffer, sizeof(controller_events_buffer));
     http_write_status(&w, 200);
     http_write_header(&w, STR("Content-Type"), STR("text/event-stream"));
     http_write_header(&w, STR("Cache-Control"), STR("no-store"));
@@ -68,7 +68,7 @@ void controller_events_open(Controller *c, ControllerHttpConnection *h)
         return;
     }
     h->is_stream = 1;
-    controller_events_send(c, h, http_writer_str(&w));
+    controller_events_send(c, h, writer_to_str(&w));
 }
 
 internal void controller_events_broadcast(Controller *c, const ControllerDevice *d, const b32 is_removed)
@@ -86,14 +86,14 @@ internal void controller_events_broadcast(Controller *c, const ControllerDevice 
     {
         return;
     }
-    HttpWriter w = http_writer_create(controller_events_buffer, sizeof(controller_events_buffer));
+    Writer w = writer_create(controller_events_buffer, sizeof(controller_events_buffer));
     controller_events_write_device(&w, d, is_removed);
     for (u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
     {
         ControllerHttpConnection *h = &c->http[i];
         if (h->is_stream)
         {
-            controller_events_send(c, h, http_writer_str(&w));
+            controller_events_send(c, h, writer_to_str(&w));
         }
     }
 }

@@ -55,11 +55,11 @@ struct EchoProbe
 internal b32 echo_probe_send(EchoProbe *p)
 {
     u8 payload[ECHO_PROBE_PAYLOAD_MAX];
-    MqttWriter body = mqtt_writer_create(payload, sizeof(payload));
+    Writer body = writer_create(payload, sizeof(payload));
     mqtt_write_u64_be(&body, time_now_raw_ns());
     mqtt_write_u64_be(&body, p->sent);
 
-    const str message = { payload, body.length };
+    const str message = writer_to_str(&body);
     p->sent += 1;
     if (p->rate == 0 || p->sent == p->count)
     {

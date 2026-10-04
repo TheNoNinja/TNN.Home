@@ -8,5 +8,6 @@
 #include "base/base_log.h"
 #include "base/base_str.h"
 #include "base/base_time.h"
+#include "base/base_writer.h"
 
 #endif

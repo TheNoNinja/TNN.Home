@@ -88,8 +88,8 @@ void controller_events_device(Controller *c, const ControllerDevice *d);
 void controller_events_removed(Controller *c, const ControllerDevice *d);
 void controller_events_heartbeat(Controller *c);
 
-void controller_page_write(const Controller *c, HttpWriter *w);
-void controller_page_device(HttpWriter *w, const ControllerDevice *d);
-void controller_page_removed(HttpWriter *w, const ControllerDevice *d);
+void controller_page_write(const Controller *c, Writer *w);
+void controller_page_device(Writer *w, const ControllerDevice *d);
+void controller_page_removed(Writer *w, const ControllerDevice *d);
 
 #endif

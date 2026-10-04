@@ -93,24 +93,17 @@ void homie_test_description(void)
 
     u8 buffer[1024];
     JsonWriter w = json_writer_create(buffer, sizeof(buffer));
-    json_write_object_begin(&w);
-    json_write_key(&w, STR("homie"));
-    json_write_str(&w, STR("5.0"));
-    json_write_key(&w, STR("version"));
-    json_write_i64(&w, 1);
-    json_write_key(&w, STR("nodes"));
-    json_write_object_begin(&w);
-    json_write_key(&w, STR("n"));
-    json_write_object_begin(&w);
-    json_write_key(&w, STR("properties"));
-    json_write_object_begin(&w);
+    json_write_object_begin(&w, STR_EMPTY);
+    json_write_str(&w, STR("homie"), STR("5.0"));
+    json_write_i64(&w, STR("version"), 1);
+    json_write_object_begin(&w, STR("nodes"));
+    json_write_object_begin(&w, STR("n"));
+    json_write_object_begin(&w, STR("properties"));
     for (u32 i = 0; i < HOMIE_PROPERTY_MAX + 1; i++)
     {
         u8 id[2] = { 'p', (u8)('a' + i) };
-        json_write_key(&w, (str){ id, sizeof(id) });
-        json_write_object_begin(&w);
-        json_write_key(&w, STR("datatype"));
-        json_write_str(&w, STR("string"));
+        json_write_object_begin(&w, (str){ id, sizeof(id) });
+        json_write_str(&w, STR("datatype"), STR("string"));
         json_write_object_end(&w);
     }
     json_write_object_end(&w);
@@ -118,8 +111,8 @@ void homie_test_description(void)
     json_write_object_end(&w);
     json_write_object_end(&w);
 
-    TEST_EXPECT(!w.has_overflown);
-    TEST_EXPECT(homie_description_read((str) { w.data, w.length }, &d));
+    TEST_EXPECT(!w.out.has_overflown);
+    TEST_EXPECT(homie_description_read(writer_to_str(&w.out), &d));
     TEST_EXPECT(d.property_count == HOMIE_PROPERTY_MAX);
     TEST_EXPECT_STR(homie_id_str(&d.properties[15].id), STR("pp"));
 }

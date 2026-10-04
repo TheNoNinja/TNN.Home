@@ -1,96 +1,96 @@
 #include "apps/controller/controller.h"
 
-internal void controller_page_value(HttpWriter *w, const ControllerDevice *d, const HomieProperty *p, const ControllerValue *v)
+internal void controller_page_value(Writer *w, const ControllerDevice *d, const HomieProperty *p, const ControllerValue *v)
 {
-    http_write_str(w, STR("<span id=\""));
-    http_write_str(w, homie_id_str(&d->domain));
-    http_write_str(w, STR("/"));
-    http_write_str(w, homie_id_str(&d->id));
-    http_write_str(w, STR("/"));
-    http_write_str(w, homie_id_str(&p->node));
-    http_write_str(w, STR("/"));
-    http_write_str(w, homie_id_str(&p->id));
-    http_write_str(w, STR("\">"));
+    write_bytes(w, STR("<span id=\""));
+    write_bytes(w, homie_id_str(&d->domain));
+    write_bytes(w, STR("/"));
+    write_bytes(w, homie_id_str(&d->id));
+    write_bytes(w, STR("/"));
+    write_bytes(w, homie_id_str(&p->node));
+    write_bytes(w, STR("/"));
+    write_bytes(w, homie_id_str(&p->id));
+    write_bytes(w, STR("\">"));
     if (v->is_known)
     {
         http_write_escaped(w, (str){ (u8 *)v->bytes, v->length });
     }
     else
     {
-        http_write_str(w, STR("(no value)"));
+        write_bytes(w, STR("(no value)"));
     }
-    http_write_str(w, STR("</span>"));
+    write_bytes(w, STR("</span>"));
 }
 
-internal void controller_page_toggle(HttpWriter *w, const ControllerDevice *d, const HomieProperty *p, const ControllerValue *v)
+internal void controller_page_toggle(Writer *w, const ControllerDevice *d, const HomieProperty *p, const ControllerValue *v)
 {
     const b32 is_on = v->is_known && str_equal((str){ (u8 *)v->bytes, v->length }, STR("true"));
-    http_write_str(w, STR("<button data-set=\""));
-    http_write_str(w, homie_id_str(&d->id));
-    http_write_str(w, STR(" "));
-    http_write_str(w, homie_id_str(&p->node));
-    http_write_str(w, STR("/"));
-    http_write_str(w, homie_id_str(&p->id));
-    http_write_str(w, is_on ? STR(" false") : STR(" true"));
-    http_write_str(w, d->state == HOMIE_STATE_READY ? STR("\">") : STR("\" disabled>"));
-    http_write_str(w, is_on ? STR("turn off") : STR("turn on"));
-    http_write_str(w, STR("</button>"));
+    write_bytes(w, STR("<button data-set=\""));
+    write_bytes(w, homie_id_str(&d->id));
+    write_bytes(w, STR(" "));
+    write_bytes(w, homie_id_str(&p->node));
+    write_bytes(w, STR("/"));
+    write_bytes(w, homie_id_str(&p->id));
+    write_bytes(w, is_on ? STR(" false") : STR(" true"));
+    write_bytes(w, d->state == HOMIE_STATE_READY ? STR("\">") : STR("\" disabled>"));
+    write_bytes(w, is_on ? STR("turn off") : STR("turn on"));
+    write_bytes(w, STR("</button>"));
 }
 
-internal void controller_page_section(HttpWriter *w, const ControllerDevice *d)
+internal void controller_page_section(Writer *w, const ControllerDevice *d)
 {
-    http_write_str(w, STR("<section id=\""));
-    http_write_str(w, homie_id_str(&d->domain));
-    http_write_str(w, STR("/"));
-    http_write_str(w, homie_id_str(&d->id));
-    http_write_str(w, STR("\">"));
+    write_bytes(w, STR("<section id=\""));
+    write_bytes(w, homie_id_str(&d->domain));
+    write_bytes(w, STR("/"));
+    write_bytes(w, homie_id_str(&d->id));
+    write_bytes(w, STR("\">"));
 }
 
-void controller_page_device(HttpWriter *w, const ControllerDevice *d)
+void controller_page_device(Writer *w, const ControllerDevice *d)
 {
     controller_page_section(w, d);
-    http_write_str(w, STR("\n<h2>"));
-    http_write_str(w, homie_id_str(&d->id));
-    http_write_str(w, STR(" <small>"));
-    http_write_str(w, homie_state_name(d->state));
-    http_write_str(w, STR("</small></h2>\n"));
+    write_bytes(w, STR("\n<h2>"));
+    write_bytes(w, homie_id_str(&d->id));
+    write_bytes(w, STR(" <small>"));
+    write_bytes(w, homie_state_name(d->state));
+    write_bytes(w, STR("</small></h2>\n"));
     if (!d->is_described)
     {
-        http_write_str(w, STR("<p>no $description yet</p>\n</section>\n"));
+        write_bytes(w, STR("<p>no $description yet</p>\n</section>\n"));
         return;
     }
-    http_write_str(w, STR("<table>\n"));
+    write_bytes(w, STR("<table>\n"));
     for (u32 i = 0; i < d->description.property_count; i++)
     {
         const HomieProperty *p = &d->description.properties[i];
-        http_write_str(w, STR("<tr><td>"));
-        http_write_str(w, homie_id_str(&p->node));
-        http_write_str(w, STR("/"));
-        http_write_str(w, homie_id_str(&p->id));
-        http_write_str(w, STR("</td><td>"));
-        http_write_str(w, homie_datatype_name(p->datatype));
-        http_write_str(w, p->is_settable ? STR(", settable") : STR_EMPTY);
-        http_write_str(w, STR("</td><td>"));
+        write_bytes(w, STR("<tr><td>"));
+        write_bytes(w, homie_id_str(&p->node));
+        write_bytes(w, STR("/"));
+        write_bytes(w, homie_id_str(&p->id));
+        write_bytes(w, STR("</td><td>"));
+        write_bytes(w, homie_datatype_name(p->datatype));
+        write_bytes(w, p->is_settable ? STR(", settable") : STR_EMPTY);
+        write_bytes(w, STR("</td><td>"));
         controller_page_value(w, d, p, &d->values[i]);
-        http_write_str(w, STR("</td><td>"));
+        write_bytes(w, STR("</td><td>"));
         if (p->is_settable && p->datatype == HOMIE_DATATYPE_BOOLEAN)
         {
             controller_page_toggle(w, d, p, &d->values[i]);
         }
-        http_write_str(w, STR("</td></tr>\n"));
+        write_bytes(w, STR("</td></tr>\n"));
     }
-    http_write_str(w, STR("</table>\n</section>\n"));
+    write_bytes(w, STR("</table>\n</section>\n"));
 }
 
-void controller_page_removed(HttpWriter *w, const ControllerDevice *d)
+void controller_page_removed(Writer *w, const ControllerDevice *d)
 {
     controller_page_section(w, d);
-    http_write_str(w, STR("</section>\n"));
+    write_bytes(w, STR("</section>\n"));
 }
 
-void controller_page_write(const Controller *c, HttpWriter *w)
+void controller_page_write(const Controller *c, Writer *w)
 {
-    http_write_str(w, STR(
+    write_bytes(w, STR(
         "<!doctype html>\n"
         "<html lang=\"en\">\n"
         "<head>\n"
@@ -116,7 +116,7 @@ void controller_page_write(const Controller *c, HttpWriter *w)
             controller_page_device(w, d);
         }
     }
-    http_write_str(w, STR(
+    write_bytes(w, STR(
         "</main>\n"
         "<script>\n"
         "const devices = document.getElementById('devices');\n"

@@ -36,33 +36,28 @@ internal b32 device_sim_light_publish(const MqttClient *c, const str value)
 
 internal void device_sim_write_description(JsonWriter *w)
 {
-    json_write_object_begin(w);
-    json_write_key(w, STR("homie"));
-    json_write_str(w, STR("5.0"));
-    json_write_key(w, STR("version"));
-    json_write_i64(w, DEVICE_SIM_DESCRIPTION_VERSION);
-    json_write_key(w, STR("name"));
-    json_write_str(w, STR("TNN virtual light"));
-    json_write_key(w, STR("nodes"));
-    json_write_object_begin(w);
-    json_write_key(w, STR("light"));
-    json_write_object_begin(w);
-    json_write_key(w, STR("name"));
-    json_write_str(w, STR("Light"));
-    json_write_key(w, STR("properties"));
-    json_write_object_begin(w);
-    json_write_key(w, STR("on"));
-    json_write_object_begin(w);
-    json_write_key(w, STR("name"));
-    json_write_str(w, STR("On"));
-    json_write_key(w, STR("datatype"));
-    json_write_str(w, STR("boolean"));
-    json_write_key(w, STR("settable"));
-    json_write_bool(w, 1);
-    json_write_object_end(w);
-    json_write_object_end(w);
-    json_write_object_end(w);
-    json_write_object_end(w);
+    json_write_object_begin(w, STR_EMPTY);
+        json_write_str(w, STR("homie"), STR("5.0"));
+        json_write_i64(w, STR("version"), DEVICE_SIM_DESCRIPTION_VERSION);
+        json_write_str(w, STR("name"), STR("TNN virtual light"));
+
+        json_write_object_begin(w, STR("nodes"));
+
+            json_write_object_begin(w, STR("light"));
+                json_write_str(w, STR("name"), STR("Light"));
+                json_write_object_begin(w, STR("properties"));
+
+                    json_write_object_begin(w, STR("on"));
+                        json_write_str(w, STR("name"), STR("On"));
+                        json_write_str(w, STR("datatype"), STR("boolean"));
+                        json_write_bool(w, STR("settable"), 1);
+                    json_write_object_end(w);
+                    
+                json_write_object_end(w);
+            json_write_object_end(w);
+
+        json_write_object_end(w);
+
     json_write_object_end(w);
 }
 
@@ -78,12 +73,11 @@ internal b32 device_sim_publish_description(Arena *arena, const MqttClient *c)
 
     JsonWriter w = json_writer_create(buffer, DEVICE_SIM_DESCRIPTION_MAX);
     device_sim_write_description(&w);
-    if (w.has_overflown)
+    if (w.out.has_overflown)
     {
         LOG_ERROR("the $description does not fit in %d bytes", DEVICE_SIM_DESCRIPTION_MAX);
     }
-    const str description = { w.data, w.length };
-    const b32 ok = !w.has_overflown && device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$description"), description);
+    const b32 ok = !w.out.has_overflown && device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$description"), writer_to_str(&w.out));
     arena_pop_to(arena, mark);
     return ok;
     

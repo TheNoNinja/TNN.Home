@@ -109,3 +109,43 @@ void base_test_str_to_u64(void)
     TEST_EXPECT(!str_to_u64(STR(" 1"), &value));
     TEST_EXPECT(value == 42);
 }
+
+void base_test_writer(void)
+{
+    u8 buffer[8];
+    Writer w = writer_create(buffer, sizeof(buffer));
+    write_bytes(&w, STR("abc"));
+    write_u8(&w, '-');
+    write_bytes(&w, STR_EMPTY);
+    write_bytes(&w, (str){0});
+    TEST_EXPECT_STR(writer_to_str(&w), STR("abc-"));
+    TEST_EXPECT(!w.has_overflown);
+
+    write_bytes(&w, STR("12345"));
+    TEST_EXPECT(w.has_overflown && w.length == 4);
+    write_bytes(&w, STR("1234"));
+    TEST_EXPECT(w.has_overflown);
+    TEST_EXPECT_STR(writer_to_str(&w), STR("abc-1234"));
+    write_u8(&w, '!');
+    TEST_EXPECT(w.has_overflown && w.length == 8);
+}
+
+void base_test_write_numbers(void)
+{
+    u8 buffer[128];
+    Writer w = writer_create(buffer, sizeof(buffer));
+    write_u64_str(&w, 0);
+    write_u8(&w, ' ');
+    write_u64_str(&w, UINT64_MAX);
+    write_u8(&w, ' ');
+    write_i64_str(&w, INT64_MIN);
+    write_u8(&w, ' ');
+    write_i64_str(&w, INT64_MAX);
+    write_u8(&w, ' ');
+    write_i64_str(&w, -42);
+    TEST_EXPECT_STR(writer_to_str(&w), STR("0 18446744073709551615 -9223372036854775808 9223372036854775807 -42"));
+
+    w = writer_create(buffer, 8);
+    write_u64_str(&w, 123456789);
+    TEST_EXPECT(w.has_overflown && w.length == 0);
+}

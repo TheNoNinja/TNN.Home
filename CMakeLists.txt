@@ -24,6 +24,7 @@ target_sources(tnn_base INTERFACE
     src/base/base_log.c
     src/base/base_str.c
     src/base/base_time.c
+    src/base/base_writer.c
 )
 target_include_directories(tnn_base INTERFACE src)
 

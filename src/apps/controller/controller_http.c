@@ -94,7 +94,7 @@ internal ControllerHttpConnection *controller_http_slot(Controller *c)
 
 internal void controller_http_send(const int sock, const u32 status, const str allow, const str content_type, const str body)
 {
-    HttpWriter w = http_writer_create(controller_http_response, sizeof(controller_http_response));
+    Writer w = writer_create(controller_http_response, sizeof(controller_http_response));
     http_write_status(&w, status);
     if (status != 204)
     {
@@ -108,7 +108,7 @@ internal void controller_http_send(const int sock, const u32 status, const str a
         http_write_header(&w, STR("Allow"), allow);
     }
     http_write_head_end(&w);
-    http_write_str(&w, body);
+    write_bytes(&w, body);
     ASSERT(!w.has_overflown);
 
     const ssize_t sent = send(sock, w.data, w.length, MSG_NOSIGNAL);
@@ -125,12 +125,12 @@ internal void controller_http_send(const int sock, const u32 status, const str a
 internal void controller_http_send_status(const int sock, const u32 status, const str allow)
 {
     u8 buffer[64];
-    HttpWriter body = http_writer_create(buffer, sizeof(buffer));
-    http_write_u64(&body, status);
-    http_write_str(&body, STR(" "));
-    http_write_str(&body, http_status_reason(status));
-    http_write_str(&body, STR("\n"));
-    controller_http_send(sock, status, allow, STR("text/plain; charset=utf-8"), http_writer_str(&body));
+    Writer body = writer_create(buffer, sizeof(buffer));
+    write_u64_str(&body, status);
+    write_bytes(&body, STR(" "));
+    write_bytes(&body, http_status_reason(status));
+    write_bytes(&body, STR("\n"));
+    controller_http_send(sock, status, allow, STR("text/plain; charset=utf-8"), writer_to_str(&body));
 }
 
 internal void controller_http_accept(Controller *c)
@@ -215,7 +215,7 @@ internal b32 controller_http_request(Controller *c, ControllerHttpConnection *h,
 
     u32 status = 200;
     b32 is_connected = 1;
-    HttpWriter page = http_writer_create(controller_http_page, sizeof(controller_http_page));
+    Writer page = writer_create(controller_http_page, sizeof(controller_http_page));
     if (!controller_http_host_valid(c, request->host))
     {
         status = 403;
@@ -250,7 +250,7 @@ internal b32 controller_http_request(Controller *c, ControllerHttpConnection *h,
     }
     else if(status == 200)
     {
-        controller_http_send(h->sock, status, STR_EMPTY, STR("text/html; charset=utf-8"), http_writer_str(&page));
+        controller_http_send(h->sock, status, STR_EMPTY, STR("text/html; charset=utf-8"), writer_to_str(&page));
     }
     else if (status == 204)
     {

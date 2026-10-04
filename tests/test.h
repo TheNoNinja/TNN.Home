@@ -21,6 +21,8 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(base_test_str_cut,       "base str cut") \
 	X(base_test_str_from_cstr, "base str cstr") \
 	X(base_test_str_to_u64,    "base str to u64") \
+	X(base_test_writer,        "base writer") \
+	X(base_test_write_numbers, "base write numbers") \
 \
 	X(histogram_test_index,       "histogram index") \
 	X(histogram_test_bounds,      "histogram bounds") \
@@ -73,6 +75,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(mqtt_test_subscribe,            "mqtt subscribe") \
 	X(mqtt_test_unsubscribe,          "mqtt unsubscribe") \
 	X(mqtt_test_pingreq,              "mqtt pingreq") \
+	X(mqtt_test_publish,              "mqtt publish") \
 	X(mqtt_test_read_str,             "mqtt read str") \
 	X(mqtt_test_read_past_end,        "mqtt read past end") \
 	X(mqtt_test_read_varint,          "mqtt read var int") \

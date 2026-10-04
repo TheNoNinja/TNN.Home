@@ -3,29 +3,16 @@
 
 #include "base/base.h"
 
-typedef struct MqttWriter MqttWriter;
-struct MqttWriter
-{
-    u8 *data;
-    u64 capacity;
-    u64 length;
-    b32 has_overflown;
-};
+void mqtt_write_u16_be(Writer *w, u16 value);
+void mqtt_write_u64_be(Writer *w, u64 value);
+void mqtt_write_str(Writer *w, str value);
+void mqtt_write_varint(Writer *w, u32 value);
 
-MqttWriter mqtt_writer_create(u8 *buffer, u64 capacity);
-
-void mqtt_write_u8(MqttWriter *w, u8 value);
-void mqtt_write_u16_be(MqttWriter *w, u16 value);
-void mqtt_write_u64_be(MqttWriter *w, u64 value);
-void mqtt_write_bytes(MqttWriter *w, str value);
-void mqtt_write_str(MqttWriter *w, str value);
-void mqtt_write_varint(MqttWriter *w, u32 value);
-
-void mqtt_write_connect(MqttWriter *w, str client_id, u16 keep_alive_seconds, str will_topic, str will_payload);
-void mqtt_write_publish(MqttWriter *w, str topic, str payload, b32 retain);
-void mqtt_write_subscribe(MqttWriter *w, u16 packet_id, str topic_filter);
-void mqtt_write_unsubscribe(MqttWriter *w, u16 packet_id, str topic_filter);
-void mqtt_write_pingreq(MqttWriter *w);
-void mqtt_write_disconnect(MqttWriter *w);
+void mqtt_write_connect(Writer *w, str client_id, u16 keep_alive_seconds, str will_topic, str will_payload);
+void mqtt_write_publish(Writer *w, str topic, str payload, b32 retain);
+void mqtt_write_subscribe(Writer *w, u16 packet_id, str topic_filter);
+void mqtt_write_unsubscribe(Writer *w, u16 packet_id, str topic_filter);
+void mqtt_write_pingreq(Writer *w);
+void mqtt_write_disconnect(Writer *w);
 
 #endif

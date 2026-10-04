@@ -43,28 +43,16 @@ b32 homie_topic_parse(const str topic, HomieTopic *out)
     return cut && homie_id_valid(out->domain) && str_equal(version, STR("5")) && homie_id_valid(out->device) && out->rest.length > 0;
 }
 
-internal u8 *homie_topic_put(u8 *at, const str s)
-{
-    if (s.length > 0)
-    {
-        memcpy(at, s.data, s.length);
-    }
-    return at + s.length;
-}
-
 str homie_topic_build(u8 *buffer, const u64 capacity, const str domain, const str device, const str rest)
 {
-    const u64 length = domain.length + 3 + device.length + 1 + rest.length;
-    if (length > capacity)
-    {
-        return STR_EMPTY;
-    }
-    u8 *at = homie_topic_put(buffer, domain);
-    at = homie_topic_put(at, STR("/5/"));
-    at = homie_topic_put(at, device);
-    at = homie_topic_put(at, STR("/"));
-    homie_topic_put(at, rest);
-    return (str){ .data = buffer, .length = length };
+    Writer w = writer_create(buffer, capacity);
+    write_bytes(&w, domain);
+    write_bytes(&w, STR("/5/"));
+    write_bytes(&w, device);
+    write_u8(&w, '/');
+    write_bytes(&w, rest);
+    return w.has_overflown ? STR_EMPTY : writer_to_str(&w);
+
 }
 
 str homie_state_name(const HomieState state)

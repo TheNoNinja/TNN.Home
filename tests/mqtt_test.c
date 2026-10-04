@@ -10,7 +10,7 @@ void mqtt_test_str(void)
     const u8 expected[] = { 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x00, 0x00 };
 
     u8 buffer[16];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    Writer w = writer_create(buffer, sizeof(buffer));
     mqtt_write_str(&w, STR("MQTT"));
     mqtt_write_str(&w, STR(""));
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
@@ -20,7 +20,7 @@ void mqtt_test_u64(void)
 {
     const u8 expected[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
     u8 buffer[8];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    Writer w = writer_create(buffer, sizeof(buffer));
     mqtt_write_u64_be(&w, 0x0102030405060708);
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 
@@ -56,7 +56,7 @@ void mqtt_test_varint(void)
     for (u32 i = 0; i < count; i++)
     {
         u8 buffer[8];
-        MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+        Writer w = writer_create(buffer, sizeof(buffer));
         mqtt_write_varint(&w, cases[i].value);
         TEST_EXPECT_BYTES(w.data, w.length, cases[i].bytes, cases[i].length);
     }
@@ -65,7 +65,7 @@ void mqtt_test_varint(void)
 void mqtt_test_varint_too_big(void)
 {
     u8 buffer[8];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    Writer w = writer_create(buffer, sizeof(buffer));
     mqtt_write_varint(&w, 268435456);
     TEST_EXPECT(w.has_overflown);
     TEST_EXPECT(w.length == 0);
@@ -84,7 +84,7 @@ void mqtt_test_connect(void)
     };
 
     u8 buffer[64];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    Writer w = writer_create(buffer, sizeof(buffer));
     mqtt_write_connect(&w, STR("tnntest"), 0, STR_EMPTY, STR_EMPTY);
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
@@ -106,7 +106,7 @@ void mqtt_test_connect_will(void)
     };
 
     u8 buffer[64];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    Writer w = writer_create(buffer, sizeof(buffer));
     mqtt_write_connect(&w, STR("tnntest"), 10, STR("w/$state"), STR("lost"));
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
@@ -122,7 +122,7 @@ void mqtt_test_subscribe(void)
     };
 
     u8 buffer[32];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    Writer w = writer_create(buffer, sizeof(buffer));
     mqtt_write_subscribe(&w, 1, STR("homie/5/#"));
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
@@ -137,7 +137,7 @@ void mqtt_test_unsubscribe(void)
     };
 
     u8 buffer[32];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    Writer w = writer_create(buffer, sizeof(buffer));
     mqtt_write_unsubscribe(&w, 2, STR("homie/5/#"));
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
@@ -147,8 +147,18 @@ void mqtt_test_pingreq(void)
     const u8 expected [] = { 0xC0, 0x00 };
 
     u8 buffer[4];
-    MqttWriter w = mqtt_writer_create(buffer, sizeof(buffer));
+    Writer w = writer_create(buffer, sizeof(buffer));
     mqtt_write_pingreq(&w);
+    TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
+}
+
+void mqtt_test_publish(void)
+{
+    const u8 expected[] = {0x30, 0x05, 0x00, 0x03, 'a', '/', 'b' };
+    u8 buffer[16];
+    Writer w = writer_create(buffer, sizeof(buffer));
+    mqtt_write_publish(&w, STR("a/b"), (str){0}, 0);
+    TEST_EXPECT(!w.has_overflown);
     TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
 }
 

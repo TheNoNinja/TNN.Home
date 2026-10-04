@@ -21,7 +21,7 @@ MqttClient mqtt_client_create(u8 *in_buffer, const u64 in_capacity, const u64 pa
     return c;
 }
 
-internal b32 mqtt_client_send(const MqttClient *c, const MqttWriter *w)
+internal b32 mqtt_client_send(const MqttClient *c, const Writer *w)
 {
     if (w->has_overflown)
     {
@@ -69,7 +69,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
 
     LOG_INFO("connected to %s:%d", ip, port);
 
-    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_connect(&w, client_id, keep_alive_seconds, will_topic, will_payload);
     if (!mqtt_client_send(c, &w))
     {
@@ -134,7 +134,7 @@ b32 mqtt_client_receive(MqttClient *c)
 
 b32 mqtt_client_publish(const MqttClient *c, const str topic, const str payload, const b32 retain)
 {
-    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_publish(&w, topic, payload, retain);
     return mqtt_client_send(c, &w);
 }
@@ -152,7 +152,7 @@ internal u16 mqtt_client_next_packet_id(MqttClient *c)
 u16 mqtt_client_subscribe(MqttClient *c, const str filter)
 {
     const u16 packet_id = mqtt_client_next_packet_id(c);
-    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_subscribe(&w, packet_id, filter);
     LOG_INFO("SUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), packet_id);
     return mqtt_client_send(c, &w) ? packet_id : 0;
@@ -161,7 +161,7 @@ u16 mqtt_client_subscribe(MqttClient *c, const str filter)
 u16 mqtt_client_unsubscribe(MqttClient *c, const str filter)
 {
     const u16 packet_id = mqtt_client_next_packet_id(c);
-    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_unsubscribe(&w, packet_id, filter);
     LOG_INFO("UNSUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), packet_id);
     return mqtt_client_send(c, &w) ? packet_id : 0;
@@ -175,7 +175,7 @@ b32 mqtt_client_ping(MqttClient *c)
         return 0;
     }
 
-    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_pingreq(&w);
     c->is_waiting_on_ping = 1;
     return mqtt_client_send(c, &w);
@@ -183,7 +183,7 @@ b32 mqtt_client_ping(MqttClient *c)
 
 b32 mqtt_client_disconnect(MqttClient *c)
 {
-    MqttWriter w = mqtt_writer_create(c->out, c->out_capacity);
+    Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_disconnect(&w);
     const b32 ok = mqtt_client_send(c, &w);
     mqtt_client_close(c);
