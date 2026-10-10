@@ -23,13 +23,13 @@
 
 internal u8 device_sim_memory[KB(16)];
 
-internal b32 device_sim_publish(const MqttClient *c, const str topic, const str payload)
+internal b32 device_sim_publish(const MqttConnection *c, const str topic, const str payload)
 {
     printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
-    return mqtt_client_publish(c, topic, payload, 1);
+    return mqtt_connection_publish(c, topic, payload, 1);
 }
 
-internal b32 device_sim_light_publish(const MqttClient *c, const str value)
+internal b32 device_sim_light_publish(const MqttConnection *c, const str value)
 {
     return device_sim_publish(c, STR(DEVICE_SIM_LIGHT_TOPIC "/$target"), value) && device_sim_publish(c, STR(DEVICE_SIM_LIGHT_TOPIC), value);
 }
@@ -61,7 +61,7 @@ internal void device_sim_write_description(JsonWriter *w)
     json_write_object_end(w);
 }
 
-internal b32 device_sim_publish_description(Arena *arena, const MqttClient *c)
+internal b32 device_sim_publish_description(Arena *arena, const MqttConnection *c)
 {
     const u64 mark = arena->position;
 
@@ -83,7 +83,7 @@ internal b32 device_sim_publish_description(Arena *arena, const MqttClient *c)
     
 }
 
-internal b32 device_sim_set(const MqttClient *c, const MqttPublish m)
+internal b32 device_sim_set(const MqttConnection *c, const MqttPublish m)
 {
     if (!str_equal(m.topic, STR(DEVICE_SIM_LIGHT_SET_TOPIC)))
     {
@@ -98,7 +98,7 @@ internal b32 device_sim_set(const MqttClient *c, const MqttPublish m)
     return device_sim_light_publish(c, m.payload);
 }
 
-internal b32 device_sim_handle(const MqttClient *c, const MqttPacket *p)
+internal b32 device_sim_handle(const MqttConnection *c, const MqttPacket *p)
 {
     switch (p->type)
     {
@@ -115,11 +115,10 @@ internal b32 device_sim_handle(const MqttClient *c, const MqttPacket *p)
     }
 }
 
-internal b32 device_sim_run(Loop *l, MqttClient *c)
+internal b32 device_sim_run(Loop *l, MqttConnection *c)
 {
-    const u64 interval_ms = DEVICE_SIM_KEEP_ALIVE * 1000;
     const u32 ping = loop_timer_add(l);
-    loop_timer_start(l, ping, interval_ms);
+    loop_timer_repeat(l, ping, DEVICE_SIM_KEEP_ALIVE * 1000);
 
     loop_watch(l, STDIN_FILENO);
     loop_watch(l, c->sock);
@@ -133,13 +132,13 @@ internal b32 device_sim_run(Loop *l, MqttClient *c)
 
         if (loop_readable(l, c->sock))
         {
-            if (!mqtt_client_receive(c))
+            if (!mqtt_connection_receive(c))
             {
                 return 0;
             }
 
             MqttPacket p = {0};
-            while (mqtt_client_next(c, &p))
+            while (mqtt_connection_next(c, &p))
             {
                 if (!device_sim_handle(c, &p))
                 {
@@ -154,12 +153,11 @@ internal b32 device_sim_run(Loop *l, MqttClient *c)
 
         if (loop_timer_fired(l, ping))
         {
-            if (!mqtt_client_ping(c))
+            if (!mqtt_connection_ping(c))
             {
                 return 0;
             }
             printf("PINGREQ\n");
-            loop_timer_start(l, ping, interval_ms);
         }
     }
 
@@ -191,8 +189,8 @@ int main(const int argc, const char **argv)
         return 1;
     }
 
-    MqttClient client = mqtt_client_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX, tx_buffer, DEVICE_SIM_PACKET_MAX);
-    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, (u16)port, STR(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR(DEVICE_SIM_TOPIC "$state"), STR("lost")))
+    MqttConnection client = mqtt_connection_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX, tx_buffer, DEVICE_SIM_PACKET_MAX);
+    if (!mqtt_connection_connect(&client, DEVICE_SIM_BROKER_IP, (u16)port, STR(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR(DEVICE_SIM_TOPIC "$state"), STR("lost")))
     {
         return 1;
     }
@@ -201,7 +199,7 @@ int main(const int argc, const char **argv)
     ok = ok && device_sim_publish(&client, STR(DEVICE_SIM_TOPIC "$state"), STR("init"));
     ok = ok && device_sim_publish_description(&arena, &client);
     ok = ok && device_sim_light_publish(&client, STR("false"));
-    ok = ok && mqtt_client_subscribe(&client, STR(DEVICE_SIM_LIGHT_SET_TOPIC)) != 0;
+    ok = ok && mqtt_connection_subscribe(&client, STR(DEVICE_SIM_LIGHT_SET_TOPIC)) != 0;
     if (!ok)
     {
         goto error_handling;
@@ -215,7 +213,7 @@ int main(const int argc, const char **argv)
         goto error_handling;
     }
 
-    if (!device_sim_publish(&client, STR(DEVICE_SIM_TOPIC "$state"), STR("disconnected")) || !mqtt_client_disconnect(&client))
+    if (!device_sim_publish(&client, STR(DEVICE_SIM_TOPIC "$state"), STR("disconnected")) || !mqtt_connection_disconnect(&client))
     {
         goto error_handling;
     }
@@ -223,6 +221,6 @@ int main(const int argc, const char **argv)
     return 0;
 
 error_handling:
-    mqtt_client_close(&client);
+    mqtt_connection_close(&client);
     return 1;
 }

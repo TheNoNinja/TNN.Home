@@ -16,26 +16,26 @@ internal b32 controller_subscribe_description(Controller *c, const ControllerDev
 {
     u8 buffer[CONTROLLER_TOPIC_MAX];
     const str filter = controller_device_filter(d, STR("$description"), buffer, sizeof(buffer));
-    return mqtt_client_subscribe(&c->client, filter) != 0;
+    return mqtt_connection_subscribe(&c->client, filter) != 0;
 }
 
 internal b32 controller_subscribe_values(Controller *c, const ControllerDevice *d)
 {
     u8 buffer[CONTROLLER_TOPIC_MAX];
     const str filter = controller_device_filter(d, STR("+/+"), buffer, sizeof(buffer));
-    return mqtt_client_subscribe(&c->client, filter) != 0;
+    return mqtt_connection_subscribe(&c->client, filter) != 0;
 }
 
 internal b32 controller_unsubscribe_device(Controller *c, const ControllerDevice *d)
 {
     u8 buffer[CONTROLLER_TOPIC_MAX];
     const str description_filter = controller_device_filter(d, STR("$description"), buffer, sizeof(buffer));
-    if (!mqtt_client_unsubscribe(&c->client, description_filter))
+    if (!mqtt_connection_unsubscribe(&c->client, description_filter))
     {
         return 0;
     }
     const str values_filter = controller_device_filter(d, STR("+/+"), buffer, sizeof(buffer));
-    return mqtt_client_unsubscribe(&c->client, values_filter);
+    return mqtt_connection_unsubscribe(&c->client, values_filter);
 }
 
 internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str payload)
@@ -90,7 +90,7 @@ internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str p
     // TODO(tnn): I'm considering using mosquitto exclusively and not supporting NanoMQ altogether
     if (state == HOMIE_STATE_INIT)
     {
-        return mqtt_client_subscribe(&c->client, STR(CONTROLLER_STATE_FILTER)) != 0;
+        return mqtt_connection_subscribe(&c->client, STR(CONTROLLER_STATE_FILTER)) != 0;
     }
     return 1;
 }

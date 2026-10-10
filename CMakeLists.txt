@@ -63,11 +63,12 @@ target_link_libraries(tnn_loop INTERFACE tnn_base)
 add_library(tnn_mqtt INTERFACE)
 target_sources(tnn_mqtt INTERFACE
     src/mqtt/mqtt_client.c
+    src/mqtt/mqtt_connection.c
     src/mqtt/mqtt_reader.c
     src/mqtt/mqtt_stream.c
     src/mqtt/mqtt_writer.c
 )
-target_link_libraries(tnn_mqtt INTERFACE tnn_base)
+target_link_libraries(tnn_mqtt INTERFACE tnn_loop)
 
 
 ################

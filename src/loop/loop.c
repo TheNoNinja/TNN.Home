@@ -4,7 +4,6 @@
 #include <limits.h>
 #include <signal.h>
 #include <string.h>
-#include <time.h>
 
 internal volatile sig_atomic_t loop_signal_received;
 
@@ -26,9 +25,7 @@ internal b32 loop_take_signal(Loop *l)
 
 u64 loop_now_ms(void)
 {
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return (u64)now.tv_sec * 1000 + (u64)now.tv_nsec / 1000000;
+    return time_now_mono_ns() / TIME_NS_PER_MS;
 }
 
 Loop loop_create(void)
@@ -76,12 +73,20 @@ u32 loop_timer_add(Loop *l)
     return l->timer_count - 1;
 }
 
+void loop_timer_repeat(Loop *l, const u32 timer, const u64 interval_ms)
+{
+    ASSERT(interval_ms > 0);
+    loop_timer_start(l, timer, interval_ms);
+    l->timers[timer].interval_ms = interval_ms;
+}
+
 void loop_timer_start(Loop *l, const u32 timer, const u64 delay_ms)
 {
     ASSERT(timer < l->timer_count && delay_ms <= INT_MAX);
     l->timers[timer].is_running = 1;
     l->timers[timer].has_fired = 0;
     l->timers[timer].deadline_ms = l->now_ms + delay_ms;
+    l->timers[timer].interval_ms = 0;
 }
 
 void loop_timer_stop(Loop *l, const u32 timer)
@@ -117,9 +122,20 @@ void loop_fire_timers(Loop *l)
     {
         LoopTimer *t = &l->timers[i];
         t->has_fired = t->is_running && t->deadline_ms <= l->now_ms;
-        if (t->has_fired)
+        if (!t->has_fired)
+        {
+            continue;
+        }
+        if (t->interval_ms == 0)
         {
             t->is_running = 0;
+            continue;
+        }
+
+        t->deadline_ms += t->interval_ms;
+        if(t->deadline_ms <= l->now_ms)
+        {
+            t->deadline_ms = l->now_ms + t->interval_ms;
         }
     }
 }

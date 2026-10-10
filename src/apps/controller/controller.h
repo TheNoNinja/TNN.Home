@@ -56,7 +56,7 @@ typedef enum ControllerSetResult ControllerSetResult;
 typedef struct Controller Controller;
 struct Controller
 {
-    MqttClient client;
+    MqttConnection client;
     Loop loop;
     ControllerDevice devices[CONTROLLER_DEVICE_MAX];
     u8 line[CONTROLLER_LINE_MAX];

@@ -125,6 +125,11 @@ void base_test_str_find(void)
     TEST_EXPECT(!str_find(STR("a\r\nb\r\n"), STR("\r\n\r\n"), &index) && index == 42);
     TEST_EXPECT(!str_find(STR_EMPTY, STR("x"), &index) && index == 42);
 
+    TEST_EXPECT_STR(str_skip(url, 7), STR("127.0.0.1:8080"));
+    TEST_EXPECT_STR(str_skip(url, url.length), STR_EMPTY);
+    TEST_EXPECT_STR(str_skip(url, 1000), STR_EMPTY);
+    const str nothing = {0};
+    TEST_EXPECT_STR(str_skip(nothing, 0), STR_EMPTY);
 }
 
 void base_test_str_next(void)
@@ -164,6 +169,18 @@ void base_test_str_to_i64(void)
     TEST_EXPECT(!str_to_i64(STR("1.5"), &value));
     TEST_EXPECT(!str_to_i64(STR_EMPTY, &value));
     TEST_EXPECT(value == 42);
+}
+
+void base_test_str_trim(void)
+{
+    TEST_EXPECT_STR(str_trim(STR(" \t on \t")), STR("on"));
+    TEST_EXPECT_STR(str_trim(STR("a b")), STR("a b"));
+    TEST_EXPECT_STR(str_trim_start(STR(" \t on \t")), STR("on \t"));
+    TEST_EXPECT_STR(str_trim_end(STR(" \t on \t")), STR(" \t on"));
+    TEST_EXPECT_STR(str_trim(STR(" \t ")), STR_EMPTY);
+    TEST_EXPECT_STR(str_trim(STR("\non\r")), STR("\non\r"));
+    const str nothing = {0};
+    TEST_EXPECT_STR(str_trim(nothing), STR_EMPTY);
 }
 
 void base_test_writer(void)

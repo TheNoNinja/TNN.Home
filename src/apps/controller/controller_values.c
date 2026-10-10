@@ -98,7 +98,7 @@ ControllerSetResult controller_set(Controller *c, const str device, const str pr
     u8 buffer[CONTROLLER_SET_TOPIC_MAX];
     const str topic = homie_topic_build(buffer, sizeof(buffer), homie_id_str(&d->domain), homie_id_str(&d->id), (str){ rest, property.length + 4 });
     ASSERT(topic.length > 0);
-    if (!mqtt_client_publish(&c->client, topic, value, 0))
+    if (!mqtt_connection_publish(&c->client, topic, value, 0))
     {
         return CONTROLLER_SET_LOST;
     }

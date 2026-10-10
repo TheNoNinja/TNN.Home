@@ -41,6 +41,35 @@ void loop_test_timer_fires(void)
     TEST_EXPECT(!loop_timer_fired(&l, t));
 }
 
+void loop_test_timer_repeats(void)
+{
+    Loop l = loop_create();
+    l.now_ms = 1000;
+    const u32 t = loop_timer_add(&l);
+    loop_timer_repeat(&l, t, 10);
+    l.now_ms = 1010;
+    loop_fire_timers(&l);
+    TEST_EXPECT(loop_timer_fired(&l, t));
+    TEST_EXPECT(loop_timeout_ms(&l) == 10);
+    
+    l.now_ms = 1023;
+    loop_fire_timers(&l);
+    TEST_EXPECT(loop_timer_fired(&l, t));
+    TEST_EXPECT(loop_timeout_ms(&l) == 7);
+
+    l.now_ms = 1075;
+    loop_fire_timers(&l);
+    TEST_EXPECT(loop_timer_fired(&l, t));
+    TEST_EXPECT(loop_timeout_ms(&l) == 10);
+
+    loop_timer_stop(&l, t);
+    TEST_EXPECT(loop_timeout_ms(&l) == -1);
+    loop_timer_start(&l, t, 5);
+    l.now_ms = 1080;
+    loop_fire_timers(&l);
+    TEST_EXPECT(loop_timer_fired(&l, t) && loop_timeout_ms(&l) == -1);
+}
+
 void loop_test_pipe(void)
 {
     int fds[2];

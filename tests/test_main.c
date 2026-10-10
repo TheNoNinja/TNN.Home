@@ -61,7 +61,7 @@ void test_expect_bytes(const u8 *data, const u64 length, const u8 *expected, con
     printf("\n");
 }
 
-void test_print_str(const str s)
+internal void test_print_str(const str s)
 {
     printf("\"");
     for(u64 i = 0; i < s.length; i++)

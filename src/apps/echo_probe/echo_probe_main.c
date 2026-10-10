@@ -37,7 +37,7 @@ internal u8 echo_probe_tx_buffer[ECHO_PROBE_TX_MAX];
 typedef struct EchoProbe EchoProbe;
 struct EchoProbe 
 {
-    MqttClient client;
+    MqttConnection client;
     Loop loop;
     int tick;
     u32 timeout;
@@ -65,7 +65,7 @@ internal b32 echo_probe_send(EchoProbe *p)
     {
         loop_timer_start(&p->loop, p->timeout, ECHO_PROBE_TIMEOUT_MS);
     }
-    return mqtt_client_publish(&p->client, STR(ECHO_PROBE_TOPIC), message, 0);
+    return mqtt_connection_publish(&p->client, STR(ECHO_PROBE_TOPIC), message, 0);
 }
 
 internal b32 echo_probe_next(EchoProbe *p)
@@ -174,13 +174,13 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
 
 internal b32 echo_probe_receive(EchoProbe *p)
 {
-    if (!mqtt_client_receive(&p->client))
+    if (!mqtt_connection_receive(&p->client))
     {
         return 0;
     }
 
     MqttPacket packet = {0};
-    while (mqtt_client_next(&p->client, &packet))
+    while (mqtt_connection_next(&p->client, &packet))
     {
         if(!echo_probe_handle(p, &packet))
         {
@@ -321,13 +321,13 @@ int main(const int argc, char **argv)
     p.interval_ns = rate > 0 ? TIME_NS_PER_S / rate : 0;
     p.round_trip = histogram_create();
     p.latency = histogram_create();
-    p.client = mqtt_client_create(echo_probe_rx_buffer, sizeof(echo_probe_rx_buffer), ECHO_PROBE_RX_PACKET_MAX, echo_probe_tx_buffer, sizeof(echo_probe_tx_buffer));
-    if (!mqtt_client_connect(&p.client, ECHO_PROBE_BROKER_IP, (u16)port, STR(ECHO_PROBE_CLIENT_ID), ECHO_PROBE_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    p.client = mqtt_connection_create(echo_probe_rx_buffer, sizeof(echo_probe_rx_buffer), ECHO_PROBE_RX_PACKET_MAX, echo_probe_tx_buffer, sizeof(echo_probe_tx_buffer));
+    if (!mqtt_connection_connect(&p.client, ECHO_PROBE_BROKER_IP, (u16)port, STR(ECHO_PROBE_CLIENT_ID), ECHO_PROBE_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
 
-    b32 ok = mqtt_client_subscribe(&p.client, STR(ECHO_PROBE_TOPIC)) != 0;
+    b32 ok = mqtt_connection_subscribe(&p.client, STR(ECHO_PROBE_TOPIC)) != 0;
 
     p.loop = loop_create();
     loop_catch_signals();
@@ -368,9 +368,9 @@ int main(const int argc, char **argv)
     if (ok)
     {
         echo_probe_print(&p, port);
-        ok = mqtt_client_disconnect(&p.client);
+        ok = mqtt_connection_disconnect(&p.client);
     }
     close(p.tick);
-    mqtt_client_close(&p.client);
+    mqtt_connection_close(&p.client);
     return ok ? 0 : 1;
 }

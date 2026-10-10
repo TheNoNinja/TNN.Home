@@ -14,6 +14,7 @@ struct LoopTimer
     b32 is_running;
     b32 has_fired;
     u64 deadline_ms;
+    u64 interval_ms;
 };
 
 typedef struct Loop Loop;
@@ -35,6 +36,7 @@ void loop_watch(Loop *l, int fd);
 void loop_unwatch(Loop *l, int fd);
 
 u32 loop_timer_add(Loop *l);
+void loop_timer_repeat(Loop *l, u32 timer, u64 interval_ms);
 void loop_timer_start(Loop *l, u32 timer, u64 delay_ms);
 void loop_timer_stop(Loop *l, u32 timer);
 

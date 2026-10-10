@@ -17,15 +17,15 @@
 internal u8 mqtt_dump_rx_buffer[MQTT_DUMP_RX_MAX];
 internal u8 mqtt_dump_tx_buffer[MQTT_DUMP_TX_MAX];
 
-internal b32 mqtt_dump_receive(MqttClient *c)
+internal b32 mqtt_dump_receive(MqttConnection *c)
 {
-    if (!mqtt_client_receive(c))
+    if (!mqtt_connection_receive(c))
     {
         return 0;
     }
 
     MqttPacket p = {0};
-    while (mqtt_client_next(c, &p))
+    while (mqtt_connection_next(c, &p))
     {
         if (p.type == MQTT_PUBLISH)
         {
@@ -53,19 +53,19 @@ int main(const int argc, const char **argv)
         return 1;
     }
 
-    MqttClient client = mqtt_client_create(mqtt_dump_rx_buffer, sizeof(mqtt_dump_rx_buffer), MQTT_DUMP_RX_PACKET_MAX, mqtt_dump_tx_buffer, sizeof(mqtt_dump_tx_buffer));
-    if (!mqtt_client_connect(&client, MQTT_DUMP_BROKER_IP, (u16)port, STR(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    MqttConnection client = mqtt_connection_create(mqtt_dump_rx_buffer, sizeof(mqtt_dump_rx_buffer), MQTT_DUMP_RX_PACKET_MAX, mqtt_dump_tx_buffer, sizeof(mqtt_dump_tx_buffer));
+    if (!mqtt_connection_connect(&client, MQTT_DUMP_BROKER_IP, (u16)port, STR(MQTT_DUMP_CLIENT_ID), MQTT_DUMP_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
 
-    b32 ok = mqtt_client_subscribe(&client, STR(MQTT_DUMP_TOPIC_FILTER)) != 0;
+    b32 ok = mqtt_connection_subscribe(&client, STR(MQTT_DUMP_TOPIC_FILTER)) != 0;
 
     Loop loop = loop_create();
     loop_catch_signals();
     loop_watch(&loop, client.sock);
     const u32 ping = loop_timer_add(&loop);
-    loop_timer_start(&loop, ping, MQTT_DUMP_KEEP_ALIVE * 1000);
+    loop_timer_repeat(&loop, ping, MQTT_DUMP_KEEP_ALIVE * 1000);
 
     while (ok && loop_wait(&loop))
     {
@@ -76,8 +76,7 @@ int main(const int argc, const char **argv)
 
         if (loop_timer_fired(&loop, ping))
         {
-            ok = ok && mqtt_client_ping(&client);
-            loop_timer_start(&loop, ping, MQTT_DUMP_KEEP_ALIVE * 1000);
+            ok = ok && mqtt_connection_ping(&client);
         }
     }
 
@@ -85,9 +84,9 @@ int main(const int argc, const char **argv)
     if (ok)
     {
         LOG_INFO("signal %d (%s): disconnecting", loop.stop_signal, strsignal(loop.stop_signal));
-        return mqtt_client_disconnect(&client) ? 0 : 1;
+        return mqtt_connection_disconnect(&client) ? 0 : 1;
     }
 
-    mqtt_client_close(&client);
+    mqtt_connection_close(&client);
     return 1;
 }

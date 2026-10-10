@@ -24,6 +24,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(base_test_str_find,      "base str find") \
 	X(base_test_str_next,      "base str next") \
 	X(base_test_str_to_i64,    "base str to i64") \
+	X(base_test_str_trim,      "base str trim") \
 	X(base_test_writer,        "base writer") \
 	X(base_test_write_numbers, "base write numbers") \
 \
@@ -63,36 +64,38 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(json_test_read_skip,     "json read skip") \
 	X(json_test_read_invalid,  "json read invalid") \
 \
-	X(loop_test_timeout,     "loop timeout") \
-	X(loop_test_timer_fires, "loop timer fires") \
-	X(loop_test_pipe,        "loop pipe") \
-	X(loop_test_signal,      "loop signal") \
-	X(loop_test_unwatch,     "loop unwatch") \
+	X(loop_test_timeout,       "loop timeout") \
+	X(loop_test_timer_fires,   "loop timer fires") \
+	X(loop_test_timer_repeats, "loop timer repeats") \
+	X(loop_test_pipe,          "loop pipe") \
+	X(loop_test_signal,        "loop signal") \
+	X(loop_test_unwatch,       "loop unwatch") \
 \
-	X(mqtt_test_str,                  "mqtt str") \
-	X(mqtt_test_u64,                  "mqtt u64") \
-	X(mqtt_test_varint,               "mqtt varint") \
-	X(mqtt_test_varint_too_big,       "mqtt var int too big") \
-	X(mqtt_test_connect,              "mqtt connect") \
-	X(mqtt_test_connect_will,         "mqtt connect will") \
-	X(mqtt_test_subscribe,            "mqtt subscribe") \
-	X(mqtt_test_unsubscribe,          "mqtt unsubscribe") \
-	X(mqtt_test_pingreq,              "mqtt pingreq") \
-	X(mqtt_test_publish,              "mqtt publish") \
-	X(mqtt_test_read_str,             "mqtt read str") \
-	X(mqtt_test_read_past_end,        "mqtt read past end") \
-	X(mqtt_test_read_varint,          "mqtt read var int") \
-	X(mqtt_test_read_varint_too_long, "mqtt read varint too long") \
-	X(mqtt_test_read_fixed_header,    "mqtt read fixed header") \
-	X(mqtt_test_read_publish,         "mqtt read publish") \
-	X(mqtt_test_stream_split,         "mqtt stream split") \
-	X(mqtt_test_stream_burst,         "mqtt stream burst") \
-	X(mqtt_test_stream_oversized,     "mqtt stream oversized") \
-	X(mqtt_test_stream_malformed,     "mqtt stream malformed") \
-	X(mqtt_test_client_send,          "mqtt client send") \
-	X(mqtt_test_client_next,          "mqtt client next") \
-	X(mqtt_test_client_refused,       "mqtt client refused") \
-	X(mqtt_test_client_unsubscribe,   "mqtt client unsubscribe")
+	X(mqtt_test_str,                    "mqtt str") \
+	X(mqtt_test_u64,                    "mqtt u64") \
+	X(mqtt_test_varint,                 "mqtt varint") \
+	X(mqtt_test_varint_too_big,         "mqtt var int too big") \
+	X(mqtt_test_connect,                "mqtt connect") \
+	X(mqtt_test_connect_will,           "mqtt connect will") \
+	X(mqtt_test_subscribe,              "mqtt subscribe") \
+	X(mqtt_test_unsubscribe,            "mqtt unsubscribe") \
+	X(mqtt_test_pingreq,                "mqtt pingreq") \
+	X(mqtt_test_publish,                "mqtt publish") \
+	X(mqtt_test_read_str,               "mqtt read str") \
+	X(mqtt_test_read_past_end,          "mqtt read past end") \
+	X(mqtt_test_read_varint,            "mqtt read var int") \
+	X(mqtt_test_read_varint_too_long,   "mqtt read varint too long") \
+	X(mqtt_test_read_fixed_header,      "mqtt read fixed header") \
+	X(mqtt_test_read_publish,           "mqtt read publish") \
+	X(mqtt_test_stream_split,           "mqtt stream split") \
+	X(mqtt_test_stream_burst,           "mqtt stream burst") \
+	X(mqtt_test_stream_oversized,       "mqtt stream oversized") \
+	X(mqtt_test_stream_malformed,       "mqtt stream malformed") \
+	X(mqtt_test_connection_send,        "mqtt connection send") \
+	X(mqtt_test_connection_next,        "mqtt connection next") \
+	X(mqtt_test_connection_refused,     "mqtt connection refused") \
+	X(mqtt_test_connection_unsubscribe, "mqtt connection unsubscribe") \
+	X(mqtt_test_client,                 "mqtt client")
 
 #define TEST_DECLARE(function, name) void function(void);
 TEST_LIST(TEST_DECLARE)
