@@ -13,7 +13,7 @@ MqttClient mqtt_client_create(u8 *in_buffer, const u64 in_capacity, const u64 pa
 
 b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str client_id, const u16 keep_alive_seconds, const str will_topic, const str will_payload)
 {
-    if (mqtt_connection_connect(&c->connection, ip, port, client_id, keep_alive_seconds, will_topic, will_payload))
+    if (!mqtt_connection_connect(&c->connection, ip, port, client_id, keep_alive_seconds, will_topic, will_payload))
     {
         return 0;
     }
@@ -47,6 +47,16 @@ b32 mqtt_client_wait(MqttClient *c)
         return 0;
     }
     return 1;
+}
+
+b32 mqtt_client_subscribe(MqttClient *c, str topic_filter)
+{
+    return mqtt_connection_subscribe(&c->connection, topic_filter) != 0;
+}
+
+b32 mqtt_client_publish(MqttClient *c, str topic, str payload, b32 retain)
+{
+    return mqtt_connection_publish(&c->connection, topic, payload, retain); 
 }
 
 int mqtt_client_close(MqttClient *c, const b32 ok)

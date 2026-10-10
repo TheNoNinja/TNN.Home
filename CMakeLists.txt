@@ -100,7 +100,7 @@ target_link_libraries(tnn_echo_probe PRIVATE tnn_histogram tnn_loop tnn_mqtt)
 add_executable(tnn_mqtt_dump
     src/apps/mqtt_dump/mqtt_dump_main.c
 )
-target_link_libraries(tnn_mqtt_dump PRIVATE tnn_loop tnn_mqtt)
+target_link_libraries(tnn_mqtt_dump PRIVATE tnn_mqtt)
 
 add_executable(tnn_timer_lateness
     src/apps/timer_lateness/timer_lateness_main.c

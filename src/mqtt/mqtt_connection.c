@@ -21,7 +21,7 @@ MqttConnection mqtt_connection_create(u8 *in_buffer, const u64 in_capacity, cons
     return c;
 }
 
-internal b32 mqtt_client_send(const MqttConnection *c, const Writer *w)
+internal b32 mqtt_connection_send(const MqttConnection *c, const Writer *w)
 {
     if (w->has_overflown)
     {
@@ -71,7 +71,7 @@ b32 mqtt_connection_connect(MqttConnection *c, const char *ip, const u16 port, c
 
     Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_connect(&w, client_id, keep_alive_seconds, will_topic, will_payload);
-    if (!mqtt_client_send(c, &w))
+    if (!mqtt_connection_send(c, &w))
     {
         goto error_handling;
     }
@@ -136,10 +136,10 @@ b32 mqtt_connection_publish(const MqttConnection *c, const str topic, const str 
 {
     Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_publish(&w, topic, payload, retain);
-    return mqtt_client_send(c, &w);
+    return mqtt_connection_send(c, &w);
 }
 
-internal u16 mqtt_client_next_packet_id(MqttConnection *c)
+internal u16 mqtt_connection_next_packet_id(MqttConnection *c)
 {
     c->packet_id += 1;
     if (c->packet_id == 0)
@@ -149,22 +149,22 @@ internal u16 mqtt_client_next_packet_id(MqttConnection *c)
     return c->packet_id;
 }
 
-u16 mqtt_connection_subscribe(MqttConnection *c, const str filter)
+u16 mqtt_connection_subscribe(MqttConnection *c, const str topic_filter)
 {
-    const u16 packet_id = mqtt_client_next_packet_id(c);
+    const u16 packet_id = mqtt_connection_next_packet_id(c);
     Writer w = writer_create(c->out, c->out_capacity);
-    mqtt_write_subscribe(&w, packet_id, filter);
-    LOG_INFO("SUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), packet_id);
-    return mqtt_client_send(c, &w) ? packet_id : 0;
+    mqtt_write_subscribe(&w, packet_id, topic_filter);
+    LOG_INFO("SUBSCRIBE %.*s (packet id %d)", STR_FMT(topic_filter), packet_id);
+    return mqtt_connection_send(c, &w) ? packet_id : 0;
 }
 
 u16 mqtt_connection_unsubscribe(MqttConnection *c, const str filter)
 {
-    const u16 packet_id = mqtt_client_next_packet_id(c);
+    const u16 packet_id = mqtt_connection_next_packet_id(c);
     Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_unsubscribe(&w, packet_id, filter);
     LOG_INFO("UNSUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), packet_id);
-    return mqtt_client_send(c, &w) ? packet_id : 0;
+    return mqtt_connection_send(c, &w) ? packet_id : 0;
 }
 
 b32 mqtt_connection_ping(MqttConnection *c)
@@ -178,14 +178,14 @@ b32 mqtt_connection_ping(MqttConnection *c)
     Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_pingreq(&w);
     c->is_waiting_on_ping = 1;
-    return mqtt_client_send(c, &w);
+    return mqtt_connection_send(c, &w);
 }
 
 b32 mqtt_connection_disconnect(MqttConnection *c)
 {
     Writer w = writer_create(c->out, c->out_capacity);
     mqtt_write_disconnect(&w);
-    const b32 ok = mqtt_client_send(c, &w);
+    const b32 ok = mqtt_connection_send(c, &w);
     mqtt_connection_close(c);
     return ok;
 }
