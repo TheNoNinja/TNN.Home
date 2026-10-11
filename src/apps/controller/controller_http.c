@@ -43,7 +43,7 @@ b32 controller_http_listen(Controller *c, const char* ip, const u16 port)
     }
 
     fcntl(c->http_sock, F_SETFL, fcntl(c->http_sock, F_GETFL) | O_NONBLOCK);
-    loop_watch(&c->loop, c->http_sock);
+    loop_watch(&c->client.loop, c->http_sock);
     c->http_ip = str_from_cstr(ip);
     c->http_port = port;
     LOG_INFO("listening on http://%s:%d/", ip, port);
@@ -61,7 +61,7 @@ void controller_http_close(Controller *c, ControllerHttpConnection *h)
     {
         LOG_INFO("an event stream closed");
     }
-    loop_unwatch(&c->loop, h->sock);
+    loop_unwatch(&c->client.loop, h->sock);
     close(h->sock);
     h->is_open = 0;
     h->is_stream = 0;
@@ -156,9 +156,9 @@ internal void controller_http_accept(Controller *c)
     }
     h->is_open = 1;
     h->sock = sock;
-    h->opened_ms = c->loop.now_ms;
+    h->opened_ms = c->client.loop.now_ms;
     h->length = 0;
-    loop_watch(&c->loop, sock);
+    loop_watch(&c->client.loop, sock);
 }
 
 internal b32 controller_http_host_valid(const Controller *c, const str host)
@@ -330,12 +330,12 @@ b32 controller_http_handle(Controller *c)
     for (u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
     {
         ControllerHttpConnection *h = &c->http[i];
-        if(h->is_open && loop_readable(&c->loop, h->sock) && !controller_http_receive(c, h))
+        if(h->is_open && loop_readable(&c->client.loop, h->sock) && !controller_http_receive(c, h))
         {
             return 0;
         }
     }
-    if (loop_readable(&c->loop, c->http_sock))
+    if (loop_readable(&c->client.loop, c->http_sock))
     {
         controller_http_accept(c);
     }

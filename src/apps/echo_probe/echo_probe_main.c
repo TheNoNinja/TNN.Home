@@ -37,8 +37,7 @@ internal u8 echo_probe_tx_buffer[ECHO_PROBE_TX_MAX];
 typedef struct EchoProbe EchoProbe;
 struct EchoProbe 
 {
-    MqttConnection client;
-    Loop loop;
+    MqttClient client;
     int tick;
     u32 timeout;
     u32 count;
@@ -63,9 +62,9 @@ internal b32 echo_probe_send(EchoProbe *p)
     p->sent += 1;
     if (p->rate == 0 || p->sent == p->count)
     {
-        loop_timer_start(&p->loop, p->timeout, ECHO_PROBE_TIMEOUT_MS);
+        loop_timer_start(&p->client.loop, p->timeout, ECHO_PROBE_TIMEOUT_MS);
     }
-    return mqtt_connection_publish(&p->client, STR(ECHO_PROBE_TOPIC), message, 0);
+    return mqtt_client_publish(&p->client, STR(ECHO_PROBE_TOPIC), message, 0);
 }
 
 internal b32 echo_probe_next(EchoProbe *p)
@@ -174,13 +173,8 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
 
 internal b32 echo_probe_receive(EchoProbe *p)
 {
-    if (!mqtt_connection_receive(&p->client))
-    {
-        return 0;
-    }
-
     MqttPacket packet = {0};
-    while (mqtt_connection_next(&p->client, &packet))
+    while (mqtt_connection_next(&p->client.connection, &packet))
     {
         if(!echo_probe_handle(p, &packet))
         {
@@ -188,7 +182,7 @@ internal b32 echo_probe_receive(EchoProbe *p)
         }
     }
 
-    return !p->client.has_error;
+    return 1;
 }
 
 internal void echo_probe_print(const EchoProbe *p, const u64 port)
@@ -321,18 +315,15 @@ int main(const int argc, char **argv)
     p.interval_ns = rate > 0 ? TIME_NS_PER_S / rate : 0;
     p.round_trip = histogram_create();
     p.latency = histogram_create();
-    p.client = mqtt_connection_create(echo_probe_rx_buffer, sizeof(echo_probe_rx_buffer), ECHO_PROBE_RX_PACKET_MAX, echo_probe_tx_buffer, sizeof(echo_probe_tx_buffer));
-    if (!mqtt_connection_connect(&p.client, ECHO_PROBE_BROKER_IP, (u16)port, STR(ECHO_PROBE_CLIENT_ID), ECHO_PROBE_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
+    p.client = mqtt_client_create(echo_probe_rx_buffer, sizeof(echo_probe_rx_buffer), ECHO_PROBE_RX_PACKET_MAX, echo_probe_tx_buffer, sizeof(echo_probe_tx_buffer));
+    if (!mqtt_client_connect(&p.client, ECHO_PROBE_BROKER_IP, (u16)port, STR(ECHO_PROBE_CLIENT_ID), ECHO_PROBE_KEEP_ALIVE, STR_EMPTY, STR_EMPTY))
     {
         return 1;
     }
 
-    b32 ok = mqtt_connection_subscribe(&p.client, STR(ECHO_PROBE_TOPIC)) != 0;
+    b32 ok = mqtt_client_subscribe(&p.client, STR(ECHO_PROBE_TOPIC)) != 0;
 
-    p.loop = loop_create();
-    loop_catch_signals();
-    loop_watch(&p.loop, p.client.sock);
-    p.timeout = loop_timer_add(&p.loop);
+    p.timeout = loop_timer_add(&p.client.loop);
     p.tick = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
     if (p.tick < 0)
     {
@@ -340,37 +331,37 @@ int main(const int argc, char **argv)
         ok = 0;
     }
 
-    loop_watch(&p.loop, p.tick);
+    loop_watch(&p.client.loop, p.tick);
 
-    while(ok && !echo_probe_done(&p) && loop_wait(&p.loop))
+    while(ok && !echo_probe_done(&p) && loop_wait(&p.client.loop))
     {
-        if (loop_timer_fired(&p.loop, p.timeout))
+        if (loop_timer_fired(&p.client.loop, p.timeout))
         {
             ok = echo_probe_give_up(&p);
         }
 
-        if (ok && loop_readable(&p.loop, p.tick))
+        if (ok && loop_readable(&p.client.loop, p.tick))
         {
             ok = echo_probe_tick(&p);
         }
 
-        if (ok && !echo_probe_done(&p) && loop_readable(&p.loop, p.client.sock))
+        if (ok && !echo_probe_done(&p))
         {
             ok = echo_probe_receive(&p);
         }
     }
 
-    if (ok && p.loop.stop_signal != 0)
+    if (ok && p.client.has_failed != 0)
     {
-        LOG_INFO("signal %d (%s): stopping after %u of %u messages", p.loop.stop_signal, strsignal(p.loop.stop_signal), p.sent, p.count);
+        LOG_INFO("stopped early after %u of %u messages", p.sent, p.count);
     }
-    ok = ok && (p.loop.stop_signal != 0 || echo_probe_done(&p));
+    ok = ok && (p.client.loop.stop_signal != 0 || echo_probe_done(&p));
     if (ok)
     {
         echo_probe_print(&p, port);
-        ok = mqtt_connection_disconnect(&p.client);
+        ok = mqtt_connection_disconnect(&p.client.connection);
     }
     close(p.tick);
-    mqtt_connection_close(&p.client);
+    mqtt_connection_close(&p.client.connection);
     return ok ? 0 : 1;
 }

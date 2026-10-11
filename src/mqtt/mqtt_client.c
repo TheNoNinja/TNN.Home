@@ -49,12 +49,17 @@ b32 mqtt_client_wait(MqttClient *c)
     return 1;
 }
 
-b32 mqtt_client_subscribe(MqttClient *c, str topic_filter)
+b32 mqtt_client_subscribe(MqttClient *c, const str topic_filter)
 {
     return mqtt_connection_subscribe(&c->connection, topic_filter) != 0;
 }
 
-b32 mqtt_client_publish(MqttClient *c, str topic, str payload, b32 retain)
+b32 mqtt_client_unsubscribe(MqttClient *c, const str topic_filter)
+{
+    return mqtt_connection_unsubscribe(&c->connection, topic_filter) != 0;
+}
+
+b32 mqtt_client_publish(const MqttClient *c, const str topic, const str payload, const b32 retain)
 {
     return mqtt_connection_publish(&c->connection, topic, payload, retain); 
 }

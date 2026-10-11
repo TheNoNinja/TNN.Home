@@ -4,7 +4,6 @@
 #include "mqtt/mqtt.h"
 
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 
 #define DEVICE_SIM_BROKER_IP           "127.0.0.1"
@@ -115,60 +114,6 @@ internal b32 device_sim_handle(const MqttConnection *c, const MqttPacket *p)
     }
 }
 
-internal b32 device_sim_run(Loop *l, MqttConnection *c)
-{
-    const u32 ping = loop_timer_add(l);
-    loop_timer_repeat(l, ping, DEVICE_SIM_KEEP_ALIVE * 1000);
-
-    loop_watch(l, STDIN_FILENO);
-    loop_watch(l, c->sock);
-
-    while(loop_wait(l))
-    {
-        if (loop_readable(l, STDIN_FILENO))
-        {
-            return 1;
-        }
-
-        if (loop_readable(l, c->sock))
-        {
-            if (!mqtt_connection_receive(c))
-            {
-                return 0;
-            }
-
-            MqttPacket p = {0};
-            while (mqtt_connection_next(c, &p))
-            {
-                if (!device_sim_handle(c, &p))
-                {
-                    return 0;
-                }
-            }
-            if(c->has_error)
-            {
-                return 0;
-            }          
-        }
-
-        if (loop_timer_fired(l, ping))
-        {
-            if (!mqtt_connection_ping(c))
-            {
-                return 0;
-            }
-            printf("PINGREQ\n");
-        }
-    }
-
-    if (l->stop_signal == 0)
-    {
-        return 0;
-    }
-    LOG_INFO("signal %d (%s): disconnecting", l->stop_signal, strsignal(l->stop_signal));
-    return 1;
-}
-
 int main(const int argc, const char **argv)
 {
     setvbuf(stdout, 0, _IOLBF, 0);
@@ -189,38 +134,42 @@ int main(const int argc, const char **argv)
         return 1;
     }
 
-    MqttConnection client = mqtt_connection_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX, tx_buffer, DEVICE_SIM_PACKET_MAX);
-    if (!mqtt_connection_connect(&client, DEVICE_SIM_BROKER_IP, (u16)port, STR(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR(DEVICE_SIM_TOPIC "$state"), STR("lost")))
+    MqttClient client = mqtt_client_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX, tx_buffer, DEVICE_SIM_PACKET_MAX);
+    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, (u16)port, STR(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR(DEVICE_SIM_TOPIC "$state"), STR("lost")))
     {
         return 1;
     }
 
     b32 ok = 1;
-    ok = ok && device_sim_publish(&client, STR(DEVICE_SIM_TOPIC "$state"), STR("init"));
-    ok = ok && device_sim_publish_description(&arena, &client);
-    ok = ok && device_sim_light_publish(&client, STR("false"));
-    ok = ok && mqtt_connection_subscribe(&client, STR(DEVICE_SIM_LIGHT_SET_TOPIC)) != 0;
-    if (!ok)
-    {
-        goto error_handling;
-    }
+    ok = ok && device_sim_publish(&client.connection, STR(DEVICE_SIM_TOPIC "$state"), STR("init"));
+    ok = ok && device_sim_publish_description(&arena, &client.connection);
+    ok = ok && device_sim_light_publish(&client.connection, STR("false"));
+    ok = ok && mqtt_connection_subscribe(&client.connection, STR(DEVICE_SIM_LIGHT_SET_TOPIC)) != 0;
 
     printf("press Enter or Ctrl+C to disconnect\n");
-    Loop loop = loop_create();
-    loop_catch_signals();
-    if (!device_sim_run(&loop, &client))
+    loop_watch(&client.loop, STDIN_FILENO);
+    while (ok && mqtt_client_wait(&client))
     {
-        goto error_handling;
+        if (loop_readable(&client.loop, STDIN_FILENO))
+        {
+            break;
+        }
+        if (loop_timer_fired(&client.loop, client.ping_timer))
+        {
+            printf("PINGREQ\n");
+        }
+        MqttPacket p = {0};
+        while (ok && mqtt_connection_next(&client.connection, &p))
+        {
+            ok = device_sim_handle(&client.connection, &p) == 0;
+        }
     }
 
-    if (!device_sim_publish(&client, STR(DEVICE_SIM_TOPIC "$state"), STR("disconnected")) || !mqtt_connection_disconnect(&client))
+    ok = ok && !client.has_failed&& device_sim_publish(&client.connection, STR(DEVICE_SIM_TOPIC "$state"), STR("disconnected"));
+    const int exit_code = mqtt_client_close(&client, ok);
+    if (exit_code == 0)
     {
-        goto error_handling;
+        printf("disconnected\n");
     }
-    printf("disconnected\n");
-    return 0;
-
-error_handling:
-    mqtt_connection_close(&client);
-    return 1;
+    return exit_code;
 }
