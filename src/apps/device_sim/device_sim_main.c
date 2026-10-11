@@ -1,4 +1,5 @@
 #include "base/base.h"
+#include "homie/homie.h"
 #include "json/json.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
@@ -89,7 +90,7 @@ internal b32 device_sim_set(const MqttConnection *c, const MqttPublish m)
         LOG_WARN("a message on %.*s,  which is not our /set topic, ignored", STR_FMT(m.topic));
         return 1;
     }
-    if (!str_equal(m.payload, STR("true")) && !str_equal(m.payload, STR("false")))
+    if (!homie_value_valid(HOMIE_DATATYPE_BOOLEAN, m.payload))
     {
         LOG_WARN("%s: '%.*s' is not a boolean (true or false), ignored", DEVICE_SIM_LIGHT_SET_TOPIC, STR_FMT(m.payload));
         return 1;
@@ -97,18 +98,23 @@ internal b32 device_sim_set(const MqttConnection *c, const MqttPublish m)
     return device_sim_light_publish(c, m.payload);
 }
 
-internal b32 device_sim_handle(const MqttConnection *c, const MqttPacket *p)
+internal b32 device_sim_handle(const MqttClient *c, const MqttPacket *p, const u16 set_subscription)
 {
     switch (p->type)
     {
         case MQTT_SUBACK:
-            return device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$state"), STR("ready"));
+            if (p->packet_id != set_subscription)
+            {
+                LOG_WARN("a SUBACK for packet id %d, not out /set, ignored", p->packet_id);
+                return 1;
+            }
+            return device_sim_publish(&c->connection, STR(DEVICE_SIM_TOPIC "$state"), STR("ready"));
         case MQTT_PINGRESP:
             printf("PINGRESP\n");
             return 1;
         case MQTT_PUBLISH:
             printf("received %.*s = %.*s\n", STR_FMT(p->publish.topic), STR_FMT(p->publish.payload));
-            return device_sim_set(c, p->publish);
+            return device_sim_set(&c->connection, p->publish);
         default:
             return 0;
     }
@@ -144,7 +150,8 @@ int main(const int argc, const char **argv)
     ok = ok && device_sim_publish(&client.connection, STR(DEVICE_SIM_TOPIC "$state"), STR("init"));
     ok = ok && device_sim_publish_description(&arena, &client.connection);
     ok = ok && device_sim_light_publish(&client.connection, STR("false"));
-    ok = ok && mqtt_connection_subscribe(&client.connection, STR(DEVICE_SIM_LIGHT_SET_TOPIC)) != 0;
+    const u16 set_subscription = mqtt_connection_subscribe(&client.connection, STR(DEVICE_SIM_LIGHT_SET_TOPIC));
+    ok = ok && set_subscription != 0;
 
     printf("press Enter or Ctrl+C to disconnect\n");
     loop_watch(&client.loop, STDIN_FILENO);
@@ -161,7 +168,7 @@ int main(const int argc, const char **argv)
         MqttPacket p = {0};
         while (ok && mqtt_connection_next(&client.connection, &p))
         {
-            ok = device_sim_handle(&client.connection, &p);
+            ok = device_sim_handle(&client, &p, set_subscription);
         }
     }
 

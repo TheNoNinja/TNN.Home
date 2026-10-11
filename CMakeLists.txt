@@ -90,7 +90,7 @@ target_link_libraries(tnn_controller PRIVATE tnn_homie tnn_http tnn_loop tnn_mqt
 add_executable(tnn_device_sim 
     src/apps/device_sim/device_sim_main.c
 )
-target_link_libraries(tnn_device_sim PRIVATE tnn_json tnn_loop tnn_mqtt)
+target_link_libraries(tnn_device_sim PRIVATE tnn_homie tnn_json tnn_loop tnn_mqtt)
 
 add_executable(tnn_echo_probe
     src/apps/echo_probe/echo_probe_main.c
