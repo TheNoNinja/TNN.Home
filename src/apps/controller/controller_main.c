@@ -12,7 +12,7 @@
 #define CONTROLLER_TX_MAX        256
 #define CONTROLLER_RX_MAX        KB(64)
 #define CONTROLLER_RX_PACKET_MAX KB(64)
-#define CONTROLLER_HEARTBEAT 15
+#define CONTROLLER_HEARTBEAT_MS  15000
 
 internal u8 controller_rx_buffer[CONTROLLER_RX_MAX];
 internal u8 controller_tx_buffer[CONTROLLER_TX_MAX];
@@ -35,7 +35,7 @@ internal b32 controller_receive(Controller *c)
 internal b32 controller_run(Controller *c)
 {
     const u32 heartbeat = loop_timer_add(&c->client.loop);
-    loop_timer_repeat(&c->client.loop, heartbeat, CONTROLLER_HEARTBEAT * 1000);
+    loop_timer_repeat(&c->client.loop, heartbeat, CONTROLLER_HEARTBEAT_MS);
     loop_watch(&c->client.loop, STDIN_FILENO);
 
     while(mqtt_client_wait(&c->client))
@@ -73,18 +73,13 @@ internal b32 controller_run(Controller *c)
     return 1;
 }
 
-internal b32 controller_port_read(const char *argument, u64 *port)
-{
-    return str_to_u64(str_from_cstr(argument), port) && *port >= 1 && *port <= 65535;
-}
-
 int main(const int argc, char **argv)
 {
     setvbuf(stdout, 0, _IOLBF, 0);
 
     u64 broker_port = CONTROLLER_BROKER_PORT;
     u64 http_port = CONTROLLER_HTTP_PORT;
-    if ((argc > 1 && !controller_port_read(argv[1], &broker_port)) || (argc > 2 && !controller_port_read(argv[2], &http_port)) || argc > 3) 
+    if ((argc > 1 && !str_to_u64_range(str_from_cstr(argv[1]), 1, 65535, &broker_port)) || (argc > 2 && !str_to_u64_range(str_from_cstr(argv[2]), 1, 65535, &http_port)) || argc > 3)
     {
         LOG_ERROR("usage: %s [broker port(1 to 65535, default %d)] [http port(1 to 65535, default %d)]", argv[0], CONTROLLER_BROKER_PORT, CONTROLLER_HTTP_PORT);
         return 1;
@@ -98,9 +93,6 @@ int main(const int argc, char **argv)
     }
 
     b32 ok = mqtt_client_subscribe(&c->client, STR(CONTROLLER_STATE_FILTER));
-    
-    c->client.loop = loop_create();
-    loop_catch_signals();
     ok = ok && controller_http_listen(c, CONTROLLER_HTTP_IP, (u16)http_port);
     ok = ok && controller_run(c);
 

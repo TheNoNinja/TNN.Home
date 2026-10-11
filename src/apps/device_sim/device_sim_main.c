@@ -128,7 +128,7 @@ int main(const int argc, const char **argv)
     }
 
     u64 port = DEVICE_SIM_BROKER_PORT;
-    if(argc > 1 && !(str_to_u64(str_from_cstr(argv[1]), &port) && port >= 1 && port <= 65535))
+    if(argc > 1 && !str_to_u64_range(str_from_cstr(argv[1]), 1, 65535, &port))
     {
         LOG_ERROR("usage: %s [port(default '%d')]", argv[0], DEVICE_SIM_BROKER_PORT);
         return 1;
@@ -161,7 +161,7 @@ int main(const int argc, const char **argv)
         MqttPacket p = {0};
         while (ok && mqtt_connection_next(&client.connection, &p))
         {
-            ok = device_sim_handle(&client.connection, &p) == 0;
+            ok = device_sim_handle(&client.connection, &p);
         }
     }
 

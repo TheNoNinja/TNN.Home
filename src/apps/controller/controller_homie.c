@@ -16,14 +16,14 @@ internal b32 controller_subscribe_description(Controller *c, const ControllerDev
 {
     u8 buffer[CONTROLLER_TOPIC_MAX];
     const str filter = controller_device_filter(d, STR("$description"), buffer, sizeof(buffer));
-    return mqtt_connection_subscribe(&c->client.connection, filter) != 0;
+    return mqtt_client_subscribe(&c->client, filter);
 }
 
 internal b32 controller_subscribe_values(Controller *c, const ControllerDevice *d)
 {
     u8 buffer[CONTROLLER_TOPIC_MAX];
     const str filter = controller_device_filter(d, STR("+/+"), buffer, sizeof(buffer));
-    return mqtt_connection_subscribe(&c->client.connection, filter) != 0;
+    return mqtt_client_subscribe(&c->client, filter);
 }
 
 internal b32 controller_unsubscribe_device(Controller *c, const ControllerDevice *d)

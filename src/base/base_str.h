@@ -25,6 +25,7 @@ str str_next(str *rest, u8 seperator);
 b32 str_cut(str s, u8 seperator, str *before, str *after);
 str str_from_cstr(const char *s);
 b32 str_to_u64(str s, u64 *value);
+b32 str_to_u64_range(str s, u64 min, u64 max, u64 *value);
 b32 str_to_i64(str s, i64 *value);
 
 

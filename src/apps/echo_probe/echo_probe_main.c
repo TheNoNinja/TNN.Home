@@ -333,7 +333,7 @@ int main(const int argc, char **argv)
 
     loop_watch(&p.client.loop, p.tick);
 
-    while(ok && !echo_probe_done(&p) && loop_wait(&p.client.loop))
+    while(ok && !echo_probe_done(&p) && mqtt_client_wait(&p.client))
     {
         if (loop_timer_fired(&p.client.loop, p.timeout))
         {
@@ -355,13 +355,10 @@ int main(const int argc, char **argv)
     {
         LOG_INFO("stopped early after %u of %u messages", p.sent, p.count);
     }
-    ok = ok && (p.client.loop.stop_signal != 0 || echo_probe_done(&p));
     if (ok)
     {
         echo_probe_print(&p, port);
-        ok = mqtt_connection_disconnect(&p.client.connection);
     }
     close(p.tick);
-    mqtt_connection_close(&p.client.connection);
-    return ok ? 0 : 1;
+    return mqtt_client_close(&p.client, ok);
 }

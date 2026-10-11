@@ -39,7 +39,7 @@ int main(const int argc, const char **argv)
     setvbuf(stdout, 0, _IOLBF, 0);
 
     u64 port = MQTT_DUMP_BROKER_PORT;
-    if(argc > 1 && !(str_to_u64(str_from_cstr(argv[1]), &port) && port >= 1 && port <= 65535))
+    if(argc > 1 && !str_to_u64_range(str_from_cstr(argv[1]), 1, 65535, &port))
     {
         LOG_ERROR("usage: %s [port(default '%d')]", argv[0], MQTT_DUMP_BROKER_PORT);
         return 1;

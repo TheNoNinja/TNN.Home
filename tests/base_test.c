@@ -110,6 +110,20 @@ void base_test_str_to_u64(void)
     TEST_EXPECT(value == 42);
 }
 
+void base_test_str_to_u64_range(void)
+{
+    u64 port = 1883;
+    TEST_EXPECT(str_to_u64_range(STR("1"), 1, 65535, &port) && port == 1);
+    TEST_EXPECT(str_to_u64_range(STR("65535"), 1, 65535, &port) && port == 65535);
+
+    port = 1883;
+    TEST_EXPECT(!str_to_u64_range(STR("0"), 1, 65535, &port));
+    TEST_EXPECT(!str_to_u64_range(STR("65536"), 1, 65535, &port));
+    TEST_EXPECT(!str_to_u64_range(STR("18a3"), 1, 65535, &port));
+    TEST_EXPECT(!str_to_u64_range(STR_EMPTY, 1, 65535, &port));
+    TEST_EXPECT(port == 1883);
+}
+
 void base_test_str_find(void)
 {
     const str url = STR("http://127.0.0.1:8080");
