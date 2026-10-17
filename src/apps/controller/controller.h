@@ -7,7 +7,6 @@
 #include "mqtt/mqtt.h"
 #include "http/http.h"
 
-#define CONTROLLER_STATE_FILTER "+/5/+/$state"
 #define CONTROLLER_DEVICE_MAX 64
 #define CONTROLLER_LINE_MAX 256
 #define CONTROLLER_VALUE_MAX 64

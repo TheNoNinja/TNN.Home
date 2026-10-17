@@ -32,5 +32,13 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
         homie_value_valid((HomieDatatype)d, value);
     }
     ASSERT(!homie_value_valid(HOMIE_DATATYPE_INTEGER, value) || homie_value_valid(HOMIE_DATATYPE_FLOAT, value));
+
+    HomieTopic t = {0};
+    if (homie_topic_parse(value, &t))
+    {
+        u8 buffer[HOMIE_TOPIC_MAX];
+        const str topic = homie_topic_build(buffer, sizeof(buffer), &t);
+        ASSERT(str_equal(topic, value));
+    }
     return 0;
 }

@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define CONTROLLER_SET_TOPIC_MAX 144
-
 void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
 {
     ControllerDevice *d = controller_find(c, t);
@@ -86,12 +84,11 @@ ControllerSetResult controller_set(Controller *c, const str device, const str pr
         return CONTROLLER_SET_REFUSED;
     }
 
-    u8 rest[2 * HOMIE_ID_MAX + 1 + 4];
-    memcpy(rest, property.data, property.length);
-    memcpy(rest + property.length, "/set", 4);
-    u8 buffer[CONTROLLER_SET_TOPIC_MAX];
-    const str topic = homie_topic_build(buffer, sizeof(buffer), homie_id_str(&d->domain), homie_id_str(&d->id), (str){ rest, property.length + 4 });
+    const HomieTopic set = { .kind = HOMIE_TOPIC_SET, .domain = homie_id_str(&d->domain), .device = homie_id_str(&d->id), .node = node, .property = id };
+    u8 buffer[HOMIE_TOPIC_MAX];
+    const str topic = homie_topic_build(buffer, sizeof(buffer), &set);
     ASSERT(topic.length > 0);
+    
     if (!mqtt_client_publish(&c->client, topic, value, 0))
     {
         return CONTROLLER_SET_LOST;

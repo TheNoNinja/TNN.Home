@@ -54,15 +54,31 @@ void homie_test_topic_invalid(void)
 
 void homie_test_topic_build(void)
 {
-    u8 buffer[64];
-    const str topic = homie_topic_build(buffer, sizeof(buffer), STR("homie"), STR("tnn-sim-1"), STR("$description"));
-    TEST_EXPECT_STR(topic, STR("homie/5/tnn-sim-1/$description"));
+    const str topics[] = {
+        STR("homie/5/tnn-sim-1/$state"),
+        STR("homie/5/tnn-sim-1/$description"),
+        STR("homie/5/tnn-sim-1/$log/warn"),
+        STR("homie/5/tnn-sim-1/$alert/batery-low"),
+        STR("homie/5/tnn-sim-1/light/on"),
+        STR("homie/5/tnn-sim-1/light/on/$target"),
+        STR("homie/5/tnn-sim-1/light/on/set"),
+    };
 
-    HomieTopic t = {0};
-    TEST_EXPECT(homie_topic_parse(topic, &t));
-    TEST_EXPECT(str_equal(t.domain, STR("homie")) && str_equal(t.device, STR("tnn-sim-1")) && t.kind == HOMIE_TOPIC_DESCRIPTION);
-    TEST_EXPECT(homie_topic_build(buffer, 30, STR("homie"), STR("tnn-sim-1"), STR("$description")).length == 30);
-    TEST_EXPECT(homie_topic_build(buffer, 29, STR("homie"), STR("tnn-sim-1"), STR("$description")).length == 0);
+    for (u32 i = 0; i < ARRAY_COUNT(topics); i++)
+    {
+        HomieTopic t = {0};
+        TEST_EXPECT(homie_topic_parse(topics[i], &t));
+        u8 buffer[HOMIE_TOPIC_MAX];
+        TEST_EXPECT_STR(homie_topic_build(buffer, sizeof(buffer), &t), topics[i]);
+    }
+
+    const HomieTopic t = { .kind = HOMIE_TOPIC_VALUE, .domain = STR("homie"), .device = STR("tnn-sim-1"), .node = STR("+"), .property = STR("+") };
+    u8 buffer[HOMIE_TOPIC_MAX];
+    TEST_EXPECT_STR(homie_topic_build(buffer, sizeof(buffer), &t), STR("homie/5/tnn-sim-1/+/+"));
+    TEST_EXPECT_STR(STR(HOMIE_DISCOVERY_FILTER), STR("+/5/+/$state"));
+
+    TEST_EXPECT(homie_topic_build(buffer, 21, &t).length == 21);
+    TEST_EXPECT(homie_topic_build(buffer, 20, &t).length == 0);
 }
 
 void homie_test_id(void)

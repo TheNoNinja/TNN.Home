@@ -5,6 +5,9 @@
 
 #define HOMIE_ID_MAX 32
 #define HOMIE_PROPERTY_MAX 16
+#define HOMIE_TOPIC_MAX 144
+#define HOMIE_TOPIC_LITERAL(domain, device, rest) domain "/5/" device "/" rest
+#define HOMIE_DISCOVERY_FILTER HOMIE_TOPIC_LITERAL("+", "+", "$state")
 
 typedef struct HomieId HomieId;
 struct HomieId
@@ -41,7 +44,7 @@ struct HomieTopic
 };
 
 b32 homie_topic_parse(str topic, HomieTopic *out);
-str homie_topic_build(u8 *buffer, u64 capacity, str domain, str device, str rest);
+str homie_topic_build(u8 *buffer, u64 capacity, const HomieTopic *t);
 
 enum HomieState
 {

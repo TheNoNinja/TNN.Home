@@ -92,7 +92,7 @@ int main(const int argc, char **argv)
         return 1;
     }
 
-    b32 ok = mqtt_client_subscribe(&c->client, STR(CONTROLLER_STATE_FILTER));
+    b32 ok = mqtt_client_subscribe(&c->client, STR(HOMIE_DISCOVERY_FILTER));
     ok = ok && controller_http_listen(c, CONTROLLER_HTTP_IP, (u16)http_port);
     ok = ok && controller_run(c);
 

@@ -108,16 +108,38 @@ b32 homie_topic_parse(const str topic, HomieTopic *out)
     return 1;
 }
 
-str homie_topic_build(u8 *buffer, const u64 capacity, const str domain, const str device, const str rest)
+str homie_topic_build(u8 *buffer, const u64 capacity, const HomieTopic *t)
 {
     Writer w = writer_create(buffer, capacity);
-    write_bytes(&w, domain);
+    write_bytes(&w, t->domain);
     write_bytes(&w, STR("/5/"));
-    write_bytes(&w, device);
+    write_bytes(&w, t->device);
     write_u8(&w, '/');
-    write_bytes(&w, rest);
+    switch (t->kind)
+    {
+        case HOMIE_TOPIC_STATE:       write_bytes(&w, STR("$state")); break;
+        case HOMIE_TOPIC_DESCRIPTION: write_bytes(&w, STR("$description")); break;
+        case HOMIE_TOPIC_LOG:         write_bytes(&w, STR("$log/")); write_bytes(&w, t->name); break;
+        case HOMIE_TOPIC_ALERT:       write_bytes(&w, STR("$alert/")); write_bytes(&w, t->name); break;
+        case HOMIE_TOPIC_VALUE:
+        case HOMIE_TOPIC_TARGET:
+        case HOMIE_TOPIC_SET:
+        {
+            write_bytes(&w, t->node);
+            write_u8(&w, '/');
+            write_bytes(&w, t->property);
+            if (t->kind == HOMIE_TOPIC_TARGET)
+            {
+                write_bytes(&w, STR("/$target"));
+            }
+            if (t->kind == HOMIE_TOPIC_SET)
+            {
+                write_bytes(&w, STR("/set"));
+            }
+            break;
+        }
+    }
     return w.has_overflown ? STR_EMPTY : writer_to_str(&w);
-
 }
 
 str homie_state_name(const HomieState state)
