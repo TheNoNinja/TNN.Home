@@ -7,34 +7,28 @@
 
 void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
 {
-    str node = STR_EMPTY;
-    str property = STR_EMPTY;
-    if (!str_cut(t->rest, '/', &node, &property) || !homie_id_valid(node) || !homie_id_valid(property))
-    {
-        return;
-    }
     ControllerDevice *d = controller_find(c, t);
     if (!d)
     {
         return;
     }
-    const i32 index = controller_property_find(d, node, property);
+    const i32 index = controller_property_find(d, t->node, t->property);
     if (index < 0)
     {
-        LOG_WARN("%.*s: %.*s is not in its $description, ignored", STR_FMT(t->device), STR_FMT(t->rest));
+        LOG_WARN("%.*s: %.*s/%.*s is not in its $description, ignored", STR_FMT(t->device), STR_FMT(t->node), STR_FMT(t->property));
         return;
     }
     ControllerValue *v = &d->values[index];
     const HomieProperty *p = &d->description.properties[index];
     if(payload.length > CONTROLLER_VALUE_MAX)
     {
-        LOG_WARN("%.*s: a value of %llu bytes for %.*s, more than %d: ignored", STR_FMT(t->device), (unsigned long long)payload.length, STR_FMT(t->rest), CONTROLLER_VALUE_MAX);
+        LOG_WARN("%.*s: a value of %llu bytes for %.*s/%.*s, more than %d: ignored", STR_FMT(t->device), (unsigned long long)payload.length, STR_FMT(t->node), STR_FMT(t->property), CONTROLLER_VALUE_MAX);
         v->is_known = 0;
     } 
     else if (payload.length > 0 && !homie_value_valid(p->datatype, payload))
     {
         const str datatype = homie_datatype_name(p->datatype);
-        LOG_WARN("%.*s: '%.*s' is not a valid %.*s for %.*s: ignored", STR_FMT(t->device), STR_FMT(payload), STR_FMT(datatype), STR_FMT(t->rest));
+        LOG_WARN("%.*s: '%.*s' is not a valid %.*s for  %.*s/%.*s: ignored", STR_FMT(t->device), STR_FMT(payload), STR_FMT(datatype), STR_FMT(t->node), STR_FMT(t->property));
         v->is_known = 0;
     }
     else 
@@ -42,7 +36,7 @@ void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
         memcpy(v->bytes, payload.data, payload.length);
         v->length = payload.length;
         v->is_known = payload.length > 0;
-        printf("%.*s: %.*s = %.*s\n", STR_FMT(t->device), STR_FMT(t->rest), STR_FMT(payload));
+        printf("%.*s: %.*s/%.*s = %.*s\n", STR_FMT(t->device), STR_FMT(t->node), STR_FMT(t->property), STR_FMT(payload));
     }
     controller_events_device(c, d);
 }

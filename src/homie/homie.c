@@ -37,10 +37,75 @@ str homie_id_str(const HomieId *id)
 
 b32 homie_topic_parse(const str topic, HomieTopic *out)
 {
-    str version = STR_EMPTY;
-    str rest = STR_EMPTY;
-    const b32 cut = str_cut(topic, '/', &out->domain, &rest) && str_cut(rest, '/', &version, &rest) && str_cut(rest, '/', &out->device, &out->rest); 
-    return cut && homie_id_valid(out->domain) && str_equal(version, STR("5")) && homie_id_valid(out->device) && out->rest.length > 0;
+    str levels[7];
+    u32 count = 0;
+    str rest = topic;
+    b32 has_more = 1;
+
+    while(has_more && count < ARRAY_COUNT(levels))
+    {
+        has_more = str_cut(rest, '/', &levels[count], &rest);
+        count += 1;
+    }
+    if (count < 4 || count > 6)
+    {
+        return 0;
+    }
+
+    HomieTopic t = {0};
+    t.domain = levels[0];
+    t.device = levels[2];
+    if (!homie_id_valid(t.domain) || !str_equal(levels[1], STR("5")) || !homie_id_valid(t.device))
+    {
+        return 0;
+    }
+
+    const str first = levels[3];
+    if (count == 4 && str_equal(first, STR("$state")))
+    {
+        t.kind = HOMIE_TOPIC_STATE;
+    }
+    else if (count == 4 && str_equal(first, STR("$description")))
+    {
+        t.kind = HOMIE_TOPIC_DESCRIPTION;
+    }
+    else if (count == 5 && str_equal(first, STR("$log")) && homie_id_valid(levels[4]))
+    {
+        t.kind = HOMIE_TOPIC_LOG;
+        t.name = levels[4];
+    }
+    else if (count == 5 && str_equal(first, STR("$alert")) && homie_id_valid(levels[4]))
+    {
+        t.kind = HOMIE_TOPIC_ALERT;
+        t.name = levels[4];
+    }
+    else if (count >= 5 && homie_id_valid(first) && homie_id_valid(levels[4]))
+    {
+        t.node = first;
+        t.property = levels[4];
+        if (count == 5)
+        {
+            t.kind = HOMIE_TOPIC_VALUE;
+        }
+        else if (str_equal(levels[5], STR("$target")))
+        {
+            t.kind = HOMIE_TOPIC_TARGET;
+        }
+        else if (str_equal(levels[5], STR("set")))
+        {
+            t.kind = HOMIE_TOPIC_SET;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    else 
+    {
+        return 0;
+    }
+    *out = t;
+    return 1;
 }
 
 str homie_topic_build(u8 *buffer, const u64 capacity, const str domain, const str device, const str rest)

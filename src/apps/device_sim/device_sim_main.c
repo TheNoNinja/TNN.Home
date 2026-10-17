@@ -150,7 +150,7 @@ int main(const int argc, const char **argv)
     ok = ok && device_sim_publish(&client.connection, STR(DEVICE_SIM_TOPIC "$state"), STR("init"));
     ok = ok && device_sim_publish_description(&arena, &client.connection);
     ok = ok && device_sim_light_publish(&client.connection, STR("false"));
-    const u16 set_subscription = mqtt_connection_subscribe(&client.connection, STR(DEVICE_SIM_LIGHT_SET_TOPIC));
+    const u16 set_subscription = ok ? mqtt_connection_subscribe(&client.connection, STR(DEVICE_SIM_LIGHT_SET_TOPIC)) : 0;
     ok = ok && set_subscription != 0;
 
     printf("press Enter or Ctrl+C to disconnect\n");

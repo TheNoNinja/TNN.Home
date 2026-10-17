@@ -9,7 +9,7 @@
 int main(const int argc, char **argv)
 {
     u64 rounds = TIMER_LATENESS_ROUNDS;
-    if (argc > 1 && !str_to_u64_range(str_from_cstr(argv[1]), 1, 1000000, &rounds))
+    if (argc > 1 && !cstr_to_u64_range(argv[1], 1, 1000000, &rounds))
     {
         LOG_ERROR("usage: %s [rounds(1 to 1000000, default %d)]", argv[0], TIMER_LATENESS_ROUNDS);
         return 1;

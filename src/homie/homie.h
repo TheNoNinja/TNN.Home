@@ -17,12 +17,27 @@ b32 homie_id_valid(str id);
 HomieId homie_id_copy(str id);
 str homie_id_str(const HomieId *id);
 
+enum HomieTopicKind
+{
+    HOMIE_TOPIC_STATE,
+    HOMIE_TOPIC_DESCRIPTION,
+    HOMIE_TOPIC_LOG,
+    HOMIE_TOPIC_ALERT,
+    HOMIE_TOPIC_VALUE,
+    HOMIE_TOPIC_TARGET,
+    HOMIE_TOPIC_SET,
+};
+typedef enum HomieTopicKind HomieTopicKind;
+
 typedef struct HomieTopic HomieTopic;
 struct HomieTopic 
 {
+    HomieTopicKind kind;
     str domain;
     str device;
-    str rest;
+    str node;
+    str property;
+    str name;
 };
 
 b32 homie_topic_parse(str topic, HomieTopic *out);

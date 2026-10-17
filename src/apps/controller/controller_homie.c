@@ -141,14 +141,15 @@ b32 controller_on_publish(Controller *c, const MqttPublish m)
         LOG_WARN("%.*s is not a Homie v5 device topic, ignored", STR_FMT(m.topic));
         return 1;
     }
-    if(str_equal(t.rest, STR("$state")))
+    switch(t.kind)
     {
-        return controller_on_state(c, &t, m.payload);
+        case HOMIE_TOPIC_STATE:       return controller_on_state(c, &t, m.payload);
+        case HOMIE_TOPIC_DESCRIPTION: return controller_on_description(c, &t, m.payload);
+        case HOMIE_TOPIC_VALUE:       controller_on_value(c, &t, m.payload); return 1;
+        case HOMIE_TOPIC_LOG:         
+        case HOMIE_TOPIC_ALERT:       
+        case HOMIE_TOPIC_TARGET:      
+        case HOMIE_TOPIC_SET:         return 1;
     }
-    if (str_equal(t.rest, STR("$description")))
-    {
-        return controller_on_description(c, &t, m.payload);
-    }
-    controller_on_value(c, &t, m.payload);
     return 1;
 }

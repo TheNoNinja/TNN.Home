@@ -459,7 +459,7 @@ void mqtt_test_client(void)
     c.connection.sock = ends[0];
     loop_watch(&c.loop, ends[0]);
     loop_timer_repeat(&c.loop, c.ping_timer, 20);
-    u8 got[8];
+    u8 got[16];
 
     const u8 pingreq[] = { 0xC0, 0x00};
     TEST_EXPECT(mqtt_client_wait(&c) && loop_timer_fired(&c.loop, c.ping_timer));
@@ -471,6 +471,11 @@ void mqtt_test_client(void)
     TEST_EXPECT(mqtt_client_wait(&c) && !loop_timer_fired(&c.loop, c.ping_timer));
     MqttPacket p = {0};
     TEST_EXPECT(mqtt_connection_next(&c.connection, &p) && p.type == MQTT_PINGRESP && !c.connection.is_waiting_on_ping);
+
+    const u8 subscribe[] = { 0x82, 0x08, 0x00, 0x01, 0x00, 0x03, 'a', '/', '#', 0x00 };
+    TEST_EXPECT(mqtt_client_subscribe(&c, STR("a/#")) && c.connection.packet_id == 1);
+    length = mqtt_test_connection_sent(ends[1], got, sizeof(got));
+    TEST_EXPECT_BYTES(got, length, subscribe, sizeof(subscribe));
 
     const u8 disconnect[] = { 0xE0, 0x00 };
     TEST_EXPECT(mqtt_client_close(&c, 1) == 0 && c.connection.sock == -1);

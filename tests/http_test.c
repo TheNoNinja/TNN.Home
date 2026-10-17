@@ -189,4 +189,5 @@ void http_test_write_event(void)
     w = writer_create(buffer, sizeof(buffer));
     http_write_event(&w, STR_EMPTY);
     TEST_EXPECT_STR(writer_to_str(&w), STR("data: \n\n"));
+    TEST_EXPECT(!w.has_overflown); 
 }

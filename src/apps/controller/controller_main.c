@@ -79,7 +79,7 @@ int main(const int argc, char **argv)
 
     u64 broker_port = CONTROLLER_BROKER_PORT;
     u64 http_port = CONTROLLER_HTTP_PORT;
-    if ((argc > 1 && !str_to_u64_range(str_from_cstr(argv[1]), 1, 65535, &broker_port)) || (argc > 2 && !str_to_u64_range(str_from_cstr(argv[2]), 1, 65535, &http_port)) || argc > 3)
+    if ((argc > 1 && !cstr_to_u64_range(argv[1], 1, 65535, &broker_port)) || (argc > 2 && !cstr_to_u64_range(argv[2], 1, 65535, &http_port)) || argc > 3)
     {
         LOG_ERROR("usage: %s [broker port(1 to 65535, default %d)] [http port(1 to 65535, default %d)]", argv[0], CONTROLLER_BROKER_PORT, CONTROLLER_HTTP_PORT);
         return 1;

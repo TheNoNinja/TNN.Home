@@ -287,11 +287,6 @@ internal b32 echo_probe_compare(const char *before_path, const char *after_path)
     return ok;
 }
 
-internal b32 echo_probe_number(const char *text, const u64 min, const u64 max, u64 *value)
-{
-    return str_to_u64(str_from_cstr(text), value) && *value >= min && *value <= max;
-}
-
 int main(const int argc, char **argv)
 {
     if (argc == 4 && strcmp(argv[1], "compare") == 0)
@@ -302,7 +297,7 @@ int main(const int argc, char **argv)
     u64 port = ECHO_PROBE_BROKER_PORT;
     u64 count = ECHO_PROBE_COUNT;
     u64 rate = ECHO_PROBE_RATE;
-    if (argc > 4 || (argc > 1 && !echo_probe_number(argv[1], 1, 65535, &port)) || (argc > 2 && !echo_probe_number(argv[2], 1, 1000000, &count)) || (argc > 3 && !echo_probe_number(argv[3], 0, ECHO_PROBE_RATE_MAX, &rate)))
+    if (argc > 4 || (argc > 1 && !cstr_to_u64_range(argv[1], 1, 65535, &port)) || (argc > 2 && !cstr_to_u64_range(argv[2], 1, 1000000, &count)) || (argc > 3 && !cstr_to_u64_range(argv[3], 0, ECHO_PROBE_RATE_MAX, &rate)))
     {
         LOG_ERROR("usage: %s [port(1 - 65535, default %d)] [count(1 - 1000000, default %d)] [rate(0 - %d, default %d)]", argv[0], ECHO_PROBE_BROKER_PORT, ECHO_PROBE_COUNT, ECHO_PROBE_RATE_MAX, ECHO_PROBE_RATE);
         LOG_ERROR("usage: %s compare <before> <after>", argv[0]);
@@ -351,7 +346,8 @@ int main(const int argc, char **argv)
         }
     }
 
-    if (ok && p.client.has_failed != 0)
+    ok = ok && !p.client.has_failed;
+    if (ok && p.client.loop.stop_signal != 0)
     {
         LOG_INFO("stopped early after %u of %u messages", p.sent, p.count);
     }

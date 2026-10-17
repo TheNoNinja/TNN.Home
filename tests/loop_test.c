@@ -61,6 +61,8 @@ void loop_test_timer_repeats(void)
     loop_fire_timers(&l);
     TEST_EXPECT(loop_timer_fired(&l, t));
     TEST_EXPECT(loop_timeout_ms(&l) == 10);
+    loop_fire_timers(&l);
+    TEST_EXPECT(!loop_timer_fired(&l, t));
 
     loop_timer_stop(&l, t);
     TEST_EXPECT(loop_timeout_ms(&l) == -1);

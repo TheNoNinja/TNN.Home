@@ -119,7 +119,7 @@ b32 str_to_u64(const str s, u64 *value)
     return 1;
 }
 
-b32 str_to_u64_range(str s, u64 min, u64 max, u64* value)
+b32 str_to_u64_range(const str s, const u64 min, const u64 max, u64* value)
 {
     u64 number = 0;
     if (!str_to_u64(s, &number) || number < min || number > max)
@@ -129,6 +129,11 @@ b32 str_to_u64_range(str s, u64 min, u64 max, u64* value)
 
     *value = number;
     return 1;
+}
+
+b32 cstr_to_u64_range(const char *s, const u64 min, const u64 max, u64* value)
+{
+    return str_to_u64_range(str_from_cstr(s), min, max, value);
 }
 
 b32 str_to_i64(const str s, i64 *value)
