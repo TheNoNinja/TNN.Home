@@ -190,20 +190,14 @@ internal u32 controller_http_set(Controller *c, const HttpRequest *request, cons
     {
         return 403;
     }
-    str rest = body;
-    const str device = str_next(&rest, ' ');
-    const str property = str_next(&rest, ' ');
-    if (device.length == 0 || property.length == 0 || rest.length == 0)
+    switch(controller_set(c, body))
     {
-        return 400;
+        case CONTROLLER_SET_SENT: return 204;
+        case CONTROLLER_SET_REFUSED: return 422;
+        case CONTROLLER_SET_MALFORMED: return 400;
+        case CONTROLLER_SET_LOST: *is_connected = 0; return 500;
     }
-    const ControllerSetResult set_result = controller_set(c, device, property, rest);
-    if (set_result == CONTROLLER_SET_LOST)
-    {
-        *is_connected = 0;
-        return 500;
-    }
-    return set_result == CONTROLLER_SET_SENT ? 204 : 422;
+    return 500;
 }
 
 internal b32 controller_http_request(Controller *c, ControllerHttpConnection *h, const HttpRequest *request, const str body)

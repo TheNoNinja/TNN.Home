@@ -335,6 +335,19 @@ b32 homie_description_read(const str json, HomieDescription *out)
     return 1;
 }
 
+i32 homie_property_find(const HomieDescription *d, const str node, const str property)
+{
+    for (u32 i = 0; i < d->property_count; i++)
+    {
+        const HomieProperty *p = &d->properties[i];
+        if (str_equal(homie_id_str(&p->node), node) && str_equal(homie_id_str(&p->id), property))
+        {
+            return (i32)i;
+        }
+    }
+    return -1;
+}
+
 internal b32 homie_value_take(str *s, const u8 c)
 {
     if (s->length > 0 && s->data[0] == c)
@@ -396,6 +409,27 @@ internal b32 homie_value_json(const str value)
     const u8 last = r.data[r.position - 1];
     json_read_end(&r);
     return !r.has_error && (last == '}' || last == ']');
+}
+
+b32 homie_value_set(HomieValue *v, const str value)
+{
+    if (value.length > HOMIE_VALUE_MAX)
+    {
+        *v = (HomieValue){0};
+        return 0;
+    }
+    if (value.length > 0)
+    {
+        memcpy(v->bytes, value.data, value.length);
+    }
+    v->length = value.length;
+    v->is_known = value.length > 0;
+    return 1;
+}
+
+str homie_value_str(const HomieValue *v)
+{
+    return v->is_known ? (str){ (u8 *)v->bytes, v->length } : STR_EMPTY;
 }
 
 b32 homie_value_valid(const HomieDatatype datatype, const str value)

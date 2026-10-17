@@ -2,6 +2,8 @@
 #include "homie/homie.h"
 #include "json/json.h"
 
+#include <string.h>
+
 void homie_test_topic(void)
 {
     HomieTopic t = {0};
@@ -161,6 +163,41 @@ void homie_test_description_invalid(void)
     {
         TEST_EXPECT(!homie_description_read(ignored[i], &d));
     }
+}
+
+void homie_test_property_find(void)
+{
+    const str description = STR("{\"homie\":\"5.0\",\"version\":1,\"name\":\"TNN virtual light\",\"nodes\":{\"light\":{\"properties\":{\"on\":{\"datatype\":\"boolean\"}}},\"fan\":{\"properties\":{\"on\":{\"datatype\":\"boolean\"},\"speed\":{\"datatype\":\"integer\"}}}}}");
+    HomieDescription d = {0};
+    TEST_EXPECT(homie_description_read(description, &d) && d.property_count == 3);
+    TEST_EXPECT(homie_property_find(&d, STR("light"), STR("on")) == 0);
+    TEST_EXPECT(homie_property_find(&d, STR("fan"), STR("on")) == 1);
+    TEST_EXPECT(homie_property_find(&d, STR("fan"), STR("speed")) == 2);
+    TEST_EXPECT(homie_property_find(&d, STR("light"), STR("speed")) == -1);
+    TEST_EXPECT(homie_property_find(&d, STR_EMPTY, STR_EMPTY) == -1);
+}
+
+void homie_test_value_keep(void)
+{
+    HomieValue v = {0};
+    TEST_EXPECT(!v.is_known);
+    TEST_EXPECT_STR(homie_value_str(&v), STR_EMPTY);
+
+    u8 bytes[] = "true";
+    TEST_EXPECT(homie_value_set(&v, (str){ bytes, sizeof(bytes) - 1 }));
+    bytes[0] = 'X';
+    TEST_EXPECT(v.is_known);
+    TEST_EXPECT_STR(homie_value_str(&v), STR("true"));
+    
+    TEST_EXPECT(homie_value_set(&v, STR_EMPTY));
+    TEST_EXPECT(!v.is_known);
+    TEST_EXPECT_STR(homie_value_str(&v), STR_EMPTY);
+
+    u8 tomany[HOMIE_VALUE_MAX + 1];
+    memset(tomany, 'a', sizeof(tomany));
+    TEST_EXPECT(homie_value_set(&v, (str){ tomany, sizeof(tomany) - 1 }) && v.length == HOMIE_VALUE_MAX);
+    TEST_EXPECT(!homie_value_set(&v, (str){ tomany, sizeof(tomany) }));
+    TEST_EXPECT(!v.is_known);
 }
 
 void homie_test_value(void)

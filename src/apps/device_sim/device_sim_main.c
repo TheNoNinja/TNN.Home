@@ -10,9 +10,8 @@
 #define DEVICE_SIM_BROKER_IP           "127.0.0.1"
 #define DEVICE_SIM_BROKER_PORT         1883
 #define DEVICE_SIM_ID                  "tnn-sim-1"
-#define DEVICE_SIM_TOPIC               "homie/5/" DEVICE_SIM_ID "/"
-#define DEVICE_SIM_LIGHT_TOPIC         DEVICE_SIM_TOPIC "light/on"
-#define DEVICE_SIM_LIGHT_SET_TOPIC     DEVICE_SIM_LIGHT_TOPIC "/set"
+#define DEVICE_SIM_TOPIC(rest)         HOMIE_TOPIC_LITERAL("homie", DEVICE_SIM_ID, rest)
+#define DEVICE_SIM_LIGHT_SET_TOPIC     DEVICE_SIM_TOPIC("light/on/set")
 #define DEVICE_SIM_KEEP_ALIVE          10
 #define DEVICE_SIM_PACKET_MAX          512
 #define DEVICE_SIM_DESCRIPTION_MAX     384
@@ -31,7 +30,7 @@ internal b32 device_sim_publish(const MqttConnection *c, const str topic, const 
 
 internal b32 device_sim_light_publish(const MqttConnection *c, const str value)
 {
-    return device_sim_publish(c, STR(DEVICE_SIM_LIGHT_TOPIC "/$target"), value) && device_sim_publish(c, STR(DEVICE_SIM_LIGHT_TOPIC), value);
+    return device_sim_publish(c, STR(DEVICE_SIM_TOPIC("light/on/$target")), value) && device_sim_publish(c, STR(DEVICE_SIM_TOPIC("light/on")), value);
 }
 
 internal void device_sim_write_description(JsonWriter *w)
@@ -77,7 +76,7 @@ internal b32 device_sim_publish_description(Arena *arena, const MqttConnection *
     {
         LOG_ERROR("the $description does not fit in %d bytes", DEVICE_SIM_DESCRIPTION_MAX);
     }
-    const b32 ok = !w.out.has_overflown && device_sim_publish(c, STR(DEVICE_SIM_TOPIC "$description"), writer_to_str(&w.out));
+    const b32 ok = !w.out.has_overflown && device_sim_publish(c, STR(DEVICE_SIM_TOPIC("$description")), writer_to_str(&w.out));
     arena_pop_to(arena, mark);
     return ok;
     
@@ -108,7 +107,7 @@ internal b32 device_sim_handle(const MqttClient *c, const MqttPacket *p, const u
                 LOG_WARN("a SUBACK for packet id %d, not out /set, ignored", p->packet_id);
                 return 1;
             }
-            return device_sim_publish(&c->connection, STR(DEVICE_SIM_TOPIC "$state"), STR("ready"));
+            return device_sim_publish(&c->connection, STR(DEVICE_SIM_TOPIC("$state")), STR("ready"));
         case MQTT_PINGRESP:
             printf("PINGRESP\n");
             return 1;
@@ -141,13 +140,13 @@ int main(const int argc, const char **argv)
     }
 
     MqttClient client = mqtt_client_create(rx_buffer, DEVICE_SIM_RX_MAX, DEVICE_SIM_RX_PACKET_MAX, tx_buffer, DEVICE_SIM_PACKET_MAX);
-    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, (u16)port, STR(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR(DEVICE_SIM_TOPIC "$state"), STR("lost")))
+    if (!mqtt_client_connect(&client, DEVICE_SIM_BROKER_IP, (u16)port, STR(DEVICE_SIM_ID), DEVICE_SIM_KEEP_ALIVE, STR(DEVICE_SIM_TOPIC("$state")), STR("lost")))
     {
         return 1;
     }
 
     b32 ok = 1;
-    ok = ok && device_sim_publish(&client.connection, STR(DEVICE_SIM_TOPIC "$state"), STR("init"));
+    ok = ok && device_sim_publish(&client.connection, STR(DEVICE_SIM_TOPIC("$state")), STR("init"));
     ok = ok && device_sim_publish_description(&arena, &client.connection);
     ok = ok && device_sim_light_publish(&client.connection, STR("false"));
     const u16 set_subscription = ok ? mqtt_connection_subscribe(&client.connection, STR(DEVICE_SIM_LIGHT_SET_TOPIC)) : 0;
@@ -172,7 +171,7 @@ int main(const int argc, const char **argv)
         }
     }
 
-    ok = ok && !client.has_failed&& device_sim_publish(&client.connection, STR(DEVICE_SIM_TOPIC "$state"), STR("disconnected"));
+    ok = ok && !client.has_failed&& device_sim_publish(&client.connection, STR(DEVICE_SIM_TOPIC("$state")), STR("disconnected"));
     const int exit_code = mqtt_client_close(&client, ok);
     if (exit_code == 0)
     {

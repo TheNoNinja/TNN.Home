@@ -8,6 +8,7 @@
 #define HOMIE_TOPIC_MAX 144
 #define HOMIE_TOPIC_LITERAL(domain, device, rest) domain "/5/" device "/" rest
 #define HOMIE_DISCOVERY_FILTER HOMIE_TOPIC_LITERAL("+", "+", "$state")
+#define HOMIE_VALUE_MAX 64
 
 typedef struct HomieId HomieId;
 struct HomieId
@@ -97,6 +98,17 @@ struct HomieDescription
 };
 
 b32 homie_description_read(str json, HomieDescription *out);
+i32 homie_property_find(const HomieDescription *d, str node, str property);
+
+typedef struct HomieValue HomieValue;
+struct HomieValue {
+    u8 bytes[HOMIE_VALUE_MAX];
+    u64 length;
+    b32 is_known;
+};
+
+b32 homie_value_set(HomieValue *v, str value);
+str homie_value_str(const HomieValue *v);
 b32 homie_value_valid(HomieDatatype datatype, str value);
 
 #endif

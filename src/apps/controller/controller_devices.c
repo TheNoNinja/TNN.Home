@@ -44,20 +44,7 @@ ControllerDevice * controller_find_id(Controller *c, const str id)
     return 0;
 }
 
-i32 controller_property_find(const ControllerDevice *d, const str node, const str id)
-{
-    for (u32 i = 0; i < d->description.property_count; i++)
-    {
-        const HomieProperty *p = &d->description.properties[i];
-        if (str_equal(homie_id_str(&p->node), node) && str_equal(homie_id_str(&p->id), id))
-        {
-            return (i32)i;
-        }
-    }
-    return -1;
-}
-
-internal void controller_list_property(const HomieProperty *p, const ControllerValue *v)
+internal void controller_list_property(const HomieProperty *p, const HomieValue *v)
 {
     const str node = homie_id_str(&p->node);
     const str id = homie_id_str(&p->id);
@@ -65,7 +52,7 @@ internal void controller_list_property(const HomieProperty *p, const ControllerV
     printf("  %.*s/%.*s %.*s%s%s", STR_FMT(node), STR_FMT(id), STR_FMT(datatype), p->is_settable ? " settable" : "", p->is_retained ? "" : " not retained");
     if(v->is_known)
     {
-        printf(" = %.*s\n", (int)v->length, (char *)v->bytes);
+        printf(" = %.*s\n", STR_FMT(homie_value_str(v)));
     }
     else
     {

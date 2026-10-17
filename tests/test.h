@@ -41,6 +41,8 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(homie_test_datatype,            "homie datatype") \
 	X(homie_test_description,         "homie description") \
 	X(homie_test_description_invalid, "homie description invalid") \
+	X(homie_test_property_find,       "homie property find") \
+	X(homie_test_value_keep,          "homie value keep") \
 	X(homie_test_value,               "homie value") \
 	X(homie_test_value_bool,          "homie value bool") \
 	X(homie_test_value_integer,       "homie value integer") \

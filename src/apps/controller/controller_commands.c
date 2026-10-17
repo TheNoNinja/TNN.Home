@@ -13,14 +13,12 @@ internal b32 controller_command(Controller *c, const str line)
     }
     else if (str_equal(command, STR("set")))
     {
-        const str device = str_next(&rest, ' ');
-        const str property = str_next(&rest, ' ');
-        if (device.length == 0 || property.length == 0 || rest.length == 0)
+        const ControllerSetResult result = controller_set(c, rest);
+        if (result == CONTROLLER_SET_MALFORMED)
         {
             printf("usage: set <device> <node>/<property> <value>\n");
-            return 1;
         }
-        return controller_set(c, device, property, rest) != CONTROLLER_SET_LOST;
+        return result != CONTROLLER_SET_LOST;
     }
     else if (line.length > 0)
     {

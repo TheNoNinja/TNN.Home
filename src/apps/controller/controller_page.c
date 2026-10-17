@@ -1,6 +1,6 @@
 #include "apps/controller/controller.h"
 
-internal void controller_page_value(Writer *w, const ControllerDevice *d, const HomieProperty *p, const ControllerValue *v)
+internal void controller_page_value(Writer *w, const ControllerDevice *d, const HomieProperty *p, const HomieValue *v)
 {
     write_bytes(w, STR("<span id=\""));
     write_bytes(w, homie_id_str(&d->domain));
@@ -22,7 +22,7 @@ internal void controller_page_value(Writer *w, const ControllerDevice *d, const 
     write_bytes(w, STR("</span>"));
 }
 
-internal void controller_page_toggle(Writer *w, const ControllerDevice *d, const HomieProperty *p, const ControllerValue *v)
+internal void controller_page_toggle(Writer *w, const ControllerDevice *d, const HomieProperty *p, const HomieValue *v)
 {
     const b32 is_on = v->is_known && str_equal((str){ (u8 *)v->bytes, v->length }, STR("true"));
     write_bytes(w, STR("<button data-set=\""));
