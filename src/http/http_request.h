@@ -7,7 +7,8 @@ enum HttpRead
 {
     HTTP_READ_INCOMPLETE,
     HTTP_READ_OK,
-    HTTP_READ_BAD
+    HTTP_READ_BAD,
+    HTTP_READ_TOO_LARGE,
 };
 typedef enum HttpRead HttpRead;
 
@@ -18,10 +19,10 @@ struct HttpRequest
     str target;
     str host;
     str origin;
-    u64 content_length;
+    str body;
     u64 head_length;
 };
 
-HttpRead http_request_read(str bytes, HttpRequest *request);
+HttpRead http_request_read(str bytes, u64 body_max, HttpRequest *request);
 
 #endif

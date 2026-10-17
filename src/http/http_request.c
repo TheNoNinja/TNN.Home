@@ -78,7 +78,7 @@ internal b32 http_name_is(const str name, const str lower)
     return 1;
 }
 
-HttpRead http_request_read(const str bytes, HttpRequest *request)
+HttpRead http_request_read(const str bytes, const u64 body_max, HttpRequest *request)
 {
     u64 end = 0;
     if (!str_find(bytes, STR("\r\n\r\n"), &end))
@@ -107,6 +107,7 @@ HttpRead http_request_read(const str bytes, HttpRequest *request)
     b32 has_host = 0;
     b32 has_length = 0;
     b32 has_origin = 0;
+    u64 content_length = 0;
     while(http_next_line(&lines, &line))
     {
         str name = STR_EMPTY;
@@ -131,7 +132,7 @@ HttpRead http_request_read(const str bytes, HttpRequest *request)
         }
         else if ( http_name_is(name, STR("content-length")))
         {
-            if (has_length || !str_to_u64(value, &r.content_length))
+            if (has_length || !str_to_u64(value, &content_length))
             {
                 return HTTP_READ_BAD;
             }
@@ -156,8 +157,17 @@ HttpRead http_request_read(const str bytes, HttpRequest *request)
     {
         return HTTP_READ_BAD;
     }
+    if (content_length > body_max)
+    {
+        return HTTP_READ_TOO_LARGE;
+    }
+    if (bytes.length - head_length < content_length)
+    {
+        return HTTP_READ_INCOMPLETE;
+    }
 
     r.head_length = head_length;
+    r.body = (str){ bytes.data + head_length, content_length };
     *request = r;
     return HTTP_READ_OK;
 }

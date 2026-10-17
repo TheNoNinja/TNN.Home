@@ -184,13 +184,13 @@ internal b32 controller_http_origin_valid(const HttpRequest *request)
     return str_starts_with(origin, scheme) && str_equal(str_skip(origin, scheme.length), request->host);
 }
 
-internal u32 controller_http_set(Controller *c, const HttpRequest *request, const str body, b32 *is_connected)
+internal u32 controller_http_set(Controller *c, const HttpRequest *request, b32 *is_connected)
 {
     if (!controller_http_origin_valid(request))
     {
         return 403;
     }
-    switch(controller_set(c, body))
+    switch(controller_set(c, request->body))
     {
         case CONTROLLER_SET_SENT: return 204;
         case CONTROLLER_SET_REFUSED: return 422;
@@ -200,7 +200,7 @@ internal u32 controller_http_set(Controller *c, const HttpRequest *request, cons
     return 500;
 }
 
-internal b32 controller_http_request(Controller *c, ControllerHttpConnection *h, const HttpRequest *request, const str body)
+internal b32 controller_http_request(Controller *c, ControllerHttpConnection *h, const HttpRequest *request)
 {
     const b32 is_page = str_equal(request->target, STR("/"));
     const b32 is_events = str_equal(request->target, STR("/events"));
@@ -224,7 +224,7 @@ internal b32 controller_http_request(Controller *c, ControllerHttpConnection *h,
     }
     else if (is_set)
     {
-        status = controller_http_set(c, request, body, &is_connected);
+        status = controller_http_set(c, request, &is_connected);
     }
     else if (is_page)
     {
@@ -284,24 +284,15 @@ internal b32 controller_http_receive(Controller *c, ControllerHttpConnection *h)
     h->length += (u64)received;
     
     HttpRequest request = {0};
-    switch (http_request_read((str){ h->request, h->length }, &request))
+    switch (http_request_read((str){ h->request, h->length }, CONTROLLER_LINE_MAX, &request))
     {
         case HTTP_READ_OK:
-        {
-            const u64 length = request.content_length;
-            if (length > CONTROLLER_LINE_MAX || request.head_length + length > sizeof(h->request))
-            {
-                LOG_WARN("a request body of %llu bytes -> 413", (unsigned long long)length);
-                controller_http_send_status(h->sock, 413, STR_EMPTY);
-                controller_http_close(c, h);
-                break;
-            }
-            if (h->length < request.head_length + length)
-            {
-                break;
-            }
-            return controller_http_request(c, h, &request, (str){ h->request + request.head_length, length });
-        }
+            return controller_http_request(c, h, &request);
+        case HTTP_READ_TOO_LARGE:
+            LOG_WARN("a request body of more than %d bytes -> 413", CONTROLLER_LINE_MAX);
+            controller_http_send_status(h->sock, 413, STR_EMPTY);
+            controller_http_close(c, h);
+            break;
         case HTTP_READ_BAD:
             LOG_WARN("a request that breaks the rules of HTTP/1.1 -> 400");
             controller_http_send_status(h->sock, 400, STR_EMPTY);
