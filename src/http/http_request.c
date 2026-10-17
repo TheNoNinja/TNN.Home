@@ -171,3 +171,26 @@ HttpRead http_request_read(const str bytes, const u64 body_max, HttpRequest *req
     *request = r;
     return HTTP_READ_OK;
 }
+
+b32 http_request_host_is(const HttpRequest *request, const str ip, const u16 port)
+{
+    str name = STR_EMPTY;
+    str digits = STR_EMPTY;
+    u64 number = 0;
+    if (!str_cut(request->host, ':', &name, &digits) || !str_to_u64(digits, &number) || number != port)
+    {
+        return 0;
+    }
+    return str_equal(name, ip) || str_equal(name, STR("localhost"));
+}
+
+b32 http_request_same_origin(const HttpRequest *request)
+{
+    const str scheme = STR("http://");
+    const str origin = request->origin;
+    if (origin.length == 0)
+    {
+        return 1;
+    }
+    return str_starts_with(origin, scheme) && str_equal(str_skip(origin, scheme.length), request->host);
+}

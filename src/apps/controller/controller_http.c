@@ -161,32 +161,9 @@ internal void controller_http_accept(Controller *c)
     loop_watch(&c->client.loop, sock);
 }
 
-internal b32 controller_http_host_valid(const Controller *c, const str host)
-{
-    str name = STR_EMPTY;
-    str digits = STR_EMPTY;
-    u64 port = 0;
-    if (!str_cut(host, ':', &name, &digits) || !str_to_u64(digits, &port) || port != c->http_port)
-    {
-        return 0;
-    }
-    return str_equal(name, c->http_ip) || str_equal(name, STR("localhost"));
-}
-
-internal b32 controller_http_origin_valid(const HttpRequest *request)
-{
-    const str scheme = STR("http://");
-    const str origin = request->origin;
-    if (origin.length == 0)
-    {
-        return 1;
-    }
-    return str_starts_with(origin, scheme) && str_equal(str_skip(origin, scheme.length), request->host);
-}
-
 internal u32 controller_http_set(Controller *c, const HttpRequest *request, b32 *is_connected)
 {
-    if (!controller_http_origin_valid(request))
+    if (!http_request_same_origin(request))
     {
         return 403;
     }
@@ -210,7 +187,7 @@ internal b32 controller_http_request(Controller *c, ControllerHttpConnection *h,
     u32 status = 200;
     b32 is_connected = 1;
     Writer page = writer_create(controller_http_page, sizeof(controller_http_page));
-    if (!controller_http_host_valid(c, request->host))
+    if (!http_request_host_is(request, c->http_ip, c->http_port))
     {
         status = 403;
     } 

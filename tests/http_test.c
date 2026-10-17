@@ -159,6 +159,50 @@ void http_test_request_headers(void)
     }
 }
 
+void http_test_request_host(void)
+{
+    const str ip = STR("127.0.0.1");
+    HttpRequest request = { .host = STR("127.0.0.1:8080") };
+    TEST_EXPECT(http_request_host_is(&request, ip, 8080));
+    request.host = STR("localhost:8080");
+    TEST_EXPECT(http_request_host_is(&request, ip, 8080));
+
+    const str others[] = {
+        STR("127.0.0.1:8081"),
+        STR("127.0.0.1"),
+        STR("evil.example:8080"),
+        STR("127.0.0.10:8080"),
+        STR("locahost.evil.example:8080"),
+        STR("127.0.0.1:"),
+    };
+    for (u32 i = 0; i < ARRAY_COUNT(others); i++)
+    {
+        request.host = others[i];
+        TEST_EXPECT(!http_request_host_is(&request, ip, 8080));
+    }
+}
+
+void http_test_request_origin(void)
+{
+    HttpRequest request = { .host = STR("127.0.0.1:8080"), .origin = STR("http://127.0.0.1:8080") };
+    TEST_EXPECT(http_request_same_origin(&request));
+    request.origin = STR_EMPTY;
+    TEST_EXPECT(http_request_same_origin(&request));
+
+    const str others[] = {
+        STR("http://evil.example"),
+        STR("http://127.0.0.1:8081"),
+        STR("https://127.0.0.1:8080"),
+        STR("http://127.0.0.1:8080.evil.example"),
+        STR("null"),
+    };
+    for (u32 i = 0; i < ARRAY_COUNT(others); i++)
+    {
+        request.origin = others[i];
+        TEST_EXPECT(!http_request_same_origin(&request));
+    }
+}
+
 void http_test_write_head(void)
 {
     u8 buffer[128];

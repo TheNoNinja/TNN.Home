@@ -53,6 +53,8 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(http_test_request_peices,  "http request peices") \
 	X(http_test_request_line,    "http request line") \
 	X(http_test_request_headers, "http request headers") \
+	X(http_test_request_host,    "http request host") \
+	X(http_test_request_origin,  "http request origin") \
 	X(http_test_write_head,      "http write head") \
 	X(http_test_write_escaped,   "http write escaped") \
 	X(http_test_write_overflow,  "http write overflow") \

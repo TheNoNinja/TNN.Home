@@ -24,5 +24,7 @@ struct HttpRequest
 };
 
 HttpRead http_request_read(str bytes, u64 body_max, HttpRequest *request);
+b32 http_request_host_is(const HttpRequest *request, str ip, u16 port);
+b32 http_request_same_origin(const HttpRequest *request);
 
 #endif
