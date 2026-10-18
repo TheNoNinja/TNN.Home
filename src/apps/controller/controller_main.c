@@ -43,7 +43,7 @@ internal b32 controller_run(Controller *c)
         if (loop_readable(&c->client.loop, STDIN_FILENO))
         {
             b32 is_closed = 0;
-            if (!controller_read_input(c, &is_closed))
+            if (!controller_commands_read(c, &is_closed))
             {
                 return 0;
             }

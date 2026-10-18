@@ -42,13 +42,13 @@ internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str p
 {
     if (payload.length == 0)
     {
-        ControllerDevice *d = controller_find(c, t);
+        ControllerDevice *d = controller_device_find(c, t);
         if (!d)
         {
             return 1;
         }
         printf("%.*s: removed\n", STR_FMT(t->device));
-        controller_events_removed(c, d);
+        controller_events_device_removed(c, d);
         const b32 ok = controller_unsubscribe_device(c, d);
         *d = (ControllerDevice){0};
         return ok;
@@ -60,7 +60,7 @@ internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str p
         LOG_WARN("%.*s: '%.*s' is not a Homie $state, ignored", STR_FMT(t->device), STR_FMT(payload));
         return 1;
     }
-    ControllerDevice *d = controller_find(c, t);
+    ControllerDevice *d = controller_device_find(c, t);
     if (d)
     {
         if (d->state == state)
@@ -72,7 +72,7 @@ internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str p
     }
     else
     {
-        d = controller_add(c, t);
+        d = controller_device_add(c, t);
         if (!d)
         {
             return 1;
@@ -84,7 +84,7 @@ internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str p
             return 0;
         }
     }
-    controller_events_device(c, d);
+    controller_events_device_changed(c, d);
 
     // This fixes a problem with NanoMQ
     // TODO(tnn): I'm considering using mosquitto exclusively and not supporting NanoMQ altogether
@@ -97,7 +97,7 @@ internal b32 controller_on_state(Controller *c, const HomieTopic *t, const str p
 
 internal b32 controller_on_description(Controller *c, const HomieTopic *t, const str payload)
 {
-    ControllerDevice *d = controller_find(c, t);
+    ControllerDevice *d = controller_device_find(c, t);
     if (!d)
     {
         return 1;
@@ -110,7 +110,7 @@ internal b32 controller_on_description(Controller *c, const HomieTopic *t, const
         }
         d->is_described = 0;
         d->description = (HomieDescription){0};
-        controller_events_device(c, d);
+        controller_events_device_changed(c, d);
         return 1;
     }
 
@@ -129,7 +129,7 @@ internal b32 controller_on_description(Controller *c, const HomieTopic *t, const
     memset(d->values, 0, sizeof(d->values));
     const u32 count = description.property_count;
     printf("%.*s: $description version %lld, %u propert%s\n", STR_FMT(t->device), (long long)description.version, count, count == 1 ? "y" : "ies");
-    controller_events_device(c, d);
+    controller_events_device_changed(c, d);
     return controller_subscribe_values(c, d);
 }
 

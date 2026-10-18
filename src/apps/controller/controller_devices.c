@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-ControllerDevice *controller_find(Controller *c, const HomieTopic *t)
+ControllerDevice *controller_device_find(Controller *c, const HomieTopic *t)
 {
     for (u32 i = 0; i < CONTROLLER_DEVICE_MAX; i++)
     {
@@ -15,7 +15,7 @@ ControllerDevice *controller_find(Controller *c, const HomieTopic *t)
     return 0;
 }
 
-ControllerDevice *controller_add(Controller *c, const HomieTopic *t)
+ControllerDevice *controller_device_add(Controller *c, const HomieTopic *t)
 {
     for (u32 i = 0; i < CONTROLLER_DEVICE_MAX; i++)
     {
@@ -31,7 +31,7 @@ ControllerDevice *controller_add(Controller *c, const HomieTopic *t)
     return 0;
 }
 
-ControllerDevice * controller_find_id(Controller *c, const str id)
+ControllerDevice * controller_device_find_id(Controller *c, const str id)
 {
     for (u32 i = 0; i < CONTROLLER_DEVICE_MAX; i++)
     {
@@ -44,7 +44,7 @@ ControllerDevice * controller_find_id(Controller *c, const str id)
     return 0;
 }
 
-internal void controller_list_property(const HomieProperty *p, const HomieValue *v)
+internal void controller_devices_list_property(const HomieProperty *p, const HomieValue *v)
 {
     const str node = homie_id_str(&p->node);
     const str id = homie_id_str(&p->id);
@@ -60,7 +60,7 @@ internal void controller_list_property(const HomieProperty *p, const HomieValue 
     }
 }
 
-void controller_list(const Controller *c)
+void controller_devices_list(const Controller *c)
 {
     u32 count = 0;
     for (u32 i = 0; i < CONTROLLER_DEVICE_MAX; i++)
@@ -85,7 +85,7 @@ void controller_list(const Controller *c)
         }
         for (u32 p = 0; p < d->description.property_count; p++)
         {
-            controller_list_property(&d->description.properties[p], &d->values[p]);
+            controller_devices_list_property(&d->description.properties[p], &d->values[p]);
         }
         count += 1;
     }

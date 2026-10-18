@@ -11,8 +11,8 @@
 #define CONTROLLER_HTTP_BACKLOG 16
 #define CONTROLLER_HTTP_HEAD_MAX 256
 
-internal u8 controller_http_response[CONTROLLER_HTTP_HEAD_MAX + CONTROLLER_HTTP_BODY_MAX];
-internal u8 controller_http_page[CONTROLLER_HTTP_BODY_MAX];
+internal u8 controller_http_response[CONTROLLER_HTTP_HEAD_MAX + CONTROLLER_HTTP_PAGE_MAX];
+internal u8 controller_http_page[CONTROLLER_HTTP_PAGE_MAX];
 
 b32 controller_http_listen(Controller *c, const char* ip, const u16 port)
 {
@@ -261,12 +261,12 @@ internal b32 controller_http_receive(Controller *c, ControllerHttpConnection *h)
     h->length += (u64)received;
     
     HttpRequest request = {0};
-    switch (http_request_parse((str){ h->request, h->length }, CONTROLLER_LINE_MAX, &request))
+    switch (http_request_parse((str){ h->request, h->length }, CONTROLLER_COMMAND_MAX, &request))
     {
         case HTTP_PARSE_OK:
             return controller_http_request(c, h, &request);
         case HTTP_PARSE_TOO_LARGE:
-            LOG_WARN("a request body of more than %d bytes -> 413", CONTROLLER_LINE_MAX);
+            LOG_WARN("a request body of more than %d bytes -> 413", CONTROLLER_COMMAND_MAX);
             controller_http_send_status(h->sock, 413, STR_EMPTY);
             controller_http_close(c, h);
             break;

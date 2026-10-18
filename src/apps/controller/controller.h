@@ -8,10 +8,10 @@
 #include "http/http.h"
 
 #define CONTROLLER_DEVICE_MAX 64
-#define CONTROLLER_LINE_MAX 256
+#define CONTROLLER_COMMAND_MAX 256
 #define CONTROLLER_HTTP_CONNECTION_MAX 8
 #define CONTROLLER_HTTP_REQUEST_MAX KB(8)
-#define CONTROLLER_HTTP_BODY_MAX KB(1024)
+#define CONTROLLER_HTTP_PAGE_MAX KB(1024)
 
 typedef struct ControllerDevice ControllerDevice;
 struct ControllerDevice
@@ -49,7 +49,7 @@ struct Controller
 {
     MqttClient client;
     ControllerDevice devices[CONTROLLER_DEVICE_MAX];
-    u8 line[CONTROLLER_LINE_MAX];
+    u8 line[CONTROLLER_COMMAND_MAX];
     u64 line_length;
     int http_sock;
     str http_ip;
@@ -57,23 +57,23 @@ struct Controller
     ControllerHttpConnection http[CONTROLLER_HTTP_CONNECTION_MAX];
 };
 
-ControllerDevice *controller_find(Controller *c, const HomieTopic *t);
-ControllerDevice *controller_find_id(Controller *c, str id);
-ControllerDevice *controller_add(Controller *c, const HomieTopic *t);
-void controller_list(const Controller *c);
+ControllerDevice *controller_device_find(Controller *c, const HomieTopic *t);
+ControllerDevice *controller_device_find_id(Controller *c, str id);
+ControllerDevice *controller_device_add(Controller *c, const HomieTopic *t);
+void controller_devices_list(const Controller *c);
 ControllerSetResult controller_set(Controller *c, str words);
 
 b32 controller_on_publish(Controller *c, MqttPublish m);
 void controller_on_value(Controller *c, const HomieTopic *t, str payload);
-b32 controller_read_input(Controller *c, b32 *is_closed);
+b32 controller_commands_read(Controller *c, b32 *is_closed);
 
 b32 controller_http_listen(Controller *c, const char *ip, u16 port);
 b32 controller_http_handle(Controller *c);
 void controller_http_close(Controller *c, ControllerHttpConnection *h);
 
 void controller_events_open(Controller *c, ControllerHttpConnection *h);
-void controller_events_device(Controller *c, const ControllerDevice *d);
-void controller_events_removed(Controller *c, const ControllerDevice *d);
+void controller_events_device_changed(Controller *c, const ControllerDevice *d);
+void controller_events_device_removed(Controller *c, const ControllerDevice *d);
 void controller_events_heartbeat(Controller *c);
 
 void controller_page_write(const Controller *c, Writer *w);

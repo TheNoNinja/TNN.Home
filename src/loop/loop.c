@@ -46,7 +46,7 @@ void loop_catch_signals(void)
 
 void loop_watch(Loop *l, const int fd)
 {
-    ASSERT(l->fd_count < LOOP_FDS_MAX);
+    ASSERT(l->fd_count < LOOP_FD_MAX);
     l->fds[l->fd_count].fd = fd;
     l->fds[l->fd_count].events = POLLIN;
     l->fds[l->fd_count].revents = 0;
@@ -68,7 +68,7 @@ void loop_unwatch(Loop *l, const int fd)
 
 u32 loop_timer_add(Loop *l)
 {
-    ASSERT(l->timer_count < LOOP_TIMERS_MAX);
+    ASSERT(l->timer_count < LOOP_TIMER_MAX);
     l->timer_count += 1;
     return l->timer_count - 1;
 }

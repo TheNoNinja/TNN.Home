@@ -5,8 +5,8 @@
 
 #include <poll.h>
 
-#define LOOP_FDS_MAX 16
-#define LOOP_TIMERS_MAX 4
+#define LOOP_FD_MAX 16
+#define LOOP_TIMER_MAX 4
 
 typedef struct LoopTimer LoopTimer;
 struct LoopTimer 
@@ -20,9 +20,9 @@ struct LoopTimer
 typedef struct Loop Loop;
 struct Loop
 {
-    struct pollfd fds[LOOP_FDS_MAX];
+    struct pollfd fds[LOOP_FD_MAX];
     u32 fd_count;
-    LoopTimer timers[LOOP_TIMERS_MAX];
+    LoopTimer timers[LOOP_TIMER_MAX];
     u32 timer_count;
     u64 now_ms;
     int stop_signal;

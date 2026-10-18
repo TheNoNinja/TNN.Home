@@ -44,7 +44,7 @@ target_link_libraries(tnn_homie INTERFACE tnn_json)
 add_library(tnn_http INTERFACE)
 target_sources(tnn_http INTERFACE
     src/http/http_request.c
-    src/http/http_writer.c
+    src/http/http_response.c
 )
 target_link_libraries(tnn_http INTERFACE tnn_base)
 
@@ -93,11 +93,6 @@ add_executable(tnn_controller
 )
 target_link_libraries(tnn_controller PRIVATE tnn_homie tnn_http tnn_loop tnn_mqtt)
 
-add_executable(tnn_device_sim 
-    src/apps/device_sim/device_sim_main.c
-)
-target_link_libraries(tnn_device_sim PRIVATE tnn_homie tnn_json tnn_loop tnn_mqtt)
-
 add_executable(tnn_echo_probe
     src/apps/echo_probe/echo_probe_main.c
 )
@@ -113,6 +108,10 @@ add_executable(tnn_timer_lateness
 )
 target_link_libraries(tnn_timer_lateness PRIVATE tnn_histogram)
 
+add_executable(tnn_virtual_light 
+    src/apps/virtual_light/virtual_light_main.c
+)
+target_link_libraries(tnn_virtual_light PRIVATE tnn_homie tnn_json tnn_loop tnn_mqtt)
 
 #########
 # Tests #
@@ -122,7 +121,7 @@ add_executable(tnn_tests
     tests/test_main.c
     tests/base_test.c
     tests/histogram_test.c
-    tests/homie_test.c
+    tests/homie/homie_test.c
     tests/http_test.c
     tests/json_test.c
     tests/loop_test.c
@@ -143,12 +142,12 @@ if(TNN_FUZZ)
     target_compile_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
     target_link_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
 
-    add_executable(tnn_fuzz_json
-        tests/json_fuzz.c
+    add_executable(tnn_fuzz_homie
+        tests/homie/homie_fuzz.c
     )
-    target_link_libraries(tnn_fuzz_json PRIVATE tnn_homie)
-    target_compile_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)
-    target_link_options(tnn_fuzz_json PRIVATE -fsanitize=fuzzer)
+    target_link_libraries(tnn_fuzz_homie PRIVATE tnn_homie)
+    target_compile_options(tnn_fuzz_homie PRIVATE -fsanitize=fuzzer)
+    target_link_options(tnn_fuzz_homie PRIVATE -fsanitize=fuzzer)
 
     add_executable(tnn_fuzz_http
         tests/http_fuzz.c

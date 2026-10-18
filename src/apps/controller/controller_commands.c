@@ -9,7 +9,7 @@ internal b32 controller_command(Controller *c, const str line)
     const str command = str_next(&rest, ' ');
     if (str_equal(command, STR("list")))
     {
-        controller_list(c);
+        controller_devices_list(c);
     }
     else if (str_equal(command, STR("set")))
     {
@@ -27,9 +27,9 @@ internal b32 controller_command(Controller *c, const str line)
     return 1;
 }
 
-b32 controller_read_input(Controller *c, b32 *is_closed)
+b32 controller_commands_read(Controller *c, b32 *is_closed)
 {
-    u8 bytes[CONTROLLER_LINE_MAX];
+    u8 bytes[CONTROLLER_COMMAND_MAX];
     const ssize_t count = read(STDIN_FILENO, bytes, sizeof(bytes));
     if (count <= 0)
     {
@@ -42,9 +42,9 @@ b32 controller_read_input(Controller *c, b32 *is_closed)
         {
             const u64 length = c->line_length;
             c->line_length = 0;
-            if (length > CONTROLLER_LINE_MAX)
+            if (length > CONTROLLER_COMMAND_MAX)
             {
-                printf("a line of %llu bytes, more than %d: not run\n", (unsigned long long) length, CONTROLLER_LINE_MAX);
+                printf("a line of %llu bytes, more than %d: not run\n", (unsigned long long) length, CONTROLLER_COMMAND_MAX);
             }
             else if (!controller_command(c, (str){ c->line, length }))
             {
@@ -53,7 +53,7 @@ b32 controller_read_input(Controller *c, b32 *is_closed)
         }
         else 
         {
-            if (c->line_length < CONTROLLER_LINE_MAX)
+            if (c->line_length < CONTROLLER_COMMAND_MAX)
             {
                 c->line[c->line_length] = bytes[i];
             }

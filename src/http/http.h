@@ -2,6 +2,6 @@
 #define HTTP_H
 
 #include "http/http_request.h"
-#include "http/http_writer.h"
+#include "http/http_response.h"
 
 #endif

@@ -1,5 +1,5 @@
-#ifndef HTTP_WRITER_H
-#define HTTP_WRITER_H
+#ifndef HTTP_RESPONSE_H
+#define HTTP_RESPONSE_H
 
 #include "base/base.h"
 

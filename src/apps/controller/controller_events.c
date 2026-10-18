@@ -9,7 +9,7 @@
 #define CONTROLLER_EVENTS_SECTION_MAX KB(32)
 
 internal u8 controller_events_section[CONTROLLER_EVENTS_SECTION_MAX];
-internal u8 controller_events_buffer[CONTROLLER_HTTP_BODY_MAX];
+internal u8 controller_events_buffer[CONTROLLER_HTTP_PAGE_MAX];
 
 internal void controller_events_send(Controller *c, ControllerHttpConnection *h, const str bytes)
 {
@@ -98,12 +98,12 @@ internal void controller_events_broadcast(Controller *c, const ControllerDevice 
     }
 }
 
-void controller_events_device(Controller *c, const ControllerDevice *d)
+void controller_events_device_changed(Controller *c, const ControllerDevice *d)
 {
     controller_events_broadcast(c, d, 0);
 }
 
-void controller_events_removed(Controller *c, const ControllerDevice *d)
+void controller_events_device_removed(Controller *c, const ControllerDevice *d)
 {
     controller_events_broadcast(c, d, 1);
 }

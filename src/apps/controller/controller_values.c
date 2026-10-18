@@ -4,7 +4,7 @@
 
 void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
 {
-    ControllerDevice *d = controller_find(c, t);
+    ControllerDevice *d = controller_device_find(c, t);
     if (!d)
     {
         return;
@@ -31,7 +31,7 @@ void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
     {
         printf("%.*s: %.*s/%.*s = %.*s\n", STR_FMT(t->device), STR_FMT(t->node), STR_FMT(t->property), STR_FMT(payload));
     }
-    controller_events_device(c, d);
+    controller_events_device_changed(c, d);
 }
 
 ControllerSetResult controller_set(Controller *c, const str words)
@@ -44,7 +44,7 @@ ControllerSetResult controller_set(Controller *c, const str words)
         return CONTROLLER_SET_MALFORMED;
     }
 
-    const ControllerDevice *d = controller_find_id(c, device);
+    const ControllerDevice *d = controller_device_find_id(c, device);
     if (!d)
     {
         printf("set: no device '%.*s'\n", STR_FMT(device));
