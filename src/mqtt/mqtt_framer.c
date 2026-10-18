@@ -22,6 +22,18 @@ void mqtt_framer_compact(MqttFramer *f)
     f->length = unread;
 }
 
+str mqtt_framer_space(MqttFramer *f)
+{
+    mqtt_framer_compact(f);
+    return (str){ f->data + f->length, f->capacity - f->length };
+}
+
+void mqtt_framer_received(MqttFramer *f, const u64 count)
+{
+    ASSERT(count <= f->capacity - f->length);
+    f->length += count;
+}
+
 b32 mqtt_framer_next(MqttFramer *f, MqttFixedHeader *header, str *body)
 {
     for (;;)

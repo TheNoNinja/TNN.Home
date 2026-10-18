@@ -32,12 +32,12 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
     u64 position = 0;
     while (position < size && !f.has_error)
     {
-        mqtt_framer_compact(&f);
+        const str space = mqtt_framer_space(&f);
         u64 count = size - position;
         count = count < piece ? count : piece;
-        count = count < f.capacity - f.length ? count : f.capacity - f.length;
-        memcpy(f.data + f.length, data + position, count);
-        f.length += count;
+        count = count < space.length ? count : space.length;
+        memcpy(space.data, data + position, count);
+        mqtt_framer_received(&f, count);
         position += count;
 
         while(mqtt_framer_next(&f, &header, &body))
@@ -45,13 +45,11 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
             ASSERT(body.length == header.remaining_length);
             ASSERT(body.length < MQTT_FUZZ_PACKET_MAX);
             sum += mqtt_fuzz_touch(body);
-            if (header.type == MQTT_PUBLISH)
-            {
-                Reader r = reader_create(body.data, body.length);
-                const MqttPublish m = mqtt_read_publish(&r, header.flags);
-                ASSERT(r.has_error || m.topic.length + m.payload.length <= body.length);
-                sum += mqtt_fuzz_touch(m.topic) + mqtt_fuzz_touch(m.payload);
-            }
+            MqttPacket p = {0};
+            const b32 is_whole = mqtt_packet_parse(header, body, &p);
+            ASSERT(p.type == header.type);
+            ASSERT(p.publish.topic.length + p.publish.payload.length <= body.length);
+            sum += is_whole + mqtt_fuzz_touch(p.publish.topic) + mqtt_fuzz_touch(p.publish.payload);
         }
     }
     mqtt_fuzz_sink = sum;

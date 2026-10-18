@@ -61,15 +61,20 @@ target_sources(tnn_loop INTERFACE
 )
 target_link_libraries(tnn_loop INTERFACE tnn_base)
 
-add_library(tnn_mqtt INTERFACE)
-target_sources(tnn_mqtt INTERFACE
-    src/mqtt/mqtt_client.c
-    src/mqtt/mqtt_connection.c
+add_library(tnn_mqtt_core INTERFACE)
+target_sources(tnn_mqtt_core INTERFACE
     src/mqtt/mqtt_decode.c
     src/mqtt/mqtt_encode.c
     src/mqtt/mqtt_framer.c
 )
-target_link_libraries(tnn_mqtt INTERFACE tnn_loop)
+target_link_libraries(tnn_mqtt_core INTERFACE tnn_base)
+
+add_library(tnn_mqtt INTERFACE)
+target_sources(tnn_mqtt INTERFACE
+    src/mqtt/mqtt_client.c
+    src/mqtt/mqtt_connection.c
+)
+target_link_libraries(tnn_mqtt INTERFACE tnn_mqtt_core tnn_loop)
 
 
 ################
@@ -121,7 +126,10 @@ add_executable(tnn_tests
     tests/http_test.c
     tests/json_test.c
     tests/loop_test.c
-    tests/mqtt_test.c
+    tests/mqtt/mqtt_client_test.c
+    tests/mqtt/mqtt_connection_test.c
+    tests/mqtt/mqtt_packet_test.c
+    tests/mqtt/mqtt_framer_test.c
 )
 target_include_directories(tnn_tests PRIVATE tests)
 target_link_libraries(tnn_tests PRIVATE tnn_histogram tnn_homie tnn_http tnn_loop tnn_mqtt)
@@ -129,9 +137,9 @@ target_link_libraries(tnn_tests PRIVATE tnn_histogram tnn_homie tnn_http tnn_loo
 option (TNN_FUZZ "Build the libFuzzer target (Clang only)" OFF)
 if(TNN_FUZZ)
     add_executable(tnn_fuzz_mqtt
-        tests/mqtt_fuzz.c
+        tests/mqtt/mqtt_fuzz.c
     )
-    target_link_libraries(tnn_fuzz_mqtt PRIVATE tnn_mqtt)
+    target_link_libraries(tnn_fuzz_mqtt PRIVATE tnn_mqtt_core)
     target_compile_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
     target_link_options(tnn_fuzz_mqtt PRIVATE -fsanitize=fuzzer)
 

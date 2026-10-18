@@ -86,20 +86,18 @@ b32 mqtt_connection_connect(MqttConnection *c, const char *ip, const u16 port, c
         }
     }
 
-    Reader r = reader_create(body.data, body.length);
-    const u8 session = read_u8(&r);
-    const u8 return_code = read_u8(&r);
-    if (r.has_error || header.type != MQTT_CONNACK || header.remaining_length != 2)
+    MqttPacket packet = {0};
+    if (!mqtt_packet_parse(header, body, &packet) || packet.type != MQTT_CONNACK)
     {
         LOG_ERROR("expected a CONNACK, got packet type %d with %u bytes", header.type, header.remaining_length);
         goto error_handling;
     }
-    if (return_code != 0)
+    if (packet.return_code != 0)
     {
-        LOG_ERROR("CONNACK: refused (return code %d)", return_code);
+        LOG_ERROR("CONNACK: refused (return code %d)", packet.return_code);
         goto error_handling;
     }
-    LOG_INFO("CONNACK: accepted (return code %d, session present %d)", return_code, session);
+    LOG_INFO("CONNACK: accepted (return code %d)", packet.return_code);
     fcntl(c->sock, F_SETFL, fcntl(c->sock, F_GETFL) | O_NONBLOCK);
     return 1;
 
@@ -110,11 +108,11 @@ error_handling:
 
 b32 mqtt_connection_receive(MqttConnection *c)
 {
-    mqtt_framer_compact(&c->in);
-    const ssize_t received = recv(c ->sock, c->in.data + c->in.length, c->in.capacity - c->in.length, 0);
+    const str space = mqtt_framer_space(&c->in);
+    const ssize_t received = recv(c ->sock, space.data, space.length, 0);
     if (received > 0)
     {
-        c->in.length += (u64)received;
+        mqtt_framer_received(&c->in, received);
         return 1;
     }
     if (received == 0)
@@ -205,30 +203,21 @@ b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet)
     str body = STR_EMPTY;
     while (!c->has_error && mqtt_framer_next(&c->in, &header, &body))
     {
-        Reader r = reader_create(body.data, body.length);
-        *packet = (MqttPacket){0};
-        packet->type = header.type;
-
-        switch (header.type)
+        if(!mqtt_packet_parse(header, body, packet))
         {
-            case MQTT_PUBLISH:
-            {
-                packet->publish = mqtt_read_publish(&r, header.flags);
-                if (r.has_error)
-                {
-                    LOG_ERROR("malformed PUBLISH of %llu bytes", (unsigned long long)body.length);
-                    c->has_error = 1;
-                    return 0;
-                }
-                return 1;
-            }
+            LOG_ERROR("malformed packet (type %d, %llu bytes)", header.type, (unsigned long long)body.length);
+            c->has_error = 1;
+            return 0;
+        }
+
+        switch (packet->type)
+        {
+            case MQTT_PUBLISH: return 1;
             case MQTT_SUBACK:
             {
-                packet->packet_id = read_u16_be(&r);
-                const u8 return_code = read_u8(&r);
-                if (r.has_error || return_code != MQTT_SUBACK_QOS_0)
+                if (packet->return_code != MQTT_SUBACK_QOS_0)
                 {
-                    LOG_ERROR("SUBACK: refused (packet id %d, return code %d)", packet->packet_id, return_code);
+                    LOG_ERROR("SUBACK: refused (packet id %d, return code %d)", packet->packet_id, packet->return_code);
                     c->has_error = 1;
                     return 0;
                 }
@@ -237,13 +226,6 @@ b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet)
             }
             case MQTT_UNSUBACK:
             {
-                packet->packet_id = read_u16_be(&r);
-                if (r.has_error)
-                {
-                    LOG_ERROR("malformed UNSUBACK of %llu bytes", (unsigned long long)body.length);
-                    c->has_error = 1;
-                    return 0;
-                }
                 LOG_INFO("UNSUBACK (packet id %d)", packet->packet_id);
                 return 1;
             }
@@ -254,7 +236,7 @@ b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet)
             }
             default:
             {
-                LOG_WARN("unexpected packet type %d, ignored", header.type);
+                LOG_WARN("unexpected packet type %d, ignored", packet->type);
                 break;
             }
         }

@@ -20,10 +20,21 @@ struct MqttPublish
     u8 qos;
 };
 
+typedef struct MqttPacket MqttPacket;
+struct MqttPacket
+{
+    u8 type;
+    u16 packet_id;
+    u8 return_code;
+    MqttPublish publish;
+};
+
 str mqtt_read_str(Reader *r);
 u32 mqtt_read_varint(Reader *r);
 
 MqttFixedHeader mqtt_read_fixed_header(Reader *r);
 MqttPublish mqtt_read_publish(Reader *r, u8 flags);
+
+b32 mqtt_packet_parse(MqttFixedHeader header, str body, MqttPacket *packet);
 
 #endif
