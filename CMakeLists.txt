@@ -122,7 +122,7 @@ add_executable(tnn_tests
     tests/base_test.c
     tests/histogram_test.c
     tests/homie/homie_test.c
-    tests/http_test.c
+    tests/http/http_test.c
     tests/json_test.c
     tests/loop_test.c
     tests/mqtt/mqtt_client_test.c
@@ -150,7 +150,7 @@ if(TNN_FUZZ)
     target_link_options(tnn_fuzz_homie PRIVATE -fsanitize=fuzzer)
 
     add_executable(tnn_fuzz_http
-        tests/http_fuzz.c
+        tests/http/http_fuzz.c
     )
     target_link_libraries(tnn_fuzz_http PRIVATE tnn_http)
     target_compile_options(tnn_fuzz_http PRIVATE -fsanitize=fuzzer)
