@@ -94,10 +94,10 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(mqtt_test_read_varint_too_long,   "mqtt read varint too long") \
 	X(mqtt_test_read_fixed_header,      "mqtt read fixed header") \
 	X(mqtt_test_read_publish,           "mqtt read publish") \
-	X(mqtt_test_stream_split,           "mqtt stream split") \
-	X(mqtt_test_stream_burst,           "mqtt stream burst") \
-	X(mqtt_test_stream_oversized,       "mqtt stream oversized") \
-	X(mqtt_test_stream_malformed,       "mqtt stream malformed") \
+	X(mqtt_test_framer_split,           "mqtt framer split") \
+	X(mqtt_test_framer_burst,           "mqtt framer burst") \
+	X(mqtt_test_framer_oversized,       "mqtt framer oversized") \
+	X(mqtt_test_framer_malformed,       "mqtt framer malformed") \
 	X(mqtt_test_connection_send,        "mqtt connection send") \
 	X(mqtt_test_connection_next,        "mqtt connection next") \
 	X(mqtt_test_connection_refused,     "mqtt connection refused") \

@@ -237,35 +237,35 @@ void mqtt_test_read_publish(void)
     TEST_EXPECT(r.has_error && m.topic.length == 0 && m.payload.length == 0);
 }
 
-internal void mqtt_test_stream_feed(MqttStream *s, const u8 *bytes, const u64 count)
+internal void mqtt_test_framer_feed(MqttFramer *f, const u8 *bytes, const u64 count)
 {
-    mqtt_stream_compact(s);
-    memcpy(s->data + s->length, bytes, count);
-    s->length += count;
+    mqtt_framer_compact(f);
+    memcpy(f->data + f->length, bytes, count);
+    f->length += count;
 }
 
-void mqtt_test_stream_split(void) 
+void mqtt_test_framer_split(void) 
 {
     const u8 packet[] = { 0x31, 0x07, 0x00, 0x03, 'a', '/', 'b', 'o', 'n' };
     u8 buffer[16];
-    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), sizeof(buffer));
+    MqttFramer f = mqtt_framer_create(buffer, sizeof(buffer), sizeof(buffer));
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
 
     for (u64 i = 0; i + 1 < sizeof(packet); i++)
     {
-        mqtt_test_stream_feed(&s, packet + i, 1);
-        TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+        mqtt_test_framer_feed(&f, packet + i, 1);
+        TEST_EXPECT(!mqtt_framer_next(&f, &header, &body));
     }
 
-    mqtt_test_stream_feed(&s, packet + sizeof(packet) - 1, 1);
-    TEST_EXPECT(mqtt_stream_next(&s, &header, &body));
+    mqtt_test_framer_feed(&f, packet + sizeof(packet) - 1, 1);
+    TEST_EXPECT(mqtt_framer_next(&f, &header, &body));
     TEST_EXPECT(header.type == MQTT_PUBLISH && header.flags == MQTT_PUBLISH_FLAG_RETAIN);
     TEST_EXPECT_BYTES(body.data, body.length, packet + 2, 7);
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.has_error);
+    TEST_EXPECT(!mqtt_framer_next(&f, &header, &body) && !f.has_error);
 }
 
-void mqtt_test_stream_burst(void) 
+void mqtt_test_framer_burst(void) 
 {
     const u8 first[] = {
          0x31, 0x07, 0x00, 0x03, 'a', '/', 'b', 'o', 'n',//PUBLISH
@@ -276,54 +276,54 @@ void mqtt_test_stream_burst(void)
     const u8 expected[] = { 0x00, 0x01, 0x00 };
 
     u8 buffer[16];
-    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), sizeof(buffer));
+    MqttFramer f = mqtt_framer_create(buffer, sizeof(buffer), sizeof(buffer));
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
 
-    mqtt_test_stream_feed(&s, first, sizeof(first));
-    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PUBLISH && body.length == 7);
-    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PINGRESP && body.length == 0);
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
+    mqtt_test_framer_feed(&f, first, sizeof(first));
+    TEST_EXPECT(mqtt_framer_next(&f, &header, &body) && header.type == MQTT_PUBLISH && body.length == 7);
+    TEST_EXPECT(mqtt_framer_next(&f, &header, &body) && header.type == MQTT_PINGRESP && body.length == 0);
+    TEST_EXPECT(!mqtt_framer_next(&f, &header, &body));
 
-    mqtt_test_stream_feed(&s, last, sizeof(last));
-    TEST_EXPECT(s.position == 0 && s.length == 5);
-    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_SUBACK);
+    mqtt_test_framer_feed(&f, last, sizeof(last));
+    TEST_EXPECT(f.position == 0 && f.length == 5);
+    TEST_EXPECT(mqtt_framer_next(&f, &header, &body) && header.type == MQTT_SUBACK);
     TEST_EXPECT_BYTES(body.data, body.length, expected, sizeof(expected));
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.has_error);
+    TEST_EXPECT(!mqtt_framer_next(&f, &header, &body) && !f.has_error);
 }
 
-void mqtt_test_stream_oversized(void)
+void mqtt_test_framer_oversized(void)
 {
     const u8 big[] = { 0x31, 0x07, 0x00, 0x03, 'a', '/', 'b', 'o', 'n' };
     const u8 after[] = { 0xD0, 0x00 };
 
     u8 buffer[8];
-    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), sizeof(buffer));
+    MqttFramer f = mqtt_framer_create(buffer, sizeof(buffer), sizeof(buffer));
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
 
-    mqtt_test_stream_feed(&s, big, 5);
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
-    TEST_EXPECT(s.skipped == 1 && s.skip == 4 && s.position == 5);
-    mqtt_test_stream_feed(&s, big + 5, 4);
-    mqtt_test_stream_feed(&s, after, sizeof(after));
-    TEST_EXPECT(mqtt_stream_next(&s, &header, &body) && header.type == MQTT_PINGRESP);
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.has_error && s.skipped == 1 && s.skip == 0);
+    mqtt_test_framer_feed(&f, big, 5);
+    TEST_EXPECT(!mqtt_framer_next(&f, &header, &body));
+    TEST_EXPECT(f.skipped_count == 1 && f.skip_remaining == 4 && f.position == 5);
+    mqtt_test_framer_feed(&f, big + 5, 4);
+    mqtt_test_framer_feed(&f, after, sizeof(after));
+    TEST_EXPECT(mqtt_framer_next(&f, &header, &body) && header.type == MQTT_PINGRESP);
+    TEST_EXPECT(!mqtt_framer_next(&f, &header, &body) && !f.has_error && f.skipped_count == 1 && f.skip_remaining == 0);
 }
 
-void mqtt_test_stream_malformed(void)
+void mqtt_test_framer_malformed(void)
 {
     const u8 bad[] = { 0x30, 0x80, 0x80, 0x80, 0x80, 0x01 };
     u8 buffer[16];
-    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), sizeof(buffer));
+    MqttFramer f = mqtt_framer_create(buffer, sizeof(buffer), sizeof(buffer));
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
 
-    mqtt_test_stream_feed(&s, bad, 4);
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body) && !s.has_error);
-    mqtt_test_stream_feed(&s, bad + 4, 2);
-    TEST_EXPECT(!mqtt_stream_next(&s, &header, &body));
-    TEST_EXPECT(s.has_error && !mqtt_stream_next(&s, &header, &body));
+    mqtt_test_framer_feed(&f, bad, 4);
+    TEST_EXPECT(!mqtt_framer_next(&f, &header, &body) && !f.has_error);
+    mqtt_test_framer_feed(&f, bad + 4, 2);
+    TEST_EXPECT(!mqtt_framer_next(&f, &header, &body));
+    TEST_EXPECT(f.has_error && !mqtt_framer_next(&f, &header, &body));
 }
 
 internal u64 mqtt_test_connection_sent(const int end, u8 *bytes, const u64 capacity)
@@ -384,7 +384,7 @@ void mqtt_test_connection_next(void)
     u8 in[32];
     u8 out[8];
     MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
-    mqtt_test_stream_feed(&c.in, bytes, sizeof(bytes));
+    mqtt_test_framer_feed(&c.in, bytes, sizeof(bytes));
     c.is_waiting_on_ping = 1;
     MqttPacket p = {0};
     TEST_EXPECT(mqtt_connection_next(&c, &p) && p.type == MQTT_SUBACK && p.packet_id == 1);
@@ -401,12 +401,12 @@ void mqtt_test_connection_refused(void)
     u8 out[8];
     MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
     MqttPacket p = {0};
-    mqtt_test_stream_feed(&c.in, refused, sizeof(refused));
+    mqtt_test_framer_feed(&c.in, refused, sizeof(refused));
     TEST_EXPECT(!mqtt_connection_next(&c, &p) && c.has_error);
 
     const u8 liar[] = { 0x30, 0x05, 0x00, 0x09, 'a', '/', 'b' };
     c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
-    mqtt_test_stream_feed(&c.in, liar, sizeof(liar));
+    mqtt_test_framer_feed(&c.in, liar, sizeof(liar));
     TEST_EXPECT(!mqtt_connection_next(&c, &p) && c.has_error);
 }
 
@@ -428,7 +428,7 @@ void mqtt_test_connection_unsubscribe(void)
     TEST_EXPECT_BYTES(got, length, unsubscribe, sizeof(unsubscribe));
 
     const u8 unsuback[] = { 0xB0, 0x02, 0x00, 0x02 };
-    mqtt_test_stream_feed(&c.in, unsuback, sizeof(unsuback));
+    mqtt_test_framer_feed(&c.in, unsuback, sizeof(unsuback));
     MqttPacket p = {0};
     TEST_EXPECT(mqtt_connection_next(&c, &p) && p.type == MQTT_UNSUBACK && p.packet_id == 2);
     mqtt_connection_close(&c);

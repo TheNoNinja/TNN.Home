@@ -67,7 +67,7 @@ target_sources(tnn_mqtt INTERFACE
     src/mqtt/mqtt_connection.c
     src/mqtt/mqtt_decode.c
     src/mqtt/mqtt_encode.c
-    src/mqtt/mqtt_stream.c
+    src/mqtt/mqtt_framer.c
 )
 target_link_libraries(tnn_mqtt INTERFACE tnn_loop)
 

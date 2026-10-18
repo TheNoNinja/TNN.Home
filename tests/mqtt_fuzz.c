@@ -23,24 +23,24 @@ internal u32 mqtt_fuzz_touch(const str s)
 int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
 {
     u8 buffer[MQTT_FUZZ_BUFFER_MAX];
-    MqttStream s = mqtt_stream_create(buffer, sizeof(buffer), MQTT_FUZZ_PACKET_MAX);
+    MqttFramer f = mqtt_framer_create(buffer, sizeof(buffer), MQTT_FUZZ_PACKET_MAX);
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
     u32 sum = 0;
 
     const u64 piece = size % 8 + 1;
     u64 position = 0;
-    while (position < size && !s.has_error)
+    while (position < size && !f.has_error)
     {
-        mqtt_stream_compact(&s);
+        mqtt_framer_compact(&f);
         u64 count = size - position;
         count = count < piece ? count : piece;
-        count = count < s.capacity - s.length ? count : s.capacity - s.length;
-        memcpy(s.data + s.length, data + position, count);
-        s.length += count;
+        count = count < f.capacity - f.length ? count : f.capacity - f.length;
+        memcpy(f.data + f.length, data + position, count);
+        f.length += count;
         position += count;
 
-        while(mqtt_stream_next(&s, &header, &body))
+        while(mqtt_framer_next(&f, &header, &body))
         {
             ASSERT(body.length == header.remaining_length);
             ASSERT(body.length < MQTT_FUZZ_PACKET_MAX);

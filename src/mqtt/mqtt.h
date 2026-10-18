@@ -4,7 +4,7 @@
 #include "mqtt/mqtt_protocol.h"
 #include "mqtt/mqtt_encode.h"
 #include "mqtt/mqtt_decode.h"
-#include "mqtt/mqtt_stream.h"
+#include "mqtt/mqtt_framer.h"
 #include "mqtt/mqtt_connection.h"
 #include "mqtt/mqtt_client.h"
 

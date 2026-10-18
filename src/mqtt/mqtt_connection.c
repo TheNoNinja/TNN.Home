@@ -15,7 +15,7 @@ MqttConnection mqtt_connection_create(u8 *in_buffer, const u64 in_capacity, cons
 {
     MqttConnection c = {0};
     c.sock = -1;
-    c.in = mqtt_stream_create(in_buffer, in_capacity, packet_max);
+    c.in = mqtt_framer_create(in_buffer, in_capacity, packet_max);
     c.out = out_buffer;
     c.out_capacity = out_capacity;
     return c;
@@ -78,7 +78,7 @@ b32 mqtt_connection_connect(MqttConnection *c, const char *ip, const u16 port, c
 
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
-    while(!mqtt_stream_next(&c->in, &header, &body))
+    while(!mqtt_framer_next(&c->in, &header, &body))
     {
         if (c->in.has_error || !mqtt_connection_receive(c))
         {
@@ -110,7 +110,7 @@ error_handling:
 
 b32 mqtt_connection_receive(MqttConnection *c)
 {
-    mqtt_stream_compact(&c->in);
+    mqtt_framer_compact(&c->in);
     const ssize_t received = recv(c ->sock, c->in.data + c->in.length, c->in.capacity - c->in.length, 0);
     if (received > 0)
     {
@@ -203,7 +203,7 @@ b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet)
 {
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
-    while (!c->has_error && mqtt_stream_next(&c->in, &header, &body))
+    while (!c->has_error && mqtt_framer_next(&c->in, &header, &body))
     {
         Reader r = reader_create(body.data, body.length);
         *packet = (MqttPacket){0};

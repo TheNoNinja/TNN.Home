@@ -3,13 +3,13 @@
 
 #include "base/base.h"
 #include "mqtt/mqtt_decode.h"
-#include "mqtt/mqtt_stream.h"
+#include "mqtt/mqtt_framer.h"
 
 typedef struct MqttConnection MqttConnection;
 struct MqttConnection 
 {
     int sock;
-    MqttStream in;
+    MqttFramer in;
     u8 *out;
     u64 out_capacity;
     u16 packet_id;
