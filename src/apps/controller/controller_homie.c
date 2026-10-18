@@ -3,12 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#define CONTROLLER_TOPIC_MAX 96
-
 internal str controller_device_filter(const ControllerDevice *d, const HomieTopicKind kind, u8 *buffer, const u64 capacity)
 {
-    ASSERT(capacity <= HOMIE_TOPIC_MAX);
-    HomieTopic t = { .kind = kind, .domain = homie_id_str(&d->domain), .device = homie_id_str(&d->id), .node = STR("+"), .property = STR("+") };
+    ASSERT(capacity >= HOMIE_TOPIC_MAX);
+    const HomieTopic t = { .kind = kind, .domain = homie_id_str(&d->domain), .device = homie_id_str(&d->id), .node = STR("+"), .property = STR("+") };
     const str filter = homie_topic_build(buffer, capacity, &t);
     ASSERT(filter.length > 0);
     return filter;
@@ -23,14 +21,14 @@ internal b32 controller_subscribe_description(Controller *c, const ControllerDev
 
 internal b32 controller_subscribe_values(Controller *c, const ControllerDevice *d)
 {
-    u8 buffer[CONTROLLER_TOPIC_MAX];
+    u8 buffer[HOMIE_TOPIC_MAX];
     const str filter = controller_device_filter(d, HOMIE_TOPIC_VALUE, buffer, sizeof(buffer));
     return mqtt_client_subscribe(&c->client, filter);
 }
 
 internal b32 controller_unsubscribe_device(Controller *c, const ControllerDevice *d)
 {
-    u8 buffer[CONTROLLER_TOPIC_MAX];
+    u8 buffer[HOMIE_TOPIC_MAX];
     const str description_filter = controller_device_filter(d, HOMIE_TOPIC_DESCRIPTION, buffer, sizeof(buffer));
     if (!mqtt_client_unsubscribe(&c->client, description_filter))
     {

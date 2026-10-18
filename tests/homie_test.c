@@ -50,6 +50,7 @@ void homie_test_topic_invalid(void)
     TEST_EXPECT(!homie_topic_parse(STR("homie/5/tnn-sim-1/light/On"), &t));
     TEST_EXPECT(!homie_topic_parse(STR("homie/5/tnn-sim-1/light/on/$name"), &t));
     TEST_EXPECT(!homie_topic_parse(STR("homie/5/tnn-sim-1/light/on/set/x"), &t));
+    TEST_EXPECT(!homie_topic_parse(STR("tnn/echo-probe"), &t));
     TEST_EXPECT(homie_topic_parse(STR("homie/5/abcdefghijklmnopqrstuvwxyz012345/$state"), &t));
     TEST_EXPECT(!homie_topic_parse(STR("homie/5/abcdefghijklmnopqrstuvwxyz0123456/$state"), &t));
 }

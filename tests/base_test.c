@@ -124,6 +124,17 @@ void base_test_str_to_u64_range(void)
     TEST_EXPECT(port == 1883);
 }
 
+void base_test_cstr_to_u64_range(void)
+{
+    u64 port = 1883;
+    TEST_EXPECT(cstr_to_u64_range("1884", 1, 65535, &port) && port == 1884);
+
+    port = 1883;
+    TEST_EXPECT(!cstr_to_u64_range("65536", 1, 65535, &port));
+    TEST_EXPECT(!cstr_to_u64_range("", 1, 65535, &port));
+    TEST_EXPECT(port == 1883);
+}
+
 void base_test_str_find(void)
 {
     const str url = STR("http://127.0.0.1:8080");
@@ -235,4 +246,20 @@ void base_test_write_numbers(void)
     w = writer_create(buffer, 8);
     write_u64_str(&w, 123456789);
     TEST_EXPECT(w.has_overflown && w.length == 0);
+}
+
+void base_test_reader(void)
+{
+    const u8 expected[] = { 0x01, 0x02, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+    u8 buffer[10];
+    Writer w = writer_create(buffer, sizeof(buffer));
+    write_u16_be(&w, 0x0102);
+    write_u64_be(&w, 0x0102030405060708);
+    TEST_EXPECT_BYTES(w.data, w.length, expected, sizeof(expected));
+
+    Reader r = reader_create(buffer, sizeof(buffer));
+    TEST_EXPECT(read_u16_be(&r) == 0x0102);
+    TEST_EXPECT(read_u64_be(&r) == 0x0102030405060708 && !r.has_error);
+    TEST_EXPECT(read_u8(&r) == 0 && r.has_error);
+    TEST_EXPECT(read_bytes(&r, 0).length == 0 && r.has_error && r.position == sizeof(buffer));
 }

@@ -12,22 +12,24 @@ void test_expect_bytes(const u8 *data, u64 length, const u8 *expected, u64 expec
 void test_expect_str(str actual, str expected, const char *text, const char *file, int line);
 
 #define TEST_LIST(X) \
-    X(base_test_arena_push,       "base arena push") \
-	X(base_test_arena_full,       "base arena full") \
-	X(base_test_arena_pop,        "base arena pop") \
-	X(base_test_time,             "base time") \
-	X(base_test_time_mono,        "base time mono") \
-	X(base_test_str_equal,        "base str equal") \
-	X(base_test_str_cut,          "base str cut") \
-	X(base_test_str_from_cstr,    "base str cstr") \
-	X(base_test_str_to_u64,       "base str to u64") \
-	X(base_test_str_to_u64_range, "base str to u64 range") \
-	X(base_test_str_find,         "base str find") \
-	X(base_test_str_next,         "base str next") \
-	X(base_test_str_to_i64,       "base str to i64") \
-	X(base_test_str_trim,         "base str trim") \
-	X(base_test_writer,           "base writer") \
-	X(base_test_write_numbers,    "base write numbers") \
+    X(base_test_arena_push,        "base arena push") \
+	X(base_test_arena_full,        "base arena full") \
+	X(base_test_arena_pop,         "base arena pop") \
+	X(base_test_time,              "base time") \
+	X(base_test_time_mono,         "base time mono") \
+	X(base_test_str_equal,         "base str equal") \
+	X(base_test_str_cut,           "base str cut") \
+	X(base_test_str_from_cstr,     "base str cstr") \
+	X(base_test_str_to_u64,        "base str to u64") \
+	X(base_test_str_to_u64_range,  "base str to u64 range") \
+	X(base_test_cstr_to_u64_range, "base cstr to u64 range") \
+	X(base_test_str_find,          "base str find") \
+	X(base_test_str_next,          "base str next") \
+	X(base_test_str_to_i64,        "base str to i64") \
+	X(base_test_str_trim,          "base str trim") \
+	X(base_test_writer,            "base writer") \
+	X(base_test_write_numbers,     "base write numbers") \
+	X(base_test_reader,            "base reader") \
 \
 	X(histogram_test_index,       "histogram index") \
 	X(histogram_test_bounds,      "histogram bounds") \
@@ -55,6 +57,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(http_test_request_headers, "http request headers") \
 	X(http_test_request_host,    "http request host") \
 	X(http_test_request_origin,  "http request origin") \
+	X(http_test_request_body,    "http request body") \
 	X(http_test_write_head,      "http write head") \
 	X(http_test_write_escaped,   "http write escaped") \
 	X(http_test_write_overflow,  "http write overflow") \

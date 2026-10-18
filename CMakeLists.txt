@@ -22,6 +22,7 @@ target_sources(tnn_base INTERFACE
     src/base/base_arena.c
     src/base/base_assert.c
     src/base/base_log.c
+    src/base/base_reader.c
     src/base/base_str.c
     src/base/base_time.c
     src/base/base_writer.c

@@ -43,6 +43,20 @@ void write_bytes(Writer *w, const str bytes)
     w->length += bytes.length;
 }
 
+void write_u16_be(Writer *w, const u16 value)
+{
+    write_u8(w, (u8)(value >> 8));
+    write_u8(w, (u8)(value & 0xFF));
+}
+
+void write_u64_be(Writer *w, const u64 value)
+{
+    for (i32 i = 7; i >= 0; i--)
+    {
+        write_u8(w, (u8)(value >> (8 * i)));
+    }
+}
+
 void write_u64_str(Writer *w, const u64 value)
 {
     u8 digits[20];

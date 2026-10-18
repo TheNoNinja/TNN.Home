@@ -133,7 +133,7 @@ int main(const int argc, const char **argv)
     }
 
     u64 port = DEVICE_SIM_BROKER_PORT;
-    if(argc > 1 && !str_to_u64_range(str_from_cstr(argv[1]), 1, 65535, &port))
+    if(argc > 1 && !cstr_to_u64_range(argv[1], 1, 65535, &port))
     {
         LOG_ERROR("usage: %s [port(default '%d')]", argv[0], DEVICE_SIM_BROKER_PORT);
         return 1;

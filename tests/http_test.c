@@ -40,7 +40,7 @@ void http_test_request_body(void)
     const str post = STR(
         "POST /set HTTP/1.1\r\n"
         "Host: 127.0.0.1:8080\r\n"
-        "Content-Lenght: 23\r\n"
+        "Content-Length: 23\r\n"
         "\r\n"
         "tnn-sim-1 light/on true"
     );
@@ -172,7 +172,7 @@ void http_test_request_host(void)
         STR("127.0.0.1"),
         STR("evil.example:8080"),
         STR("127.0.0.10:8080"),
-        STR("locahost.evil.example:8080"),
+        STR("localhost.evil.example:8080"),
         STR("127.0.0.1:"),
     };
     for (u32 i = 0; i < ARRAY_COUNT(others); i++)

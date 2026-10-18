@@ -6,6 +6,7 @@
 #include "base/base_arena.h"
 #include "base/base_assert.h"
 #include "base/base_log.h"
+#include "base/base_reader.h"
 #include "base/base_str.h"
 #include "base/base_time.h"
 #include "base/base_writer.h"

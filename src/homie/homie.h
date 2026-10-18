@@ -101,7 +101,8 @@ b32 homie_description_read(str json, HomieDescription *out);
 i32 homie_property_find(const HomieDescription *d, str node, str property);
 
 typedef struct HomieValue HomieValue;
-struct HomieValue {
+struct HomieValue 
+{
     u8 bytes[HOMIE_VALUE_MAX];
     u64 length;
     b32 is_known;

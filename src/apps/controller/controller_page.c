@@ -13,7 +13,7 @@ internal void controller_page_value(Writer *w, const ControllerDevice *d, const 
     write_bytes(w, STR("\">"));
     if (v->is_known)
     {
-        http_write_escaped(w, (str){ (u8 *)v->bytes, v->length });
+        http_write_escaped(w, homie_value_str(v));
     }
     else
     {
@@ -24,7 +24,7 @@ internal void controller_page_value(Writer *w, const ControllerDevice *d, const 
 
 internal void controller_page_toggle(Writer *w, const ControllerDevice *d, const HomieProperty *p, const HomieValue *v)
 {
-    const b32 is_on = v->is_known && str_equal((str){ (u8 *)v->bytes, v->length }, STR("true"));
+    const b32 is_on = str_equal(homie_value_str(v), STR("true"));
     write_bytes(w, STR("<button data-set=\""));
     write_bytes(w, homie_id_str(&d->id));
     write_bytes(w, STR(" "));
