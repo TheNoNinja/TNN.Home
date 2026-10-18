@@ -97,7 +97,7 @@ struct HomieDescription
     HomieProperty properties[HOMIE_PROPERTY_MAX];
 };
 
-b32 homie_description_read(str json, HomieDescription *out);
+b32 homie_description_parse(str json, HomieDescription *out);
 i32 homie_property_find(const HomieDescription *d, str node, str property);
 
 typedef struct HomieValue HomieValue;
@@ -110,6 +110,6 @@ struct HomieValue
 
 b32 homie_value_set(HomieValue *v, str value);
 str homie_value_str(const HomieValue *v);
-b32 homie_value_valid(HomieDatatype datatype, str value);
+b32 homie_payload_valid(HomieDatatype datatype, str value);
 
 #endif

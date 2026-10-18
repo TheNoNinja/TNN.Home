@@ -3,14 +3,14 @@
 
 #include "base/base.h"
 
-enum HttpRead
+enum HttpParse
 {
-    HTTP_READ_INCOMPLETE,
-    HTTP_READ_OK,
-    HTTP_READ_BAD,
-    HTTP_READ_TOO_LARGE,
+    HTTP_PARSE_INCOMPLETE,
+    HTTP_PARSE_OK,
+    HTTP_PARSE_BAD,
+    HTTP_PARSE_TOO_LARGE,
 };
-typedef enum HttpRead HttpRead;
+typedef enum HttpParse HttpParse;
 
 typedef struct HttpRequest HttpRequest;
 struct HttpRequest
@@ -23,7 +23,7 @@ struct HttpRequest
     u64 head_length;
 };
 
-HttpRead http_request_read(str bytes, u64 body_max, HttpRequest *request);
+HttpParse http_request_parse(str bytes, u64 body_max, HttpRequest *request);
 b32 http_request_host_is(const HttpRequest *request, str ip, u16 port);
 b32 http_request_same_origin(const HttpRequest *request);
 

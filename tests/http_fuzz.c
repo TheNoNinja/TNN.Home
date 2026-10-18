@@ -23,9 +23,9 @@ internal b32 http_fuzz_word(const str s, const u8 *data, const u64 length)
 int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
 {
     HttpRequest request = {0};
-    const HttpRead result = http_request_read((str){ (u8 *)data, size }, HTTP_FUZZ_BODY_MAX, &request);
-    ASSERT(result == HTTP_READ_INCOMPLETE || result == HTTP_READ_OK || result == HTTP_READ_BAD || result == HTTP_READ_TOO_LARGE);
-    if (result != HTTP_READ_OK)
+    const HttpParse result = http_request_parse((str){ (u8 *)data, size }, HTTP_FUZZ_BODY_MAX, &request);
+    ASSERT(result == HTTP_PARSE_INCOMPLETE || result == HTTP_PARSE_OK || result == HTTP_PARSE_BAD || result == HTTP_PARSE_TOO_LARGE);
+    if (result != HTTP_PARSE_OK)
     {
         return 0;
     }
@@ -41,9 +41,9 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
     ASSERT(request.origin.length == 0 || http_fuzz_word(request.origin, data, head));
 
     HttpRequest again = {0};
-    ASSERT(http_request_read((str){ (u8 *)data, whole }, HTTP_FUZZ_BODY_MAX, &again) == HTTP_READ_OK);
+    ASSERT(http_request_parse((str){ (u8 *)data, whole }, HTTP_FUZZ_BODY_MAX, &again) == HTTP_PARSE_OK);
     ASSERT(again.head_length == head && str_equal(again.body, request.body));
     ASSERT(str_equal(again.method, request.method) && str_equal(again.target, request.target) && str_equal(again.host, request.host) && str_equal(again.origin, request.origin));
-    ASSERT(http_request_read((str){ (u8 *)data, whole - 1 }, HTTP_FUZZ_BODY_MAX, &again) == HTTP_READ_INCOMPLETE);
+    ASSERT(http_request_parse((str){ (u8 *)data, whole - 1 }, HTTP_FUZZ_BODY_MAX, &again) == HTTP_PARSE_INCOMPLETE);
     return 0;
 }

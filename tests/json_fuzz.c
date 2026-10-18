@@ -15,7 +15,7 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
     ASSERT(r.has_error || r.position == r.length);
     
     HomieDescription description;
-    if (homie_description_read((str){ (u8 *)data, size }, &description))
+    if (homie_description_parse((str){ (u8 *)data, size }, &description))
     {
         ASSERT(description.property_count <= HOMIE_PROPERTY_MAX);
         for (u32 i = 0; i < description.property_count; i++)
@@ -29,9 +29,9 @@ int LLVMFuzzerTestOneInput(const u8 *data, const size_t size)
     const str value = { (u8*)data, size };
     for (u32 d = HOMIE_DATATYPE_INTEGER; d <= HOMIE_DATATYPE_JSON; d++)
     {
-        homie_value_valid((HomieDatatype)d, value);
+        homie_payload_valid((HomieDatatype)d, value);
     }
-    ASSERT(!homie_value_valid(HOMIE_DATATYPE_INTEGER, value) || homie_value_valid(HOMIE_DATATYPE_FLOAT, value));
+    ASSERT(!homie_payload_valid(HOMIE_DATATYPE_INTEGER, value) || homie_payload_valid(HOMIE_DATATYPE_FLOAT, value));
 
     HomieTopic t = {0};
     if (homie_topic_parse(value, &t))

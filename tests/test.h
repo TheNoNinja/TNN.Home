@@ -45,11 +45,11 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(homie_test_description_invalid, "homie description invalid") \
 	X(homie_test_property_find,       "homie property find") \
 	X(homie_test_value_keep,          "homie value keep") \
-	X(homie_test_value,               "homie value") \
-	X(homie_test_value_bool,          "homie value bool") \
-	X(homie_test_value_integer,       "homie value integer") \
-	X(homie_test_value_float,         "homie value float") \
-	X(homie_test_value_json,          "homie value json") \
+	X(homie_test_payload,             "homie payload") \
+	X(homie_test_payload_bool,        "homie payload bool") \
+	X(homie_test_payload_integer,     "homie payload integer") \
+	X(homie_test_payload_float,       "homie payload float") \
+	X(homie_test_payload_json,        "homie payload json") \
 \
 	X(http_test_request,         "http request") \
 	X(http_test_request_peices,  "http request peices") \

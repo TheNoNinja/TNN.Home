@@ -89,7 +89,7 @@ internal b32 device_sim_set(const MqttConnection *c, const MqttPublish m)
         LOG_WARN("a message on %.*s,  which is not our /set topic, ignored", STR_FMT(m.topic));
         return 1;
     }
-    if (!homie_value_valid(HOMIE_DATATYPE_BOOLEAN, m.payload))
+    if (!homie_payload_valid(HOMIE_DATATYPE_BOOLEAN, m.payload))
     {
         LOG_WARN("%s: '%.*s' is not a boolean (true or false), ignored", DEVICE_SIM_LIGHT_SET_TOPIC, STR_FMT(m.payload));
         return 1;

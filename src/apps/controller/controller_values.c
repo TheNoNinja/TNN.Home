@@ -21,7 +21,7 @@ void controller_on_value(Controller *c, const HomieTopic *t, const str payload)
     {
         LOG_WARN("%.*s: a value of %llu bytes for %.*s/%.*s, more than %d: ignored", STR_FMT(t->device), (unsigned long long)payload.length, STR_FMT(t->node), STR_FMT(t->property), HOMIE_VALUE_MAX);
     } 
-    else if (payload.length > 0 && !homie_value_valid(p->datatype, payload))
+    else if (payload.length > 0 && !homie_payload_valid(p->datatype, payload))
     {
         const str datatype = homie_datatype_name(p->datatype);
         LOG_WARN("%.*s: '%.*s' is not a valid %.*s for  %.*s/%.*s: ignored", STR_FMT(t->device), STR_FMT(payload), STR_FMT(datatype), STR_FMT(t->node), STR_FMT(t->property));
@@ -80,7 +80,7 @@ ControllerSetResult controller_set(Controller *c, const str words)
         printf("set: a value of %llu bytes, more than %d\n", (unsigned long long)value.length, HOMIE_VALUE_MAX);
         return CONTROLLER_SET_REFUSED;
     }
-    if(!homie_value_valid(p->datatype, value))
+    if(!homie_payload_valid(p->datatype, value))
     {
         const str datatype = homie_datatype_name(p->datatype);
         printf("set: '%.*s' is not a valid for %.*s\n", STR_FMT(value), STR_FMT(datatype));

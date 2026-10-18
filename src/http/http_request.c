@@ -78,12 +78,12 @@ internal b32 http_name_is(const str name, const str lower)
     return 1;
 }
 
-HttpRead http_request_read(const str bytes, const u64 body_max, HttpRequest *request)
+HttpParse http_request_parse(const str bytes, const u64 body_max, HttpRequest *request)
 {
     u64 end = 0;
     if (!str_find(bytes, STR("\r\n\r\n"), &end))
     {
-        return HTTP_READ_INCOMPLETE;
+        return HTTP_PARSE_INCOMPLETE;
     }
     const u64 head_length = end + 4;
 
@@ -96,12 +96,12 @@ HttpRead http_request_read(const str bytes, const u64 body_max, HttpRequest *req
     str version = STR_EMPTY;
     if (!str_cut(line, ' ', &r.method, &rest) || !str_cut(rest, ' ', &r.target, &version))
     {
-        return HTTP_READ_BAD;
+        return HTTP_PARSE_BAD;
     }
     const b32 is_target_ok = r.target.length > 0 && r.target.data[0] == '/' && http_visible(r.target);
     if (!http_token_valid(r.method) || !is_target_ok || !str_equal(version, STR("HTTP/1.1")))
     {
-        return HTTP_READ_BAD;
+        return HTTP_PARSE_BAD;
     }
 
     b32 has_host = 0;
@@ -114,18 +114,18 @@ HttpRead http_request_read(const str bytes, const u64 body_max, HttpRequest *req
         str value = STR_EMPTY;
         if (!str_cut(line, ':', &name, &value) || !http_token_valid(name))
         {
-            return HTTP_READ_BAD;
+            return HTTP_PARSE_BAD;
         }
         value = str_trim(value);
         if (!http_value_valid(value))
         {
-            return HTTP_READ_BAD;
+            return HTTP_PARSE_BAD;
         }
         if (http_name_is(name, STR("host")))
         {
             if (has_host || value.length == 0 || !http_visible(value))
             {
-                return HTTP_READ_BAD;
+                return HTTP_PARSE_BAD;
             }
             has_host = 1;
             r.host = value;
@@ -134,19 +134,19 @@ HttpRead http_request_read(const str bytes, const u64 body_max, HttpRequest *req
         {
             if (has_length || !str_to_u64(value, &content_length))
             {
-                return HTTP_READ_BAD;
+                return HTTP_PARSE_BAD;
             }
             has_length = 1;
         }
         else if (http_name_is(name, STR("transfer-encoding")))
         {
-            return HTTP_READ_BAD;
+            return HTTP_PARSE_BAD;
         }
         else if (http_name_is(name, STR("origin")))
         {
             if (has_origin || value.length == 0 || !http_visible(value))
             {
-                return HTTP_READ_BAD;
+                return HTTP_PARSE_BAD;
             }
             has_origin = 1;
             r.origin = value;
@@ -155,21 +155,21 @@ HttpRead http_request_read(const str bytes, const u64 body_max, HttpRequest *req
 
     if (!has_host)
     {
-        return HTTP_READ_BAD;
+        return HTTP_PARSE_BAD;
     }
     if (content_length > body_max)
     {
-        return HTTP_READ_TOO_LARGE;
+        return HTTP_PARSE_TOO_LARGE;
     }
     if (bytes.length - head_length < content_length)
     {
-        return HTTP_READ_INCOMPLETE;
+        return HTTP_PARSE_INCOMPLETE;
     }
 
     r.head_length = head_length;
     r.body = (str){ bytes.data + head_length, content_length };
     *request = r;
-    return HTTP_READ_OK;
+    return HTTP_PARSE_OK;
 }
 
 b32 http_request_host_is(const HttpRequest *request, const str ip, const u16 port)

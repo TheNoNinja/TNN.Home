@@ -115,7 +115,7 @@ internal b32 controller_on_description(Controller *c, const HomieTopic *t, const
     }
 
     HomieDescription description;
-    if (!homie_description_read(payload, &description))
+    if (!homie_description_parse(payload, &description))
     {
         LOG_WARN("%.*s: $description ignored", STR_FMT(t->device));
         return 1;

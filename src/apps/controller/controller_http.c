@@ -261,21 +261,21 @@ internal b32 controller_http_receive(Controller *c, ControllerHttpConnection *h)
     h->length += (u64)received;
     
     HttpRequest request = {0};
-    switch (http_request_read((str){ h->request, h->length }, CONTROLLER_LINE_MAX, &request))
+    switch (http_request_parse((str){ h->request, h->length }, CONTROLLER_LINE_MAX, &request))
     {
-        case HTTP_READ_OK:
+        case HTTP_PARSE_OK:
             return controller_http_request(c, h, &request);
-        case HTTP_READ_TOO_LARGE:
+        case HTTP_PARSE_TOO_LARGE:
             LOG_WARN("a request body of more than %d bytes -> 413", CONTROLLER_LINE_MAX);
             controller_http_send_status(h->sock, 413, STR_EMPTY);
             controller_http_close(c, h);
             break;
-        case HTTP_READ_BAD:
+        case HTTP_PARSE_BAD:
             LOG_WARN("a request that breaks the rules of HTTP/1.1 -> 400");
             controller_http_send_status(h->sock, 400, STR_EMPTY);
             controller_http_close(c, h);
             break;
-        case HTTP_READ_INCOMPLETE:
+        case HTTP_PARSE_INCOMPLETE:
             if (h->length == sizeof(h->request))
             {
                 LOG_WARN("a request head of more than %llu bytes -> 431", (unsigned long long)sizeof(h->request));
