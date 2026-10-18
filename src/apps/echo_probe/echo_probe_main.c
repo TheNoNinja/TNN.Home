@@ -55,8 +55,8 @@ internal b32 echo_probe_send(EchoProbe *p)
 {
     u8 payload[ECHO_PROBE_PAYLOAD_MAX];
     Writer body = writer_create(payload, sizeof(payload));
-    mqtt_write_u64_be(&body, time_now_raw_ns());
-    mqtt_write_u64_be(&body, p->sent);
+    write_u64_be(&body, time_now_raw_ns());
+    write_u64_be(&body, p->sent);
 
     const str message = writer_to_str(&body);
     p->sent += 1;
@@ -138,9 +138,9 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
             const u64 now_ns = time_now_raw_ns();
             const u64 now_mono_ns = time_now_mono_ns();
             const str message = packet->publish.payload;
-            MqttReader payload = mqtt_reader_create(message.data, message.length);
-            const u64 sent_ns = mqtt_read_u64_be(&payload);
-            const u64 sequence = mqtt_read_u64_be(&payload);
+            Reader payload = reader_create(message.data, message.length);
+            const u64 sent_ns = read_u64_be(&payload);
+            const u64 sequence = read_u64_be(&payload);
             if (payload.has_error)
             {
                 LOG_ERROR("malformed echo of %llu bytes", (unsigned long long) message.length);

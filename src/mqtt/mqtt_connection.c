@@ -1,6 +1,6 @@
 #include "mqtt/mqtt_connection.h"
-#include "mqtt/mqtt.h"
-#include "base/base.h"
+#include "mqtt/mqtt_encode.h"
+#include "mqtt/mqtt_protocol.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -86,9 +86,9 @@ b32 mqtt_connection_connect(MqttConnection *c, const char *ip, const u16 port, c
         }
     }
 
-    MqttReader r = mqtt_reader_create(body.data, body.length);
-    const u8 session = mqtt_read_u8(&r);
-    const u8 return_code = mqtt_read_u8(&r);
+    Reader r = reader_create(body.data, body.length);
+    const u8 session = read_u8(&r);
+    const u8 return_code = read_u8(&r);
     if (r.has_error || header.type != MQTT_CONNACK || header.remaining_length != 2)
     {
         LOG_ERROR("expected a CONNACK, got packet type %d with %u bytes", header.type, header.remaining_length);
@@ -205,7 +205,7 @@ b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet)
     str body = STR_EMPTY;
     while (!c->has_error && mqtt_stream_next(&c->in, &header, &body))
     {
-        MqttReader r = mqtt_reader_create(body.data, body.length);
+        Reader r = reader_create(body.data, body.length);
         *packet = (MqttPacket){0};
         packet->type = header.type;
 
@@ -224,8 +224,8 @@ b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet)
             }
             case MQTT_SUBACK:
             {
-                packet->packet_id = mqtt_read_u16_be(&r);
-                const u8 return_code = mqtt_read_u8(&r);
+                packet->packet_id = read_u16_be(&r);
+                const u8 return_code = read_u8(&r);
                 if (r.has_error || return_code != MQTT_SUBACK_QOS_0)
                 {
                     LOG_ERROR("SUBACK: refused (packet id %d, return code %d)", packet->packet_id, return_code);
@@ -237,7 +237,7 @@ b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet)
             }
             case MQTT_UNSUBACK:
             {
-                packet->packet_id = mqtt_read_u16_be(&r);
+                packet->packet_id = read_u16_be(&r);
                 if (r.has_error)
                 {
                     LOG_ERROR("malformed UNSUBACK of %llu bytes", (unsigned long long)body.length);

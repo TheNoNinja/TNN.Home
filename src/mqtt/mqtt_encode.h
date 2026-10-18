@@ -1,10 +1,8 @@
-#ifndef MQTT_WRITER_H
-#define MQTT_WRITER_H
+#ifndef MQTT_ENCODE_H
+#define MQTT_ENCODE_H
 
 #include "base/base.h"
 
-void mqtt_write_u16_be(Writer *w, u16 value);
-void mqtt_write_u64_be(Writer *w, u64 value);
 void mqtt_write_str(Writer *w, str value);
 void mqtt_write_varint(Writer *w, u32 value);
 

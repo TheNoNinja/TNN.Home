@@ -1,5 +1,5 @@
 #include "mqtt/mqtt_stream.h"
-#include "mqtt/mqtt.h"
+#include "mqtt/mqtt_protocol.h"
 
 #include <string.h>
 
@@ -45,7 +45,7 @@ b32 mqtt_stream_next(MqttStream *s, MqttFixedHeader *header, str *body)
             continue;
         }
 
-        MqttReader r = mqtt_reader_create(s->data + s->position, unread);
+        Reader r = reader_create(s->data + s->position, unread);
         const MqttFixedHeader h = mqtt_read_fixed_header(&r);
         if (r.has_error)
         {
@@ -72,7 +72,7 @@ b32 mqtt_stream_next(MqttStream *s, MqttFixedHeader *header, str *body)
         }
 
         *header = h;
-        *body = mqtt_read_bytes(&r, h.remaining_length);
+        *body = read_bytes(&r, h.remaining_length);
         s->position += packet_length;
         return 1;
     }

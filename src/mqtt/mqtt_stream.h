@@ -2,7 +2,7 @@
 #define MQTT_STREAM_H
 
 #include "base/base.h"
-#include "mqtt/mqtt_reader.h"
+#include "mqtt/mqtt_decode.h"
 
 typedef struct MqttStream MqttStream;
 struct MqttStream 

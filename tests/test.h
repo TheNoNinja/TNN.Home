@@ -80,7 +80,6 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(loop_test_unwatch,       "loop unwatch") \
 \
 	X(mqtt_test_str,                    "mqtt str") \
-	X(mqtt_test_u64,                    "mqtt u64") \
 	X(mqtt_test_varint,                 "mqtt varint") \
 	X(mqtt_test_varint_too_big,         "mqtt var int too big") \
 	X(mqtt_test_connect,                "mqtt connect") \

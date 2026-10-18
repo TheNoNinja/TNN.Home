@@ -1,19 +1,5 @@
-#include "mqtt/mqtt_writer.h"
-#include "mqtt/mqtt.h"
-
-void mqtt_write_u16_be(Writer *w, const u16 value)
-{
-    write_u8(w, (u8)(value >> 8));
-    write_u8(w, (u8)value & 0xFF);
-}
-
-void mqtt_write_u64_be(Writer *w, const u64 value)
-{
-    for (i32 i = 7; i >= 0; i--)
-    {
-        write_u8(w, (u8)(value >> (8 * i)));
-    }
-}
+#include "mqtt/mqtt_encode.h"
+#include "mqtt/mqtt_protocol.h"
 
 void mqtt_write_str(Writer *w, const str value)
 {
@@ -22,7 +8,7 @@ void mqtt_write_str(Writer *w, const str value)
         w->has_overflown = 1;
         return;
     }
-    mqtt_write_u16_be(w, (u16)value.length);
+    write_u16_be(w, (u16)value.length);
     write_bytes(w, value);
 }
 
@@ -66,7 +52,7 @@ void mqtt_write_connect(Writer *w, const str client_id, const u16 keep_alive_sec
     mqtt_write_str(w, protocol_name);
     write_u8(w, MQTT_PROTOCOL_3_1_1);
     write_u8(w, flags);
-    mqtt_write_u16_be(w, keep_alive_seconds);
+    write_u16_be(w, keep_alive_seconds);
     mqtt_write_str(w, client_id);
     if (has_will)
     {
@@ -95,7 +81,7 @@ void mqtt_write_subscribe(Writer *w, const u16 packet_id, const str topic_filter
 
     write_u8(w, MQTT_SUBSCRIBE << 4 | MQTT_SUBSCRIBE_FLAG);
     mqtt_write_varint(w, remaining);
-    mqtt_write_u16_be(w, packet_id);
+    write_u16_be(w, packet_id);
     mqtt_write_str(w, topic_filter);
     write_u8(w, 0);
 }
@@ -106,7 +92,7 @@ void mqtt_write_unsubscribe(Writer *w, const u16 packet_id, const str topic_filt
 
     write_u8(w, MQTT_UNSUBSCRIBE << 4 | MQTT_UNSUBSCRIBE_FLAG);
     mqtt_write_varint(w, remaining);
-    mqtt_write_u16_be(w, packet_id);
+    write_u16_be(w, packet_id);
     mqtt_write_str(w, topic_filter);
 }
 
