@@ -37,7 +37,9 @@ target_link_libraries(tnn_histogram INTERFACE tnn_base)
 
 add_library(tnn_homie INTERFACE)
 target_sources(tnn_homie INTERFACE
-    src/homie/homie.c
+    src/homie/homie_description.c
+    src/homie/homie_payload.c
+    src/homie/homie_topic.c
 )
 target_link_libraries(tnn_homie INTERFACE tnn_json)
 
@@ -121,7 +123,9 @@ add_executable(tnn_tests
     tests/test_main.c
     tests/base_test.c
     tests/histogram_test.c
-    tests/homie/homie_test.c
+    tests/homie/homie_description_test.c
+    tests/homie/homie_payload_test.c
+    tests/homie/homie_topic_test.c
     tests/http/http_test.c
     tests/json_test.c
     tests/loop_test.c
