@@ -65,7 +65,7 @@ ControllerSetResult controller_set(Controller *c, str words);
 
 b32 controller_on_publish(Controller *c, MqttPublish m);
 void controller_on_value(Controller *c, const HomieTopic *t, str payload);
-b32 controller_commands_read(Controller *c, b32 *is_closed);
+b32 controller_commands_receive(Controller *c, b32 *is_closed);
 
 b32 controller_http_listen(Controller *c, const char *ip, u16 port);
 b32 controller_http_handle(Controller *c);

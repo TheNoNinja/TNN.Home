@@ -171,7 +171,7 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
     }
 }
 
-internal b32 echo_probe_receive(EchoProbe *p)
+internal b32 echo_probe_packets_handle(EchoProbe *p)
 {
     MqttPacket packet = {0};
     while (mqtt_connection_next(&p->client.connection, &packet))
@@ -342,7 +342,7 @@ int main(const int argc, char **argv)
 
         if (ok && !echo_probe_done(&p))
         {
-            ok = echo_probe_receive(&p);
+            ok = echo_probe_packets_handle(&p);
         }
     }
 

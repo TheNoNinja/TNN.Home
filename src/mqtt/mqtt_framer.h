@@ -18,7 +18,6 @@ struct MqttFramer
 };
 
 MqttFramer mqtt_framer_create(u8 *buffer, u64 capacity, u64 packet_max);
-void mqtt_framer_compact(MqttFramer *f);
 str mqtt_framer_space(MqttFramer *f);
 void mqtt_framer_received(MqttFramer *f, u64 count);
 b32 mqtt_framer_next(MqttFramer *f, MqttFixedHeader *header, str *body);

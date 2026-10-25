@@ -19,7 +19,7 @@ internal u8 controller_tx_buffer[CONTROLLER_TX_MAX];
 
 internal Controller controller;
 
-internal b32 controller_receive(Controller *c)
+internal b32 controller_packets_handle(Controller *c)
 {
     MqttPacket p = {0};
     while(mqtt_connection_next(&c->client.connection, &p))
@@ -43,7 +43,7 @@ internal b32 controller_run(Controller *c)
         if (loop_readable(&c->client.loop, STDIN_FILENO))
         {
             b32 is_closed = 0;
-            if (!controller_commands_read(c, &is_closed))
+            if (!controller_commands_receive(c, &is_closed))
             {
                 return 0;
             }
@@ -54,7 +54,7 @@ internal b32 controller_run(Controller *c)
             }
         }
         
-        if (!controller_receive(c))
+        if (!controller_packets_handle(c))
         {
             return 0;
         }

@@ -13,7 +13,7 @@ MqttFramer mqtt_framer_create(u8 *buffer, const u64 capacity, const u64 packet_m
     return f;
 }
 
-void mqtt_framer_compact(MqttFramer *f)
+internal void mqtt_framer_compact(MqttFramer *f)
 {
     ASSERT(f->position <= f->length);
     const u64 unread = f->length - f->position;
@@ -25,7 +25,7 @@ void mqtt_framer_compact(MqttFramer *f)
 str mqtt_framer_space(MqttFramer *f)
 {
     mqtt_framer_compact(f);
-    return (str){ f->data + f->length, f->capacity - f->length };
+    return (str){ .data = f->data + f->length, .length = f->capacity - f->length };
 }
 
 void mqtt_framer_received(MqttFramer *f, const u64 count)

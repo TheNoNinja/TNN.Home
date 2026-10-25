@@ -27,7 +27,7 @@ internal b32 controller_command(Controller *c, const str line)
     return 1;
 }
 
-b32 controller_commands_read(Controller *c, b32 *is_closed)
+b32 controller_commands_receive(Controller *c, b32 *is_closed)
 {
     u8 bytes[CONTROLLER_COMMAND_MAX];
     const ssize_t count = read(STDIN_FILENO, bytes, sizeof(bytes));
