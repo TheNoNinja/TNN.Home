@@ -21,24 +21,49 @@ MqttConnection mqtt_connection_create(u8 *in_buffer, const u64 in_capacity, cons
     return c;
 }
 
-internal b32 mqtt_connection_send(const MqttConnection *c, const Writer *w)
+str mqtt_connection_output(const MqttConnection *c)
+{
+    return (str){ .data = c->out, .length = c->out_length };
+}
+
+void mqtt_connection_sent(MqttConnection *c, const u64 count)
+{
+    ASSERT(count <= c->out_length);
+    memmove(c->out, c->out + count, c->out_length - count);
+    c->out_length -= count;
+}
+
+internal Writer mqtt_connection_writer(const MqttConnection *c)
+{
+    ASSERT(c->state != MQTT_CONNECTION_DISCONNECTED);
+    return writer_create(c->out + c->out_length, c->out_capacity - c->out_length);
+}
+
+internal b32 mqtt_connection_queue(MqttConnection *c, const Writer *w)
 {
     if (w->has_overflown)
     {
-        LOG_ERROR("packet does not fit in the send buffer (%llu bytes)", (unsigned long long)w->capacity);
+        LOG_ERROR("packet does not fit in the send buffer (%llu bytes)", (unsigned long long)c->out_capacity);
         return 0;
     }
+    c->out_length += w->length;
+    return 1;
+}
 
-    const ssize_t sent = send(c->sock, w->data, w->length, MSG_NOSIGNAL);
+internal b32 mqtt_connection_send(MqttConnection *c)
+{
+    const str out = mqtt_connection_output(c);
+    const ssize_t sent = send(c->sock, out.data, out.length, MSG_NOSIGNAL);
     if (sent < 0)
     {
         LOG_ERROR("send: %s", strerror(errno));
         return 0;
     }
+    mqtt_connection_sent(c, (u64)sent);
 
-    if ((u64)sent != w->length)
+    if ((u64)sent != out.length)
     {
-        LOG_ERROR("send: only %lld of %llu bytes went out (the send buffer is full)", (long long)sent, (unsigned long long)w->length);
+        LOG_ERROR("send: only %lld of %llu bytes went out (the send buffer is full)", (long long)sent, (unsigned long long)out.length);
         return 0;
     }
     return 1;
@@ -69,9 +94,9 @@ b32 mqtt_connection_connect(MqttConnection *c, const char *ip, const u16 port, c
 
     LOG_INFO("connected to %s:%d", ip, port);
 
-    Writer w = writer_create(c->out, c->out_capacity);
+    Writer w = mqtt_connection_writer(c);
     mqtt_write_connect(&w, client_id, keep_alive_seconds, will_topic, will_payload);
-    if (!mqtt_connection_send(c, &w))
+    if (!mqtt_connection_queue(c, &w) || !mqtt_connection_send(c))
     {
         goto error_handling;
     }
@@ -117,11 +142,11 @@ b32 mqtt_connection_receive(MqttConnection *c)
     return 0;
 }
 
-b32 mqtt_connection_publish(const MqttConnection *c, const str topic, const str payload, const b32 retain)
+b32 mqtt_connection_publish(MqttConnection *c, const str topic, const str payload, const b32 retain)
 {
-    Writer w = writer_create(c->out, c->out_capacity);
+    Writer w = mqtt_connection_writer(c);
     mqtt_write_publish(&w, topic, payload, retain);
-    return mqtt_connection_send(c, &w);
+    return mqtt_connection_queue(c, &w) && mqtt_connection_send(c);
 }
 
 internal u16 mqtt_connection_next_packet_id(MqttConnection *c)
@@ -137,19 +162,19 @@ internal u16 mqtt_connection_next_packet_id(MqttConnection *c)
 u16 mqtt_connection_subscribe(MqttConnection *c, const str topic_filter)
 {
     const u16 packet_id = mqtt_connection_next_packet_id(c);
-    Writer w = writer_create(c->out, c->out_capacity);
+    Writer w = mqtt_connection_writer(c);
     mqtt_write_subscribe(&w, packet_id, topic_filter);
     LOG_INFO("SUBSCRIBE %.*s (packet id %d)", STR_FMT(topic_filter), packet_id);
-    return mqtt_connection_send(c, &w) ? packet_id : 0;
+    return mqtt_connection_queue(c, &w) && mqtt_connection_send(c) ? packet_id : 0;
 }
 
 u16 mqtt_connection_unsubscribe(MqttConnection *c, const str filter)
 {
     const u16 packet_id = mqtt_connection_next_packet_id(c);
-    Writer w = writer_create(c->out, c->out_capacity);
+    Writer w = mqtt_connection_writer(c);
     mqtt_write_unsubscribe(&w, packet_id, filter);
     LOG_INFO("UNSUBSCRIBE %.*s (packet id %d)", STR_FMT(filter), packet_id);
-    return mqtt_connection_send(c, &w) ? packet_id : 0;
+    return mqtt_connection_queue(c, &w) && mqtt_connection_send(c) ? packet_id : 0;
 }
 
 b32 mqtt_connection_ping(MqttConnection *c)
@@ -160,17 +185,18 @@ b32 mqtt_connection_ping(MqttConnection *c)
         return 0;
     }
 
-    Writer w = writer_create(c->out, c->out_capacity);
+    Writer w = mqtt_connection_writer(c);
     mqtt_write_pingreq(&w);
     c->is_waiting_on_ping = 1;
-    return mqtt_connection_send(c, &w);
+    return mqtt_connection_queue(c, &w) && mqtt_connection_send(c);
 }
 
 b32 mqtt_connection_disconnect(MqttConnection *c)
 {
-    Writer w = writer_create(c->out, c->out_capacity);
+    Writer w = mqtt_connection_writer(c);
     mqtt_write_disconnect(&w);
-    const b32 ok = mqtt_connection_send(c, &w);
+    const b32 ok = mqtt_connection_queue(c, &w) && mqtt_connection_send(c);
+    c->state = MQTT_CONNECTION_DISCONNECTED;
     mqtt_connection_close(c);
     return ok;
 }

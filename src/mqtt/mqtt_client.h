@@ -19,7 +19,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, u16 port, str client_id, 
 b32 mqtt_client_wait(MqttClient *c);
 b32 mqtt_client_subscribe(MqttClient *c, str topic_filter);
 b32 mqtt_client_unsubscribe(MqttClient *c, str topic_filter);
-b32 mqtt_client_publish(const MqttClient *c, str topic, str payload, b32 retain);
+b32 mqtt_client_publish(MqttClient *c, str topic, str payload, b32 retain);
 int mqtt_client_close(MqttClient *c, b32 ok);
 
 #endif
