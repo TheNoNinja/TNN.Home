@@ -22,13 +22,13 @@
 
 internal u8 virtual_light_memory[KB(16)];
 
-internal b32 virtual_light_publish(const MqttConnection *c, const str topic, const str payload)
+internal b32 virtual_light_publish(MqttConnection *c, const str topic, const str payload)
 {
     printf("publish %.*s = %.*s\n", STR_FMT(topic), STR_FMT(payload));
     return mqtt_connection_publish(c, topic, payload, 1);
 }
 
-internal b32 virtual_light_light_publish(const MqttConnection *c, const str value)
+internal b32 virtual_light_light_publish(MqttConnection *c, const str value)
 {
     return virtual_light_publish(c, STR(VIRTUAL_LIGHT_TOPIC("light/on/$target")), value) && virtual_light_publish(c, STR(VIRTUAL_LIGHT_TOPIC("light/on")), value);
 }
@@ -60,7 +60,7 @@ internal void virtual_light_write_description(JsonWriter *w)
     json_write_object_end(w);
 }
 
-internal b32 virtual_light_publish_description(Arena *arena, const MqttConnection *c)
+internal b32 virtual_light_publish_description(Arena *arena, MqttConnection *c)
 {
     const u64 mark = arena->position;
 
@@ -82,7 +82,7 @@ internal b32 virtual_light_publish_description(Arena *arena, const MqttConnectio
     
 }
 
-internal b32 virtual_light_set(const MqttConnection *c, const MqttPublish m)
+internal b32 virtual_light_set(MqttConnection *c, const MqttPublish m)
 {
     if (!str_equal(m.topic, STR(VIRTUAL_LIGHT_LIGHT_SET_TOPIC)))
     {
@@ -97,7 +97,7 @@ internal b32 virtual_light_set(const MqttConnection *c, const MqttPublish m)
     return virtual_light_light_publish(c, m.payload);
 }
 
-internal b32 virtual_light_handle(const MqttClient *c, const MqttPacket *p, const u16 set_subscription)
+internal b32 virtual_light_handle(MqttClient *c, const MqttPacket *p, const u16 set_subscription)
 {
     switch (p->type)
     {

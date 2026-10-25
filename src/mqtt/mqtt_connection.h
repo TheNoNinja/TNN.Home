@@ -17,7 +17,6 @@ typedef struct MqttConnection MqttConnection;
 struct MqttConnection 
 {
     MqttConnectionState state;
-    int sock;
     MqttFramer in;
     u8 *out;
     u64 out_capacity;
@@ -28,8 +27,7 @@ struct MqttConnection
 };
 
 MqttConnection mqtt_connection_create(u8 *in_buffer, u64 in_capacity, u64 packet_max, u8 *out_buffer, u64 out_capacity);
-b32 mqtt_connection_connect(MqttConnection *c, const char *ip, u16 port, str client_id, u16 keep_alive_seconds, str will_topic, str will_payload);
-b32 mqtt_connection_receive(MqttConnection *c);
+b32 mqtt_connection_connect(MqttConnection *c, str client_id, u16 keep_alive_seconds, str will_topic, str will_payload);
 str mqtt_connection_output(const MqttConnection *c);
 void mqtt_connection_sent(MqttConnection *c, u64 count);
 b32 mqtt_connection_publish(MqttConnection *c, str topic, str payload, b32 retain);
@@ -37,7 +35,6 @@ u16 mqtt_connection_subscribe(MqttConnection *c, str filter);
 u16 mqtt_connection_unsubscribe(MqttConnection *c, str filter);
 b32 mqtt_connection_ping(MqttConnection *c);
 b32 mqtt_connection_disconnect(MqttConnection *c);
-void mqtt_connection_close(MqttConnection *c);
 b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet);
 
 #endif

@@ -104,6 +104,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(mqtt_test_connection_next,        "mqtt connection next") \
 	X(mqtt_test_connection_refused,     "mqtt connection refused") \
 	X(mqtt_test_connection_unsubscribe, "mqtt connection unsubscribe") \
+	X(mqtt_test_connection_queue,       "mqtt connection queue") \
 	X(mqtt_test_client,                 "mqtt client")
 
 #define TEST_DECLARE(function, name) void function(void);

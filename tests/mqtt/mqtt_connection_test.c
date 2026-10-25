@@ -2,8 +2,6 @@
 #include "mqtt/mqtt.h"
 
 #include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 internal void mqtt_test_connection_feed(MqttFramer *in, const u8 *bytes, const u64 count)
 {
@@ -13,50 +11,73 @@ internal void mqtt_test_connection_feed(MqttFramer *in, const u8 *bytes, const u
     mqtt_framer_received(in, count);
 }
 
-internal u64 mqtt_test_connection_sent(const int end, u8 *bytes, const u64 capacity)
+internal str mqtt_test_connection_take(MqttConnection *c)
 {
-    const ssize_t count = recv(end, bytes, capacity, MSG_DONTWAIT);
-    return count > 0 ? (u64)count : 0;
+    const str out = mqtt_connection_output(c);
+    mqtt_connection_sent(c, out.length);
+    return out;
 }
 
 void mqtt_test_connection_send(void)
 {
-    int ends[2];
-    TEST_EXPECT(socketpair(AF_UNIX, SOCK_STREAM, 0, ends) == 0);
     u8 in[16];
     u8 out[16];
     MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
-    c.sock = ends[0];
-    u8 got[32];
+    c.state = MQTT_CONNECTION_CONNECTED;
 
     const u8 publish[] = { 0x31, 0x07, 0x00, 0x03, 'a', '/', 'b', 'o', 'n' };
     TEST_EXPECT(mqtt_connection_publish(&c, STR("a/b"), STR("on"), 1));
-    u64 length = mqtt_test_connection_sent(ends[1], got, sizeof(got));
-    TEST_EXPECT_BYTES(got, length, publish, sizeof(publish));
+    str sent = mqtt_test_connection_take(&c);
+    TEST_EXPECT_BYTES(sent.data, sent.length, publish, sizeof(publish));
 
     const u8 subscribe[] = { 0x82, 0x08, 0x00, 0x02, 0x00, 0x03, 'a', '/', '#', 0x00 };
     TEST_EXPECT(mqtt_connection_subscribe(&c, STR("a/b")) == 1);
-    mqtt_test_connection_sent(ends[1], got, sizeof(got));
+    mqtt_test_connection_take(&c);
     TEST_EXPECT(mqtt_connection_subscribe(&c, STR("a/#")) == 2);
-    length = mqtt_test_connection_sent(ends[1], got, sizeof(got));
-    TEST_EXPECT_BYTES(got, length, subscribe, sizeof(subscribe));
+    sent = mqtt_test_connection_take(&c);
+    TEST_EXPECT_BYTES(sent.data, sent.length, subscribe, sizeof(subscribe));
 
     const u8 pingreq[] = { 0xC0, 0x00 };
     TEST_EXPECT(mqtt_connection_ping(&c) && c.is_waiting_on_ping);
-    length = mqtt_test_connection_sent(ends[1], got, sizeof(got));
-    TEST_EXPECT_BYTES(got, length, pingreq, sizeof(pingreq));
+    sent = mqtt_test_connection_take(&c);
+    TEST_EXPECT_BYTES(sent.data, sent.length, pingreq, sizeof(pingreq));
 
     TEST_EXPECT(!mqtt_connection_ping(&c));
-    TEST_EXPECT(mqtt_test_connection_sent(ends[1], got, sizeof(got)) == 0);
+    TEST_EXPECT(mqtt_connection_output(&c).length == 0);
 
     TEST_EXPECT(!mqtt_connection_publish(&c, STR("a/b"), STR("something way to long to fit in 16 bytes"), 0));
-    TEST_EXPECT(mqtt_test_connection_sent(ends[1], got, sizeof(got)) == 0);
+    TEST_EXPECT(mqtt_connection_output(&c).length == 0);
 
     const u8 disconnect[] = { 0xE0, 0x00 };
-    TEST_EXPECT(mqtt_connection_disconnect(&c) && c.sock == -1);
-    length = mqtt_test_connection_sent(ends[1], got, sizeof(got));
-    TEST_EXPECT_BYTES(got, length, disconnect, sizeof(disconnect));
-    close(ends[1]);
+    TEST_EXPECT(mqtt_connection_disconnect(&c) && c.state == MQTT_CONNECTION_DISCONNECTED);
+    sent = mqtt_test_connection_take(&c);
+    TEST_EXPECT_BYTES(sent.data, sent.length, disconnect, sizeof(disconnect));
+}
+
+void mqtt_test_connection_queue(void)
+{
+    u8 in[16];
+    u8 out[16];
+    MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    c.state = MQTT_CONNECTION_CONNECTED;
+    const u8 both[] = {
+        0x31, 0x07, 0x00, 0x03, 'a', '/', 'b', 'o', 'n', // PUBLISH
+        0xC0, 0x00                                       // PINGREQ
+    };
+
+    TEST_EXPECT(mqtt_connection_publish(&c, STR("a/b"), STR("on"), 1) && mqtt_connection_ping(&c));
+    str queue = mqtt_connection_output(&c);
+    TEST_EXPECT_BYTES(queue.data, queue.length, both, sizeof(both));
+
+    mqtt_connection_sent(&c, 4);
+    queue = mqtt_connection_output(&c);
+    TEST_EXPECT_BYTES(queue.data, queue.length, both + 4, sizeof(both) - 4);
+
+    TEST_EXPECT(!mqtt_connection_publish(&c, STR("a/b"), STR("off"), 1));
+    TEST_EXPECT(mqtt_connection_output(&c).length == sizeof(both) - 4);
+
+    mqtt_connection_sent(&c, sizeof(both) - 4);
+    TEST_EXPECT(mqtt_connection_output(&c).length == 0);
 }
 
 void mqtt_test_connection_next(void)
@@ -102,28 +123,22 @@ void mqtt_test_connection_refused(void)
 
 void mqtt_test_connection_unsubscribe(void)
 {
-    int ends[2];
-    TEST_EXPECT(socketpair(AF_UNIX, SOCK_STREAM, 0, ends) == 0);
     u8 in[16];
     u8 out[16];
     MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
     c.state = MQTT_CONNECTION_CONNECTED;
-    c.sock = ends[0];
-    u8 got[32];
 
     const u8 unsubscribe[] = { 0xA2, 0x07, 0x00, 0x02, 0x00, 0x03, 'a', '/', '#' };
     TEST_EXPECT(mqtt_connection_subscribe(&c, STR("a/#")) == 1);
-    mqtt_test_connection_sent(ends[1], got, sizeof(got));
+    mqtt_test_connection_take(&c);
     TEST_EXPECT(mqtt_connection_unsubscribe(&c, STR("a/#")) == 2);
-    const u64 length = mqtt_test_connection_sent(ends[1], got, sizeof(got));
-    TEST_EXPECT_BYTES(got, length, unsubscribe, sizeof(unsubscribe));
+    const str sent = mqtt_test_connection_take(&c);
+    TEST_EXPECT_BYTES(sent.data, sent.length, unsubscribe, sizeof(unsubscribe));
 
     const u8 unsuback[] = { 0xB0, 0x02, 0x00, 0x02 };
     mqtt_test_connection_feed(&c.in, unsuback, sizeof(unsuback));
     MqttPacket p = {0};
     TEST_EXPECT(mqtt_connection_next(&c, &p) && p.type == MQTT_UNSUBACK && p.packet_id == 2);
-    mqtt_connection_close(&c);
-    close(ends[1]);
 }
 
 void mqtt_test_connection_connect(void)
@@ -135,6 +150,15 @@ void mqtt_test_connection_connect(void)
     u8 in[16];
     u8 out[32];
     MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+
+    const u8 connect[] = {
+        0x10, 0x15, 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x04, 0x02, 0x00, 0x0A,
+        0x00, 0x09, 't', 'n', 'n', '-', 's', 'i', 'm', '-', '1'
+    };
+    TEST_EXPECT(mqtt_connection_connect(&c, STR("tnn-sim-1"), 10, STR_EMPTY, STR_EMPTY));
+    const str sent = mqtt_test_connection_take(&c);
+    TEST_EXPECT_BYTES(sent.data, sent.length, connect, sizeof(connect));
+
     MqttPacket p = {0};
     mqtt_test_connection_feed(&c.in, bytes, 3);
     TEST_EXPECT(!mqtt_connection_next(&c, &p) && c.state == MQTT_CONNECTION_CONNECTING && !c.has_error);

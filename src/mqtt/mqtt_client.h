@@ -10,6 +10,7 @@ struct MqttClient
 {
     MqttConnection connection;
     Loop loop;
+    int sock;
     u32 ping_timer;
     b32 has_failed;
 };
