@@ -5,9 +5,18 @@
 #include "mqtt/mqtt_decode.h"
 #include "mqtt/mqtt_framer.h"
 
+enum MqttConnectionState
+{
+    MQTT_CONNECTION_CONNECTING,
+    MQTT_CONNECTION_CONNECTED,
+    MQTT_CONNECTION_DISCONNECTED,
+};
+typedef enum MqttConnectionState MqttConnectionState;
+
 typedef struct MqttConnection MqttConnection;
 struct MqttConnection 
 {
+    MqttConnectionState state;
     int sock;
     MqttFramer in;
     u8 *out;

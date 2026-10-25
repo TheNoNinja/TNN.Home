@@ -71,6 +71,7 @@ void mqtt_test_connection_next(void)
     u8 in[32];
     u8 out[8];
     MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    c.state = MQTT_CONNECTION_CONNECTED;
     mqtt_test_connection_feed(&c.in, bytes, sizeof(bytes));
     c.is_waiting_on_ping = 1;
     MqttPacket p = {0};
@@ -87,12 +88,14 @@ void mqtt_test_connection_refused(void)
     u8 in[16];
     u8 out[8];
     MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    c.state = MQTT_CONNECTION_CONNECTED;
     MqttPacket p = {0};
     mqtt_test_connection_feed(&c.in, refused, sizeof(refused));
     TEST_EXPECT(!mqtt_connection_next(&c, &p) && c.has_error);
 
     const u8 liar[] = { 0x30, 0x05, 0x00, 0x09, 'a', '/', 'b' };
     c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    c.state = MQTT_CONNECTION_CONNECTED;
     mqtt_test_connection_feed(&c.in, liar, sizeof(liar));
     TEST_EXPECT(!mqtt_connection_next(&c, &p) && c.has_error);
 }
@@ -104,6 +107,7 @@ void mqtt_test_connection_unsubscribe(void)
     u8 in[16];
     u8 out[16];
     MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    c.state = MQTT_CONNECTION_CONNECTED;
     c.sock = ends[0];
     u8 got[32];
 
@@ -120,4 +124,31 @@ void mqtt_test_connection_unsubscribe(void)
     TEST_EXPECT(mqtt_connection_next(&c, &p) && p.type == MQTT_UNSUBACK && p.packet_id == 2);
     mqtt_connection_close(&c);
     close(ends[1]);
+}
+
+void mqtt_test_connection_connect(void)
+{
+    const u8 bytes[] = {
+        0x20, 0x02, 0x00, 0x00,       // CONNACK: accepted
+        0x90, 0x03, 0x00, 0x01, 0x00, // SUBACK: packet id 1, QoS 0
+    };
+    u8 in[16];
+    u8 out[32];
+    MqttConnection c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    MqttPacket p = {0};
+    mqtt_test_connection_feed(&c.in, bytes, 3);
+    TEST_EXPECT(!mqtt_connection_next(&c, &p) && c.state == MQTT_CONNECTION_CONNECTING && !c.has_error);
+    mqtt_test_connection_feed(&c.in, bytes + 3, sizeof(bytes) - 3);
+    TEST_EXPECT(mqtt_connection_next(&c, &p) && p.type == MQTT_CONNACK && c.state == MQTT_CONNECTION_CONNECTED);
+    TEST_EXPECT(mqtt_connection_next(&c, &p) && p.type == MQTT_SUBACK);
+
+    const u8 refused[] = { 0x20, 0x02, 0x00, 0x05 }; // CONNACK: not authorized
+    c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    mqtt_test_connection_feed(&c.in, refused, sizeof(refused));
+    TEST_EXPECT(!mqtt_connection_next(&c, &p) && c.has_error);
+
+    const u8 suback[] = { 0x90, 0x03, 0x00, 0x01, 0x00 };
+    c = mqtt_connection_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    mqtt_test_connection_feed(&c.in, suback, sizeof(suback));
+    TEST_EXPECT(!mqtt_connection_next(&c, &p) && c.has_error);
 }

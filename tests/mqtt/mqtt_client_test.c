@@ -17,6 +17,7 @@ void mqtt_test_client(void)
     u8 in[16];
     u8 out[16];
     MqttClient c = mqtt_client_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    c.connection.state = MQTT_CONNECTION_CONNECTED;
     c.connection.sock = ends[0];
     loop_watch(&c.loop, ends[0]);
     loop_timer_repeat(&c.loop, c.ping_timer, 20);

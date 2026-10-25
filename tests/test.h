@@ -100,6 +100,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(mqtt_test_framer_oversized,       "mqtt framer oversized") \
 	X(mqtt_test_framer_malformed,       "mqtt framer malformed") \
 	X(mqtt_test_connection_send,        "mqtt connection send") \
+	X(mqtt_test_connection_connect,     "mqtt connection connect") \
 	X(mqtt_test_connection_next,        "mqtt connection next") \
 	X(mqtt_test_connection_refused,     "mqtt connection refused") \
 	X(mqtt_test_connection_unsubscribe, "mqtt connection unsubscribe") \

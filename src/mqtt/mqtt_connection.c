@@ -76,28 +76,15 @@ b32 mqtt_connection_connect(MqttConnection *c, const char *ip, const u16 port, c
         goto error_handling;
     }
 
-    MqttFixedHeader header = {0};
-    str body = STR_EMPTY;
-    while(!mqtt_framer_next(&c->in, &header, &body))
+    MqttPacket packet = {0};
+    while(!mqtt_connection_next(c, &packet))
     {
-        if (c->in.has_error || !mqtt_connection_receive(c))
+        if (c->has_error || !mqtt_connection_receive(c))
         {
             goto error_handling;
         }
     }
 
-    MqttPacket packet = {0};
-    if (!mqtt_packet_parse(header, body, &packet) || packet.type != MQTT_CONNACK)
-    {
-        LOG_ERROR("expected a CONNACK, got packet type %d with %u bytes", header.type, header.remaining_length);
-        goto error_handling;
-    }
-    if (packet.return_code != 0)
-    {
-        LOG_ERROR("CONNACK: refused (return code %d)", packet.return_code);
-        goto error_handling;
-    }
-    LOG_INFO("CONNACK: accepted (return code %d)", packet.return_code);
     fcntl(c->sock, F_SETFL, fcntl(c->sock, F_GETFL) | O_NONBLOCK);
     return 1;
 
@@ -197,17 +184,41 @@ void mqtt_connection_close(MqttConnection *c)
     c->sock = -1;
 }
 
+internal b32 mqtt_connection_accept(MqttConnection *c, const MqttPacket *packet)
+{
+    if (packet->type != MQTT_CONNACK)
+    {
+        LOG_ERROR("expected a CONNACK, got packet type %d", packet->type);
+        c->has_error = 1;
+        return 0;
+    }
+    if (packet->return_code != 0)
+    {
+        LOG_ERROR("CONNACK: refused (return code %d)", packet->return_code);
+        c->has_error = 1;
+        return 0;
+    }
+    LOG_INFO("CONNACK: accepted (return code %d)", packet->return_code);
+    c->state = MQTT_CONNECTION_CONNECTED;
+    return 1;
+}
+
 b32 mqtt_connection_next(MqttConnection *c, MqttPacket *packet)
 {
     MqttFixedHeader header = {0};
     str body = STR_EMPTY;
     while (!c->has_error && mqtt_framer_next(&c->in, &header, &body))
     {
-        if(!mqtt_packet_parse(header, body, packet))
+        if (!mqtt_packet_parse(header, body, packet))
         {
             LOG_ERROR("malformed packet (type %d, %llu bytes)", header.type, (unsigned long long)body.length);
             c->has_error = 1;
             return 0;
+        }
+
+        if (c->state == MQTT_CONNECTION_CONNECTING)
+        {
+            return mqtt_connection_accept(c, packet);
         }
 
         switch (packet->type)
