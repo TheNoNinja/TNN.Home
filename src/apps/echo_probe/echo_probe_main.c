@@ -2,6 +2,7 @@
 #include "histogram/histogram.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
+#include "platform/platform.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -55,7 +56,7 @@ internal b32 echo_probe_send(EchoProbe *p)
 {
     u8 payload[ECHO_PROBE_PAYLOAD_MAX];
     Writer body = writer_create(payload, sizeof(payload));
-    write_u64_be(&body, time_now_raw_ns());
+    write_u64_be(&body, platform_time_raw_ns());
     write_u64_be(&body, p->sent);
 
     const str message = writer_to_str(&body);
@@ -78,7 +79,7 @@ internal void echo_probe_tick_start(EchoProbe *p)
     spec.it_value.tv_sec = (time_t)(p->interval_ns / TIME_NS_PER_S);
     spec.it_value.tv_nsec = (long)(p->interval_ns % TIME_NS_PER_S);
     spec.it_interval = spec.it_value;
-    p->start_ns = time_now_mono_ns() + p->interval_ns;
+    p->start_ns = platform_time_mono_ns() + p->interval_ns;
     timerfd_settime(p->tick, 0, &spec, 0);
 }
 
@@ -135,8 +136,8 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
         }
         case MQTT_PUBLISH:
         {
-            const u64 now_ns = time_now_raw_ns();
-            const u64 now_mono_ns = time_now_mono_ns();
+            const u64 now_ns = platform_time_raw_ns();
+            const u64 now_mono_ns = platform_time_mono_ns();
             const str message = packet->publish.payload;
             Reader payload = reader_create(message.data, message.length);
             const u64 sent_ns = read_u64_be(&payload);

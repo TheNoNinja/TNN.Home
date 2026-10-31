@@ -24,7 +24,6 @@ target_sources(tnn_base INTERFACE
     src/base/base_log.c
     src/base/base_reader.c
     src/base/base_str.c
-    src/base/base_time.c
     src/base/base_writer.c
 )
 target_include_directories(tnn_base INTERFACE src)
@@ -61,7 +60,7 @@ add_library(tnn_loop INTERFACE)
 target_sources(tnn_loop INTERFACE
     src/loop/loop.c
 )
-target_link_libraries(tnn_loop INTERFACE tnn_base)
+target_link_libraries(tnn_loop INTERFACE tnn_platform)
 
 add_library(tnn_mqtt_core INTERFACE)
 target_sources(tnn_mqtt_core INTERFACE
@@ -77,6 +76,15 @@ target_sources(tnn_mqtt INTERFACE
     src/mqtt/mqtt_client.c
 )
 target_link_libraries(tnn_mqtt INTERFACE tnn_mqtt_core tnn_loop)
+
+set(TNN_PLATFORM_LINUX_SOURCES
+    src/platform/linux/platform_linux_network.c
+    src/platform/linux/platform_linux_time.c
+    src/platform/linux/platform_linux_wait.c
+)
+add_library(tnn_platform INTERFACE)
+target_sources(tnn_platform INTERFACE ${TNN_PLATFORM_LINUX_SOURCES})
+target_link_libraries(tnn_platform INTERFACE tnn_base)
 
 
 ################
@@ -98,7 +106,7 @@ target_link_libraries(tnn_controller PRIVATE tnn_homie tnn_http tnn_loop tnn_mqt
 add_executable(tnn_echo_probe
     src/apps/echo_probe/echo_probe_main.c
 )
-target_link_libraries(tnn_echo_probe PRIVATE tnn_histogram tnn_loop tnn_mqtt)
+target_link_libraries(tnn_echo_probe PRIVATE tnn_histogram tnn_loop tnn_mqtt tnn_platform)
 
 add_executable(tnn_mqtt_dump
     src/apps/mqtt_dump/mqtt_dump_main.c
@@ -108,7 +116,7 @@ target_link_libraries(tnn_mqtt_dump PRIVATE tnn_mqtt)
 add_executable(tnn_timer_lateness
     src/apps/timer_lateness/timer_lateness_main.c
 )
-target_link_libraries(tnn_timer_lateness PRIVATE tnn_histogram)
+target_link_libraries(tnn_timer_lateness PRIVATE tnn_histogram tnn_platform)
 
 add_executable(tnn_virtual_light 
     src/apps/virtual_light/virtual_light_main.c
@@ -133,9 +141,10 @@ add_executable(tnn_tests
     tests/mqtt/mqtt_connection_test.c
     tests/mqtt/mqtt_packet_test.c
     tests/mqtt/mqtt_framer_test.c
+    tests/platform_test.c
 )
 target_include_directories(tnn_tests PRIVATE tests)
-target_link_libraries(tnn_tests PRIVATE tnn_histogram tnn_homie tnn_http tnn_loop tnn_mqtt)
+target_link_libraries(tnn_tests PRIVATE tnn_histogram tnn_homie tnn_http tnn_loop tnn_mqtt tnn_platform)
 
 option (TNN_FUZZ "Build the libFuzzer target (Clang only)" OFF)
 if(TNN_FUZZ)

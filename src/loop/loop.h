@@ -2,6 +2,7 @@
 #define LOOP_H
 
 #include "base/base.h"
+#include "platform/platform.h"
 
 #include <poll.h>
 

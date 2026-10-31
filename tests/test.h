@@ -15,8 +15,6 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
     X(base_test_arena_push,        "base arena push") \
 	X(base_test_arena_full,        "base arena full") \
 	X(base_test_arena_pop,         "base arena pop") \
-	X(base_test_time,              "base time") \
-	X(base_test_time_mono,         "base time mono") \
 	X(base_test_str_equal,         "base str equal") \
 	X(base_test_str_cut,           "base str cut") \
 	X(base_test_str_from_cstr,     "base str cstr") \
@@ -105,7 +103,10 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(mqtt_test_connection_refused,     "mqtt connection refused") \
 	X(mqtt_test_connection_unsubscribe, "mqtt connection unsubscribe") \
 	X(mqtt_test_connection_queue,       "mqtt connection queue") \
-	X(mqtt_test_client,                 "mqtt client")
+	X(mqtt_test_client,                 "mqtt client") \
+\
+	X(platform_test_time,      "platform time") \
+	X(platform_test_time_mono, "platform time mono") \
 
 #define TEST_DECLARE(function, name) void function(void);
 TEST_LIST(TEST_DECLARE)

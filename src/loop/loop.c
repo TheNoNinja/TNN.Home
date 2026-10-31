@@ -25,7 +25,7 @@ internal b32 loop_take_signal(Loop *l)
 
 u64 loop_now_ms(void)
 {
-    return time_now_mono_ns() / TIME_NS_PER_MS;
+    return platform_time_mono_ns() / TIME_NS_PER_MS;
 }
 
 Loop loop_create(void)

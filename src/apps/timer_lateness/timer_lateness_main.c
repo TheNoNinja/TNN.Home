@@ -1,5 +1,6 @@
 #include "base/base.h"
 #include "histogram/histogram.h"
+#include "platform/platform.h"
 
 #include <poll.h>
 
@@ -14,15 +15,15 @@ int main(const int argc, char **argv)
         LOG_ERROR("usage: %s [rounds(1 to 1000000, default %d)]", argv[0], TIMER_LATENESS_ROUNDS);
         return 1;
     }
-    LOG_INFO("%llu rounds of poll() with a timeout of %d ms", (unsigned long long)rounds, TIMER_LATENESS_DELAY_MS);
+    LOG_INFO("%llu rounds of platform_wait with a timeout of %d ms", (unsigned long long)rounds, TIMER_LATENESS_DELAY_MS);
 
     Histogram lateness = histogram_create();
     const u64 asked_ns = (u64)TIMER_LATENESS_DELAY_MS * TIME_NS_PER_MS;
     for (u64 i = 0; i < rounds; i++)
     {
-        const u64 before = time_now_raw_ns();
-        poll(0, 0, TIMER_LATENESS_DELAY_MS);
-        const u64 slept_ns = time_now_raw_ns() - before;
+        const u64 before = platform_time_raw_ns();
+        platform_wait(0, 0, TIMER_LATENESS_DELAY_MS);
+        const u64 slept_ns = platform_time_raw_ns() - before;
         histogram_record(&lateness, slept_ns > asked_ns ? slept_ns - asked_ns : 0);
     }
 
