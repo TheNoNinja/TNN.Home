@@ -1,14 +1,5 @@
 #include "apps/controller/controller.h"
 
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#define CONTROLLER_HTTP_BACKLOG 16
 #define CONTROLLER_HTTP_HEAD_MAX 256
 
 internal u8 controller_http_response[CONTROLLER_HTTP_HEAD_MAX + CONTROLLER_HTTP_PAGE_MAX];
@@ -16,43 +7,17 @@ internal u8 controller_http_page[CONTROLLER_HTTP_PAGE_MAX];
 
 b32 controller_http_listen(Controller *c, const char* ip, const u16 port)
 {
-    c->http_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (c->http_sock < 0)
+    if (platform_tcp_listen(ip, port, &c->http_sock))
     {
-        LOG_ERROR("socket: %s", strerror(errno));
+        LOG_ERROR("socket: %s", platform_error());
         return 0;
     }
 
-    const int one = 1;
-    setsockopt(c->http_sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-
-    struct sockaddr_in address = {0};
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    inet_pton(AF_INET, ip, &address.sin_addr);
-    if (bind(c->http_sock, (struct sockaddr *)&address, sizeof(address)) < 0)
-    {
-        LOG_ERROR("bind to %s:%d: %s", ip, port, strerror(errno));
-        goto error_handling;
-    }
-
-    if (listen(c->http_sock, CONTROLLER_HTTP_BACKLOG) < 0)
-    {
-        LOG_ERROR("http listen: %s", strerror(errno));
-        goto error_handling;
-    }
-
-    fcntl(c->http_sock, F_SETFL, fcntl(c->http_sock, F_GETFL) | O_NONBLOCK);
     loop_watch(&c->client.loop, c->http_sock);
     c->http_ip = str_from_cstr(ip);
     c->http_port = port;
     LOG_INFO("listening on http://%s:%d/", ip, port);
     return 1;
-
-error_handling:
-    close(c->http_sock);
-    c->http_sock = -1;
-    return 0;
 }
 
 void controller_http_close(Controller *c, ControllerHttpConnection *h)
@@ -62,7 +27,7 @@ void controller_http_close(Controller *c, ControllerHttpConnection *h)
         LOG_INFO("an event stream closed");
     }
     loop_unwatch(&c->client.loop, h->sock);
-    close(h->sock);
+    platform_close(&h->sock);
     h->is_open = 0;
     h->is_stream = 0;
 }
@@ -92,7 +57,7 @@ internal ControllerHttpConnection *controller_http_slot(Controller *c)
     return oldest;
 }
 
-internal void controller_http_send(const int sock, const u32 status, const str allow, const str content_type, const str body)
+internal void controller_http_send(const PlatformHandle sock, const u32 status, const str allow, const str content_type, const str body)
 {
     Writer w = writer_create(controller_http_response, sizeof(controller_http_response));
     http_write_status(&w, status);
@@ -111,10 +76,10 @@ internal void controller_http_send(const int sock, const u32 status, const str a
     write_bytes(&w, body);
     ASSERT(!w.has_overflown);
 
-    const ssize_t sent = send(sock, w.data, w.length, MSG_NOSIGNAL);
+    const i64 sent = platform_send(sock, writer_to_str(&w));
     if (sent < 0)
     {
-        LOG_WARN("send: %s", strerror(errno));
+        LOG_WARN("send: %s", platform_error());
     } 
     else if ((u64)sent != w.length)
     {
@@ -122,7 +87,7 @@ internal void controller_http_send(const int sock, const u32 status, const str a
     }
 }
 
-internal void controller_http_send_status(const int sock, const u32 status, const str allow)
+internal void controller_http_send_status(const PlatformHandle sock, const u32 status, const str allow)
 {
     u8 buffer[64];
     Writer body = writer_create(buffer, sizeof(buffer));
@@ -135,23 +100,22 @@ internal void controller_http_send_status(const int sock, const u32 status, cons
 
 internal void controller_http_accept(Controller *c)
 {
-    const int sock = accept(c->http_sock, 0, 0);
-    if (sock < 0)
+    PlatformHandle sock = {0};
+    if (platform_tcp_accept(c->http_sock, &sock))
     {
-        if (errno != EAGAIN && errno != EINTR)
+        if (platform_error())
         {
-            LOG_WARN("accept: %s", strerror(errno));
+            LOG_WARN("accept: %s", platform_error());
         }
         return;
     }
-    fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) | O_NONBLOCK);
 
     ControllerHttpConnection *h = controller_http_slot(c);
     if (!h)
     {
         LOG_WARN("%d event streams are open: a new connection gets 503", CONTROLLER_HTTP_CONNECTION_MAX);
         controller_http_send_status(sock, 503, STR_EMPTY);
-        close(sock);
+        platform_close(&sock);
         return;
     }
     h->is_open = 1;
@@ -239,16 +203,16 @@ internal b32 controller_http_receive(Controller *c, ControllerHttpConnection *h)
 {
     if (h->is_stream)
     {
-        const ssize_t received = recv(h->sock, h->request, sizeof(h->request), 0);
-        if (received == 0 || (received < 0 && errno != EAGAIN && errno != EINTR))
+        const i64 received = platform_receive(h->sock, (str){ h->request, sizeof(h->request) });
+        if (received == 0 || received == PLATFORM_FAILED)
         {
             controller_http_close(c, h);
         }
         return 1;
     }
 
-    const ssize_t received = recv(h->sock, h->request + h->length, sizeof(h->request) - h->length, 0);
-    if (received < 0 && (errno == EAGAIN || errno == EINTR))
+    const i64 received = platform_receive(h->sock, (str){ h->request + h->length, sizeof(h->request) - h->length });
+    if (received == PLATFORM_NOTHING)
     {
         return 1;
     }
@@ -292,12 +256,12 @@ b32 controller_http_handle(Controller *c)
     for (u32 i = 0; i < CONTROLLER_HTTP_CONNECTION_MAX; i++)
     {
         ControllerHttpConnection *h = &c->http[i];
-        if(h->is_open && loop_readable(&c->client.loop, h->sock) && !controller_http_receive(c, h))
+        if(h->is_open && loop_is_readable(&c->client.loop, h->sock) && !controller_http_receive(c, h))
         {
             return 0;
         }
     }
-    if (loop_readable(&c->client.loop, c->http_sock))
+    if (loop_is_readable(&c->client.loop, c->http_sock))
     {
         controller_http_accept(c);
     }

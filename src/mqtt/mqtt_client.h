@@ -4,13 +4,14 @@
 #include "base/base.h"
 #include "loop/loop.h"
 #include "mqtt/mqtt_connection.h"
+#include "platform/platform.h"
 
 typedef struct MqttClient MqttClient;
 struct MqttClient 
 {
     MqttConnection connection;
     Loop loop;
-    int sock;
+    PlatformHandle sock;
     u32 ping_timer;
     b32 has_failed;
 };

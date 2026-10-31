@@ -6,6 +6,7 @@
 #include "loop/loop.h"
 #include "mqtt/mqtt.h"
 #include "http/http.h"
+#include "platform/platform.h"
 
 #define CONTROLLER_DEVICE_MAX 64
 #define CONTROLLER_COMMAND_MAX 256
@@ -29,7 +30,7 @@ struct ControllerHttpConnection
 {
     b32 is_open;
     b32 is_stream;
-    int sock;
+    PlatformHandle sock;
     u64 opened_ms;
     u64 length;
     u8 request[CONTROLLER_HTTP_REQUEST_MAX];
@@ -51,7 +52,7 @@ struct Controller
     ControllerDevice devices[CONTROLLER_DEVICE_MAX];
     u8 line[CONTROLLER_COMMAND_MAX];
     u64 line_length;
-    int http_sock;
+    PlatformHandle http_sock;
     str http_ip;
     u16 http_port;
     ControllerHttpConnection http[CONTROLLER_HTTP_CONNECTION_MAX];

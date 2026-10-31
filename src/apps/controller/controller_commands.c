@@ -1,7 +1,6 @@
 #include "apps/controller/controller.h"
 
 #include <stdio.h>
-#include <unistd.h>
 
 internal b32 controller_command(Controller *c, const str line)
 {
@@ -30,7 +29,7 @@ internal b32 controller_command(Controller *c, const str line)
 b32 controller_commands_receive(Controller *c, b32 *is_closed)
 {
     u8 bytes[CONTROLLER_COMMAND_MAX];
-    const ssize_t count = read(STDIN_FILENO, bytes, sizeof(bytes));
+    const i64 count = platform_receive(platform_stdin(), (str){ bytes, sizeof(bytes) });
     if (count <= 0)
     {
         *is_closed = 1;

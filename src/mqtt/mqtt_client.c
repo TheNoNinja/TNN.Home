@@ -1,20 +1,10 @@
 #include "mqtt/mqtt_client.h"
 
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
 MqttClient mqtt_client_create(u8 *in_buffer, const u64 in_capacity, const u64 packet_max, u8 *out_buffer, const u64 out_capacity)
 {
     MqttClient c = {0};
     c.connection = mqtt_connection_create(in_buffer, in_capacity, packet_max, out_buffer, out_capacity);
     c.loop = loop_create();
-    c.sock = -1;
     c.ping_timer = loop_timer_add(&c.loop);
     return c;
 }
@@ -26,10 +16,10 @@ internal b32 mqtt_client_send(MqttClient *c)
     {
         return 1;
     }
-    const ssize_t sent = send(c->sock, out.data, out.length, MSG_NOSIGNAL);
+    const i64 sent = platform_send(c->sock, out);
     if (sent < 0)
     {
-        LOG_ERROR("send: %s", strerror(errno));
+        LOG_ERROR("send: %s", platform_error());
         return 0;
     }
     mqtt_connection_sent(&c->connection, (u64)sent);
@@ -45,7 +35,7 @@ internal b32 mqtt_client_send(MqttClient *c)
 internal b32 mqtt_client_receive(MqttClient *c)
 {
     const str space = mqtt_framer_space(&c->connection.in);
-    const ssize_t received = recv(c ->sock, space.data, space.length, 0);
+    const i64 received = platform_receive(c->sock, space);
     if (received > 0)
     {
         mqtt_framer_received(&c->connection.in, received);
@@ -57,45 +47,21 @@ internal b32 mqtt_client_receive(MqttClient *c)
         return 0;
     }
 
-    if (errno == EAGAIN || errno == EINTR)
+    if (received == PLATFORM_NOTHING)
     {
         return 1;
     }
 
-    LOG_ERROR("recv: %s", strerror(errno));
+    LOG_ERROR("recv: %s", platform_error());
     return 0;
-}
-
-internal void mqtt_client_close_socket(MqttClient *c)
-{
-    if (c->sock >= 0)
-    {
-        close(c->sock);
-    }
-    c->sock = -1;
 }
 
 internal b32 mqtt_client_open(MqttClient *c, const char *ip, const u16 port, const str client_id, const u16 keep_alive_seconds, const str will_topic, const str will_payload)
 {
-    c->sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (c->sock < 0)
+    if (!platform_tcp_connect(ip, port, &c->sock))
     {
-        LOG_ERROR("socket: %s", strerror(errno));
+        LOG_ERROR("socket: %s", platform_error());
         return 0;
-    }
-
-    const int one = 1;
-    setsockopt(c->sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
-
-    struct sockaddr_in broker = {0};
-    broker.sin_family = AF_INET;
-    broker.sin_port = htons(port);
-    inet_pton(AF_INET, ip, &broker.sin_addr);
-
-    if (connect(c->sock, (struct sockaddr *)&broker, sizeof(broker)) < 0)
-    {
-        LOG_ERROR("connect to %s:%d: %s", ip, port, strerror(errno));
-        goto error_handling;
     }
 
     LOG_INFO("connected to %s:%d", ip, port);
@@ -104,21 +70,20 @@ internal b32 mqtt_client_open(MqttClient *c, const char *ip, const u16 port, con
     {
         goto error_handling;
     }
+    PlatformWatch watch = { .handle = c->sock };
 
     MqttPacket packet = {0};
     while(!mqtt_connection_next(&c->connection, &packet))
     {
-        if (c->connection.has_error || !mqtt_client_receive(c))
+        if (c->connection.has_error || !platform_wait(&watch, 1, -1) || !mqtt_client_receive(c))
         {
             goto error_handling;
         }
     }
-
-    fcntl(c->sock, F_SETFL, fcntl(c->sock, F_GETFL) | O_NONBLOCK);
     return 1;
 
     error_handling:
-        mqtt_client_close_socket(c);
+    platform_close(&c->sock);
     return 0;
 }
 
@@ -152,12 +117,12 @@ b32 mqtt_client_wait(MqttClient *c)
         c->has_failed = c->loop.stop_signal == 0;
         return 0;
     }
-    if (loop_timer_fired(&c->loop, c->ping_timer) && !(mqtt_connection_ping(&c->connection) && mqtt_client_send(c)))
+    if (loop_has_timer_fired(&c->loop, c->ping_timer) && !(mqtt_connection_ping(&c->connection) && mqtt_client_send(c)))
     {
         c->has_failed = 1;
         return 0;
     }
-    if (loop_readable(&c->loop, c->sock) && !mqtt_client_receive(c))
+    if (loop_is_readable(&c->loop, c->sock) && !mqtt_client_receive(c))
     {
         c->has_failed = 1;
         return 0;
@@ -184,7 +149,7 @@ int mqtt_client_close(MqttClient *c, const b32 ok)
 {
     if (c->loop.stop_signal != 0)
     {
-        LOG_INFO("signal %d (%s): disconnecting", c->loop.stop_signal, strsignal(c->loop.stop_signal));
+        LOG_INFO("signal %d (%s): disconnecting", c->loop.stop_signal, platform_signal_name(c->loop.stop_signal));
     }
 
     int exit_code = 1;
@@ -192,6 +157,6 @@ int mqtt_client_close(MqttClient *c, const b32 ok)
     {
         exit_code = 0;
     }
-    mqtt_client_close_socket(c);
+    platform_close(&c->sock);
     return exit_code;
 }

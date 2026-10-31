@@ -1,11 +1,5 @@
 #include "apps/controller/controller.h"
 
-#include <errno.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <string.h>
-#include <sys/socket.h>
-
 #define CONTROLLER_EVENTS_SECTION_MAX KB(32)
 
 internal u8 controller_events_section[CONTROLLER_EVENTS_SECTION_MAX];
@@ -13,10 +7,10 @@ internal u8 controller_events_buffer[CONTROLLER_HTTP_PAGE_MAX];
 
 internal void controller_events_send(Controller *c, ControllerHttpConnection *h, const str bytes)
 {
-    const ssize_t sent = send(h->sock, bytes.data, bytes.length, MSG_NOSIGNAL);
+    const i64 sent = platform_send(h->sock, bytes);
     if (sent < 0)
     {
-        LOG_WARN("an event stream: %s", strerror(errno));
+        LOG_WARN("an event stream: %s", platform_error());
         controller_http_close(c, h);
     }
     else if ((u64)sent != bytes.length)
@@ -43,9 +37,6 @@ internal void controller_events_write_device(Writer *w, const ControllerDevice *
 
 void controller_events_open(Controller *c, ControllerHttpConnection *h)
 {
-    const int one = 1;
-    setsockopt(h->sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
-
     Writer w = writer_create(controller_events_buffer, sizeof(controller_events_buffer));
     http_write_status(&w, 200);
     http_write_header(&w, STR("Content-Type"), STR("text/event-stream"));

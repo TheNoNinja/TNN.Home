@@ -1,8 +1,6 @@
 #include "loop/loop.h"
 
-#include <errno.h>
 #include <limits.h>
-#include <string.h>
 
 internal b32 loop_take_signal(Loop *l)
 {
@@ -27,25 +25,30 @@ Loop loop_create(void)
     return l;
 }
 
-void loop_watch(Loop *l, const int fd)
+internal u32 loop_find(const Loop *l, const PlatformHandle h)
 {
-    ASSERT(l->fd_count < LOOP_FD_MAX);
-    l->fds[l->fd_count].fd = fd;
-    l->fds[l->fd_count].events = POLLIN;
-    l->fds[l->fd_count].revents = 0;
-    l->fd_count += 1;
+    u32 i = 0;
+    while (i < l->watch_count && l->watches[i].handle.value != h.value)
+    {
+        i++;
+    }
+    return i;
 }
 
-void loop_unwatch(Loop *l, const int fd)
+void loop_watch(Loop *l, const PlatformHandle h)
 {
-    for (u32 i = 0; i < l->fd_count; i++)
+    ASSERT(l->watch_count < LOOP_WATCH_MAX);
+    l->watches[l->watch_count] = (PlatformWatch){ .handle = h };
+    l->watch_count += 1;
+}
+
+void loop_unwatch(Loop *l, const PlatformHandle h)
+{
+    const u32 i = loop_find(l, h);
+    if (i < l->watch_count)
     {
-        if (l->fds[i].fd == fd)
-        {
-            l->fds[i] = l->fds[l->fd_count - 1];
-            l->fd_count -= 1;
-            return;
-        }
+        l->watches[i] = l->watches[l->watch_count - 1];
+        l->watch_count -= 1;
     }
 }
 
@@ -130,20 +133,16 @@ b32 loop_wait(Loop *l)
         return 0;
     }
 
-    for(u32 i = 0; i < l->fd_count; i++)
-    {
-        l->fds[i].revents = 0;
-    }
     l->now_ms = loop_now_ms();
-    const int ready = poll(l->fds, l->fd_count, loop_timeout_ms(l));
+    const b32 is_awake = platform_wait(l->watches, l->watch_count, loop_timeout_ms(l));
 
     if(loop_take_signal(l))
     {
         return 0;
     }
-    if (ready < 0 && errno != EINTR)
+    if (!is_awake)
     {
-        LOG_ERROR("poll: %s", strerror(errno));
+        LOG_ERROR("wait: %s", platform_error());
         return 0;
     }
 
@@ -152,19 +151,13 @@ b32 loop_wait(Loop *l)
     return 1;
 }
 
-b32 loop_readable(const Loop *l, const int fd)
+b32 loop_is_readable(const Loop *l, const PlatformHandle h)
 {
-    for (u32 i = 0; i < l->fd_count; i++)
-    {
-        if (l->fds[i].fd == fd)
-        {
-            return l->fds[i].revents != 0;
-        }
-    }
-    return 0;
+    const u32 i = loop_find(l, h);
+    return i < l->watch_count && l->watches[i].is_readable;
 }
 
-b32 loop_timer_fired(const Loop *l, const u32 timer)
+b32 loop_has_timer_fired(const Loop *l, const u32 timer)
 {
     ASSERT(timer < l->timer_count);
     return l->timers[timer].has_fired;

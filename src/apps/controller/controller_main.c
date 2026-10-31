@@ -1,7 +1,6 @@
 #include "apps/controller/controller.h"
 
 #include <stdio.h>
-#include <unistd.h>
 
 #define CONTROLLER_BROKER_IP     "127.0.0.1"
 #define CONTROLLER_BROKER_PORT   1883
@@ -36,11 +35,11 @@ internal b32 controller_run(Controller *c)
 {
     const u32 heartbeat = loop_timer_add(&c->client.loop);
     loop_timer_repeat(&c->client.loop, heartbeat, CONTROLLER_HEARTBEAT_MS);
-    loop_watch(&c->client.loop, STDIN_FILENO);
+    loop_watch(&c->client.loop, platform_stdin());
 
     while(mqtt_client_wait(&c->client))
     {
-        if (loop_readable(&c->client.loop, STDIN_FILENO))
+        if (loop_is_readable(&c->client.loop, platform_stdin()))
         {
             b32 is_closed = 0;
             if (!controller_commands_receive(c, &is_closed))
@@ -64,7 +63,7 @@ internal b32 controller_run(Controller *c)
             return 0;
         }
 
-        if (loop_timer_fired(&c->client.loop, heartbeat))
+        if (loop_has_timer_fired(&c->client.loop, heartbeat))
         {
             controller_events_heartbeat(c);
         }

@@ -27,7 +27,7 @@ int platform_signal_take(void)
     return number;
 }
 
-const char *plarform_signal_name(const int number)
+const char *platform_signal_name(const int number)
 {
     return strsignal(number);
 }

@@ -1,8 +1,8 @@
 #include "test.h"
 #include "loop/loop.h"
+#include "platform/platform.h"
 
 #include <signal.h>
-#include <unistd.h>
 
 void loop_test_timeout(void)
 {
@@ -30,15 +30,15 @@ void loop_test_timer_fires(void)
     
     l.now_ms = 1009;
     loop_fire_timers(&l);
-    TEST_EXPECT(!loop_timer_fired(&l, t));
+    TEST_EXPECT(!loop_has_timer_fired(&l, t));
 
     l.now_ms = 1010;
     loop_fire_timers(&l);
-    TEST_EXPECT(loop_timer_fired(&l, t));
+    TEST_EXPECT(loop_has_timer_fired(&l, t));
     TEST_EXPECT(loop_timeout_ms(&l) == -1);
 
     loop_fire_timers(&l);
-    TEST_EXPECT(!loop_timer_fired(&l, t));
+    TEST_EXPECT(!loop_has_timer_fired(&l, t));
 }
 
 void loop_test_timer_repeats(void)
@@ -49,45 +49,45 @@ void loop_test_timer_repeats(void)
     loop_timer_repeat(&l, t, 10);
     l.now_ms = 1010;
     loop_fire_timers(&l);
-    TEST_EXPECT(loop_timer_fired(&l, t));
+    TEST_EXPECT(loop_has_timer_fired(&l, t));
     TEST_EXPECT(loop_timeout_ms(&l) == 10);
     
     l.now_ms = 1023;
     loop_fire_timers(&l);
-    TEST_EXPECT(loop_timer_fired(&l, t));
+    TEST_EXPECT(loop_has_timer_fired(&l, t));
     TEST_EXPECT(loop_timeout_ms(&l) == 7);
 
     l.now_ms = 1075;
     loop_fire_timers(&l);
-    TEST_EXPECT(loop_timer_fired(&l, t));
+    TEST_EXPECT(loop_has_timer_fired(&l, t));
     TEST_EXPECT(loop_timeout_ms(&l) == 10);
     loop_fire_timers(&l);
-    TEST_EXPECT(!loop_timer_fired(&l, t));
+    TEST_EXPECT(!loop_has_timer_fired(&l, t));
 
     loop_timer_stop(&l, t);
     TEST_EXPECT(loop_timeout_ms(&l) == -1);
     loop_timer_start(&l, t, 5);
     l.now_ms = 1080;
     loop_fire_timers(&l);
-    TEST_EXPECT(loop_timer_fired(&l, t) && loop_timeout_ms(&l) == -1);
+    TEST_EXPECT(loop_has_timer_fired(&l, t) && loop_timeout_ms(&l) == -1);
 }
 
 void loop_test_pipe(void)
 {
-    int fds[2];
-    TEST_EXPECT(pipe(fds) == 0);
+    PlatformHandle ends[2];
+    TEST_EXPECT(platform_socket_pair(ends));
     Loop l = loop_create();
-    loop_watch(&l, fds[0]);
+    loop_watch(&l, ends[0]);
     const u32 t = loop_timer_add(&l);
 
     loop_timer_start(&l, t, 1);
     TEST_EXPECT(loop_wait(&l));
-    TEST_EXPECT(loop_timer_fired(&l, t) && !loop_readable(&l, fds[0]));
-    TEST_EXPECT(write(fds[1], "x", 1) == 1);
+    TEST_EXPECT(loop_has_timer_fired(&l, t) && !loop_is_readable(&l, ends[0]));
+    TEST_EXPECT(platform_send(ends[1], STR("x")) == 1);
     TEST_EXPECT(loop_wait(&l));
-    TEST_EXPECT(loop_readable(&l, fds[0]) && !loop_timer_fired(&l, t));
-    close(fds[0]);
-    close(fds[1]);
+    TEST_EXPECT(loop_is_readable(&l, ends[0]) && !loop_has_timer_fired(&l, t));
+    platform_close(&ends[0]);
+    platform_close(&ends[1]);
 }
 
 void loop_test_signal(void)
@@ -99,32 +99,32 @@ void loop_test_signal(void)
 
     const u32 t = loop_timer_add(&l);
     loop_timer_start(&l, t, 0);
-    TEST_EXPECT(loop_wait(&l) && loop_timer_fired(&l, t));
+    TEST_EXPECT(loop_wait(&l) && loop_has_timer_fired(&l, t));
 }
 
 void loop_test_unwatch(void)
 {
-    int a[2];
-    int b[2];
-    TEST_EXPECT(pipe(a) == 0 && pipe(b) == 0);
+    PlatformHandle a[2];
+    PlatformHandle b[2];
+    TEST_EXPECT(platform_socket_pair(a) && platform_socket_pair(b));
     Loop l = loop_create();
     loop_watch(&l, a[0]);
     loop_watch(&l, b[0]);
-    TEST_EXPECT(write(a[1], "x", 1) == 1 && write(b[1], "x", 1) == 1);
+    TEST_EXPECT(platform_send(a[1], STR("x")) == 1 && platform_send(b[1], STR("x")) == 1);
     TEST_EXPECT(loop_wait(&l));
-    TEST_EXPECT(loop_readable(&l, a[0]) && loop_readable(&l, b[0]));
+    TEST_EXPECT(loop_is_readable(&l, a[0]) && loop_is_readable(&l, b[0]));
 
     loop_unwatch(&l, a[0]);
-    TEST_EXPECT(l.fd_count == 1 && !loop_readable(&l, a[0]) && loop_readable(&l, b[0]));
+    TEST_EXPECT(l.watch_count == 1 && !loop_is_readable(&l, a[0]) && loop_is_readable(&l, b[0]));
 
     loop_watch(&l, a[0]);
-    TEST_EXPECT(l.fd_count == 2 && !loop_readable(&l, a[0]));
-    TEST_EXPECT(loop_wait(&l) && loop_readable(&l, a[0]));
+    TEST_EXPECT(l.watch_count == 2 && !loop_is_readable(&l, a[0]));
+    TEST_EXPECT(loop_wait(&l) && loop_is_readable(&l, a[0]));
 
     loop_unwatch(&l, a[1]);
-    TEST_EXPECT(l.fd_count == 2);
-    close(a[0]);
-    close(a[1]);
-    close(b[0]);
-    close(b[1]);
+    TEST_EXPECT(l.watch_count == 2);
+    platform_close(&a[0]);
+    platform_close(&a[1]);
+    platform_close(&b[0]);
+    platform_close(&b[1]);
 }

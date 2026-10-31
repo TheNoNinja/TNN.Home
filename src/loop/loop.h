@@ -4,9 +4,7 @@
 #include "base/base.h"
 #include "platform/platform.h"
 
-#include <poll.h>
-
-#define LOOP_FD_MAX 16
+#define LOOP_WATCH_MAX 16
 #define LOOP_TIMER_MAX 4
 
 typedef struct LoopTimer LoopTimer;
@@ -21,8 +19,8 @@ struct LoopTimer
 typedef struct Loop Loop;
 struct Loop
 {
-    struct pollfd fds[LOOP_FD_MAX];
-    u32 fd_count;
+    PlatformWatch watches[LOOP_WATCH_MAX];
+    u32 watch_count;
     LoopTimer timers[LOOP_TIMER_MAX];
     u32 timer_count;
     u64 now_ms;
@@ -32,8 +30,8 @@ struct Loop
 u64 loop_now_ms(void);
 Loop loop_create(void);
 
-void loop_watch(Loop *l, int fd);
-void loop_unwatch(Loop *l, int fd);
+void loop_watch(Loop *l, PlatformHandle h);
+void loop_unwatch(Loop *l, PlatformHandle h);
 
 u32 loop_timer_add(Loop *l);
 void loop_timer_repeat(Loop *l, u32 timer, u64 interval_ms);
@@ -41,8 +39,8 @@ void loop_timer_start(Loop *l, u32 timer, u64 delay_ms);
 void loop_timer_stop(Loop *l, u32 timer);
 
 b32 loop_wait(Loop *l);
-b32 loop_readable(const Loop *l, int fd);
-b32 loop_timer_fired(const Loop *l, u32 timer);
+b32 loop_is_readable(const Loop *l, PlatformHandle h);
+b32 loop_has_timer_fired(const Loop *l, u32 timer);
 
 int loop_timeout_ms(const Loop *l);
 void loop_fire_timers(Loop *l);

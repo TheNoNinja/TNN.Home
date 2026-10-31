@@ -7,9 +7,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/timerfd.h>
 #include <time.h>
-#include <unistd.h>
 
 #define ECHO_PROBE_BROKER_IP "127.0.0.1"
 #define ECHO_PROBE_BROKER_PORT 1883
@@ -39,7 +37,7 @@ typedef struct EchoProbe EchoProbe;
 struct EchoProbe 
 {
     MqttClient client;
-    int tick;
+    PlatformHandle tick;
     u32 timeout;
     u32 count;
     u32 rate;
@@ -73,22 +71,24 @@ internal b32 echo_probe_next(EchoProbe *p)
     return p->sent < p->count ? echo_probe_send(p) : 1;
 }
 
-internal void echo_probe_tick_start(EchoProbe *p)
+internal b32 echo_probe_tick_start(EchoProbe *p)
 {
-    struct itimerspec spec = {0};
-    spec.it_value.tv_sec = (time_t)(p->interval_ns / TIME_NS_PER_S);
-    spec.it_value.tv_nsec = (long)(p->interval_ns % TIME_NS_PER_S);
-    spec.it_interval = spec.it_value;
     p->start_ns = platform_time_mono_ns() + p->interval_ns;
-    timerfd_settime(p->tick, 0, &spec, 0);
+    if(!platform_ticker_start(p->interval_ns, &p->tick))
+    {
+        LOG_ERROR("the tick: %s", platform_error());
+        return 0;
+    }
+    loop_watch(&p->client.loop, p->tick);
+    return 1;
 }
 
 internal b32 echo_probe_tick(EchoProbe *p)
 {
     u64 ticks = 0;
-    if (read(p->tick, &ticks, sizeof(ticks)) < 0)
+    if (platform_ticker_take(p->tick, &ticks))
     {
-        LOG_ERROR("read the tick: %s", strerror(errno));
+        LOG_ERROR("read the tick: %s", platform_error());
         return 0;
     }
     for(u64 i = 0; i < ticks && p->sent < p->count; i++)
@@ -131,8 +131,7 @@ internal b32 echo_probe_handle(EchoProbe *p, const MqttPacket *packet)
                 return echo_probe_send(p);
             }
             LOG_INFO("subscribed to %s: sending %u messages, %u per second", ECHO_PROBE_TOPIC, p->count, p->rate);
-            echo_probe_tick_start(p);
-            return 1;
+            return echo_probe_tick_start(p);
         }
         case MQTT_PUBLISH:
         {
@@ -318,25 +317,15 @@ int main(const int argc, char **argv)
     }
 
     b32 ok = mqtt_client_subscribe(&p.client, STR(ECHO_PROBE_TOPIC)) != 0;
-
     p.timeout = loop_timer_add(&p.client.loop);
-    p.tick = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-    if (p.tick < 0)
-    {
-        LOG_ERROR("timerfd_create: %s", strerror(errno));
-        ok = 0;
-    }
-
-    loop_watch(&p.client.loop, p.tick);
-
     while(ok && !echo_probe_done(&p) && mqtt_client_wait(&p.client))
     {
-        if (loop_timer_fired(&p.client.loop, p.timeout))
+        if (loop_has_timer_fired(&p.client.loop, p.timeout))
         {
             ok = echo_probe_give_up(&p);
         }
 
-        if (ok && loop_readable(&p.client.loop, p.tick))
+        if (ok && loop_is_readable(&p.client.loop, p.tick))
         {
             ok = echo_probe_tick(&p);
         }
@@ -356,6 +345,6 @@ int main(const int argc, char **argv)
     {
         echo_probe_print(&p, port);
     }
-    close(p.tick);
+    platform_close(&p.tick);
     return mqtt_client_close(&p.client, ok);
 }

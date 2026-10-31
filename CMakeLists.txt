@@ -75,10 +75,12 @@ add_library(tnn_mqtt INTERFACE)
 target_sources(tnn_mqtt INTERFACE
     src/mqtt/mqtt_client.c
 )
-target_link_libraries(tnn_mqtt INTERFACE tnn_mqtt_core tnn_loop)
+target_link_libraries(tnn_mqtt INTERFACE tnn_mqtt_core tnn_loop tnn_platform)
 
 set(TNN_PLATFORM_LINUX_SOURCES
     src/platform/linux/platform_linux_network.c
+    src/platform/linux/platform_linux_signal.c
+    src/platform/linux/platform_linux_ticker.c
     src/platform/linux/platform_linux_time.c
     src/platform/linux/platform_linux_wait.c
 )
@@ -101,7 +103,7 @@ add_executable(tnn_controller
     src/apps/controller/controller_page.c
     src/apps/controller/controller_values.c
 )
-target_link_libraries(tnn_controller PRIVATE tnn_homie tnn_http tnn_loop tnn_mqtt)
+target_link_libraries(tnn_controller PRIVATE tnn_homie tnn_http tnn_loop tnn_mqtt tnn_platform)
 
 add_executable(tnn_echo_probe
     src/apps/echo_probe/echo_probe_main.c
@@ -121,7 +123,7 @@ target_link_libraries(tnn_timer_lateness PRIVATE tnn_histogram tnn_platform)
 add_executable(tnn_virtual_light 
     src/apps/virtual_light/virtual_light_main.c
 )
-target_link_libraries(tnn_virtual_light PRIVATE tnn_homie tnn_json tnn_loop tnn_mqtt)
+target_link_libraries(tnn_virtual_light PRIVATE tnn_homie tnn_json tnn_loop tnn_mqtt tnn_platform)
 
 #########
 # Tests #

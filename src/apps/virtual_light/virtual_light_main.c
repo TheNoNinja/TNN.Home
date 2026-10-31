@@ -5,7 +5,6 @@
 #include "mqtt/mqtt.h"
 
 #include <stdio.h>
-#include <unistd.h>
 
 #define VIRTUAL_LIGHT_BROKER_IP           "127.0.0.1"
 #define VIRTUAL_LIGHT_BROKER_PORT         1883
@@ -153,14 +152,14 @@ int main(const int argc, const char **argv)
     ok = ok && set_subscription != 0;
 
     printf("press Enter or Ctrl+C to disconnect\n");
-    loop_watch(&client.loop, STDIN_FILENO);
+    loop_watch(&client.loop, platform_stdin());
     while (ok && mqtt_client_wait(&client))
     {
-        if (loop_readable(&client.loop, STDIN_FILENO))
+        if (loop_is_readable(&client.loop, platform_stdin()))
         {
             break;
         }
-        if (loop_timer_fired(&client.loop, client.ping_timer))
+        if (loop_has_timer_fired(&client.loop, client.ping_timer))
         {
             printf("PINGREQ\n");
         }

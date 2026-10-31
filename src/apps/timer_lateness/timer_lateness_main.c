@@ -2,8 +2,6 @@
 #include "histogram/histogram.h"
 #include "platform/platform.h"
 
-#include <poll.h>
-
 #define TIMER_LATENESS_DELAY_MS 1
 #define TIMER_LATENESS_ROUNDS   5000
 
