@@ -42,6 +42,15 @@ void loop_watch(Loop *l, const PlatformHandle h)
     l->watch_count += 1;
 }
 
+void loop_watch_write(Loop *l, const PlatformHandle h, const b32 should_write)
+{
+    const u32 i = loop_find(l, h);
+    if (i < l->watch_count)
+    {
+        l->watches[i].should_write = should_write;
+    }
+}
+
 void loop_unwatch(Loop *l, const PlatformHandle h)
 {
     const u32 i = loop_find(l, h);
@@ -155,6 +164,12 @@ b32 loop_is_readable(const Loop *l, const PlatformHandle h)
 {
     const u32 i = loop_find(l, h);
     return i < l->watch_count && l->watches[i].is_readable;
+}
+
+b32 loop_is_writable(const Loop *l, const PlatformHandle h)
+{
+    const u32 i = loop_find(l, h);
+    return i < l->watch_count && l->watches[i].is_writable;
 }
 
 b32 loop_has_timer_fired(const Loop *l, const u32 timer)

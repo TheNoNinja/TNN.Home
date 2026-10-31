@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "platform/platform_network.h"
 #include "platform/linux/platform_linux.h"
 

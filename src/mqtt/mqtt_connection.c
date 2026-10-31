@@ -35,7 +35,7 @@ internal b32 mqtt_connection_queue(MqttConnection *c, const Writer *w)
 {
     if (w->has_overflown)
     {
-        LOG_ERROR("packet does not fit in the send buffer (%llu bytes)", (unsigned long long)c->out_capacity);
+        LOG_ERROR("the packet does not fit in the send buffer (%llu of %llu bytes free)", (unsigned long long)(c->out_capacity - c->out_length), (unsigned long long)c->out_capacity);
         return 0;
     }
     c->out_length += w->length;

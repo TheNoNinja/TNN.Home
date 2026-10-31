@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "platform/platform_time.h"
 #include "platform/linux/platform_linux.h"
 #include "base/base_time.h"

@@ -189,9 +189,7 @@ internal void echo_probe_print(const EchoProbe *p, const u64 port)
 {
     char date[32];
     const time_t now = time(0);
-    struct tm local;
-    localtime_r(&now, &local);
-    strftime(date, sizeof(date), "%Y-%m-%d %H:%M", &local);
+    strftime(date, sizeof(date), "%Y-%m-%d %H:%M", localtime(&now));
 
     printf("echo probe: port %llu, count %u, rate %u, %s build, %s\n", (unsigned long long)port, p->count, p->rate, ECHO_PROBE_BUILD, date);
     if (p->rate > 0)

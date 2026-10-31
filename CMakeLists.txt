@@ -6,7 +6,6 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 add_compile_options(-Wall -Wextra -Wshadow -Werror)
-add_compile_definitions(_POSIX_C_SOURCE=200809L)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
@@ -87,7 +86,7 @@ set(TNN_PLATFORM_LINUX_SOURCES
 add_library(tnn_platform INTERFACE)
 target_sources(tnn_platform INTERFACE ${TNN_PLATFORM_LINUX_SOURCES})
 target_link_libraries(tnn_platform INTERFACE tnn_base)
-
+set_source_files_properties(${TNN_PLATFORM_LINUX_SOURCES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 ################
 # Applications #

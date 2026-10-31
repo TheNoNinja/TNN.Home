@@ -90,6 +90,28 @@ void loop_test_pipe(void)
     platform_close(&ends[1]);
 }
 
+void loop_test_writable(void)
+{
+    PlatformHandle ends[2];
+    TEST_EXPECT(platform_socket_pair(ends));
+    Loop l = loop_create();
+    loop_watch(&l, ends[0]);
+    const u32 t = loop_timer_add(&l);
+    loop_timer_start(&l, t, 1);
+    TEST_EXPECT(loop_wait(&l) && loop_has_timer_fired(&l, t) && !loop_is_writable(&l, ends[0]));
+
+    loop_watch_write(&l, ends[0], 1);
+    loop_timer_start(&l, t, 1000);
+    TEST_EXPECT(loop_wait(&l) && loop_is_writable(&l, ends[0]) && !loop_is_readable(&l, ends[0]));
+    TEST_EXPECT(!loop_has_timer_fired(&l, t));
+
+    loop_watch_write(&l, ends[0], 0);
+    loop_timer_start(&l, t, 1);
+    TEST_EXPECT(loop_wait(&l) && !loop_is_writable(&l, ends[0]));
+    platform_close(&ends[0]);
+    platform_close(&ends[1]);
+}
+
 void loop_test_signal(void)
 {
     Loop l = loop_create();

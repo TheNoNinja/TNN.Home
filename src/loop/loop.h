@@ -31,6 +31,7 @@ u64 loop_now_ms(void);
 Loop loop_create(void);
 
 void loop_watch(Loop *l, PlatformHandle h);
+void loop_watch_write(Loop *l, PlatformHandle h, b32 should_write);
 void loop_unwatch(Loop *l, PlatformHandle h);
 
 u32 loop_timer_add(Loop *l);
@@ -40,6 +41,7 @@ void loop_timer_stop(Loop *l, u32 timer);
 
 b32 loop_wait(Loop *l);
 b32 loop_is_readable(const Loop *l, PlatformHandle h);
+b32 loop_is_writable(const Loop *l, PlatformHandle h);
 b32 loop_has_timer_fired(const Loop *l, u32 timer);
 
 int loop_timeout_ms(const Loop *l);

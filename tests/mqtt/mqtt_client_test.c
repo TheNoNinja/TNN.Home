@@ -55,3 +55,43 @@ void mqtt_test_client(void)
     TEST_EXPECT(mqtt_test_client_sent(ends[1], got, sizeof(got)) == 0);
     platform_close(&ends[1]);
 }
+
+void mqtt_test_client_drain(void)
+{
+    PlatformHandle ends[2];
+    TEST_EXPECT(platform_socket_pair(ends));
+    u8 filler[1024] = {0};
+    while (platform_send(ends[0], (str){ filler, sizeof(filler) }) > 0)
+    {
+    }
+    u8 in[16];
+    u8 out[64];
+    MqttClient c = mqtt_client_create(in, sizeof(in), sizeof(in), out, sizeof(out));
+    c.connection.state = MQTT_CONNECTION_CONNECTED;
+    c.sock = ends[0];
+    loop_watch(&c.loop, ends[0]);
+
+    const str payload = STR("number of bytes of a value that must wait...");
+    TEST_EXPECT(mqtt_client_publish(&c, STR("a/b"), payload, 0));
+    LOG_INFO("%ld", mqtt_connection_output(&c.connection).length);
+    TEST_EXPECT(mqtt_connection_output(&c.connection).length == 51);
+    TEST_EXPECT(!mqtt_client_publish(&c, STR("a/b"), payload, 0));
+
+    const u32 t = loop_timer_add(&c.loop);
+    loop_timer_start(&c.loop, t, 1);
+    TEST_EXPECT(mqtt_client_wait(&c) && c.loop.watches[0].should_write);
+    TEST_EXPECT(mqtt_connection_output(&c.connection).length == 51);
+
+    u8 got[1024];
+    while (mqtt_test_client_sent(ends[1], got, sizeof(got)) > 0)
+    {
+    }
+    const u8 pingresp[] = { 0xD0, 0x00 };
+    TEST_EXPECT(platform_send(ends[1], (str){ (u8 *)pingresp, sizeof(pingresp) }) == sizeof(pingresp));
+    TEST_EXPECT(mqtt_client_wait(&c) && !c.loop.watches[0].should_write);
+    TEST_EXPECT(mqtt_connection_output(&c.connection).length == 0);
+    const u64 length = mqtt_test_client_sent(ends[1], got, sizeof(got));
+    TEST_EXPECT(length == 51 && got[0] == 0x30 && got[50] == '.');
+    TEST_EXPECT(mqtt_client_close(&c, 1) == 0);
+    platform_close(&ends[1]);
+}

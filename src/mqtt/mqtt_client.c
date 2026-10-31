@@ -23,12 +23,6 @@ internal b32 mqtt_client_send(MqttClient *c)
         return 0;
     }
     mqtt_connection_sent(&c->connection, (u64)sent);
-
-    if ((u64)sent != out.length)
-    {
-        LOG_ERROR("send: only %lld of %llu bytes went out (the send buffer is full)", (long long)sent, (unsigned long long)out.length);
-        return 0;
-    }
     return 1;
 }
 
@@ -112,12 +106,18 @@ b32 mqtt_client_wait(MqttClient *c)
         c->has_failed = 1;
         return 0;
     }
+    loop_watch_write(&c->loop, c->sock, mqtt_connection_output(&c->connection).length > 0);
     if (!loop_wait(&c->loop))
     {
         c->has_failed = c->loop.stop_signal == 0;
         return 0;
     }
     if (loop_has_timer_fired(&c->loop, c->ping_timer) && !(mqtt_connection_ping(&c->connection) && mqtt_client_send(c)))
+    {
+        c->has_failed = 1;
+        return 0;
+    }
+    if (loop_is_writable(&c->loop, c->sock) && !mqtt_client_send(c))
     {
         c->has_failed = 1;
         return 0;
@@ -153,7 +153,7 @@ int mqtt_client_close(MqttClient *c, const b32 ok)
     }
 
     int exit_code = 1;
-    if (ok && !c->has_failed && mqtt_connection_disconnect(&c->connection) && mqtt_client_send(c))
+    if (ok && !c->has_failed && mqtt_connection_disconnect(&c->connection) && mqtt_client_send(c) && mqtt_connection_output(&c->connection).length == 0)
     {
         exit_code = 0;
     }

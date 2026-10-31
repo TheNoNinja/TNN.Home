@@ -74,6 +74,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(loop_test_timer_fires,   "loop timer fires") \
 	X(loop_test_timer_repeats, "loop timer repeats") \
 	X(loop_test_pipe,          "loop pipe") \
+	X(loop_test_writable,      "loop writable") \
 	X(loop_test_signal,        "loop signal") \
 	X(loop_test_unwatch,       "loop unwatch") \
 \
@@ -104,6 +105,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(mqtt_test_connection_unsubscribe, "mqtt connection unsubscribe") \
 	X(mqtt_test_connection_queue,       "mqtt connection queue") \
 	X(mqtt_test_client,                 "mqtt client") \
+	X(mqtt_test_client_drain,           "mqtt client drain") \
 \
 	X(platform_test_time,        "platform time") \
 	X(platform_test_time_mono,   "platform time mono") \

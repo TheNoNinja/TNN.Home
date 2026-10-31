@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "platform/platform_signal.h"
 
 #include <signal.h>
