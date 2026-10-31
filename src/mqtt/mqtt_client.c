@@ -129,7 +129,7 @@ b32 mqtt_client_connect(MqttClient *c, const char *ip, const u16 port, const str
         return 0;
     }
 
-    loop_catch_signals();
+    platform_signals_catch();
     loop_watch(&c->loop, c->sock);
     loop_timer_repeat(&c->loop, c->ping_timer, (u64)keep_alive_seconds * TIME_MS_PER_S);
     return 1;

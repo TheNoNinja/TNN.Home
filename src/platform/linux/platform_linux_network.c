@@ -114,15 +114,15 @@ b32 platform_tcp_listen(const char *ip, const u16 port, PlatformHandle *h)
 b32 platform_tcp_accept(const PlatformHandle listener, PlatformHandle *h)
 {
     *h = (PlatformHandle){0};
-    const int fd = accept(platform_linux(fd), 0, 0);
+    const int fd = accept(platform_linux_fd(listener), 0, 0);
     if (fd < 0)
     {
-        if (errno == EAGAIN | errno == EINTR)
+        if (errno == EAGAIN || errno == EINTR)
         {
             platform_last_error = 0;
             return 0;
         }
-        return platform_linux_failed;
+        return platform_linux_failed();
     }
     platform_unblock(fd);
     platform_no_delay(fd);

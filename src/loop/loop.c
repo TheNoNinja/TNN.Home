@@ -2,24 +2,16 @@
 
 #include <errno.h>
 #include <limits.h>
-#include <signal.h>
 #include <string.h>
-
-internal volatile sig_atomic_t loop_signal_received;
-
-internal void loop_signal_handler(const int number)
-{
-    loop_signal_received = number;
-}
 
 internal b32 loop_take_signal(Loop *l)
 {
-    if (!loop_signal_received)
+    const int number = platform_signal_take();
+    if (number == 0)
     {
         return 0;
     }
-    l->stop_signal = (int)loop_signal_received;
-    loop_signal_received = 0;
+    l->stop_signal = number;
     return 1;
 }
 
@@ -33,15 +25,6 @@ Loop loop_create(void)
     Loop l = {0};
     l.now_ms = loop_now_ms();
     return l;
-}
-
-void loop_catch_signals(void)
-{
-    struct sigaction action = {0};
-    action.sa_handler = loop_signal_handler;
-    sigemptyset(&action.sa_mask);
-    sigaction(SIGINT, &action, 0);
-    sigaction(SIGTERM, &action, 0);
 }
 
 void loop_watch(Loop *l, const int fd)

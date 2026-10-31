@@ -108,6 +108,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(platform_test_time,        "platform time") \
 	X(platform_test_time_mono,   "platform time mono") \
 	X(platform_test_socket_pair, "platform socket pair") \
+	X(platform_test_ticker,      "platform ticker") \
 
 #define TEST_DECLARE(function, name) void function(void);
 TEST_LIST(TEST_DECLARE)

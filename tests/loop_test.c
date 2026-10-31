@@ -93,7 +93,7 @@ void loop_test_pipe(void)
 void loop_test_signal(void)
 {
     Loop l = loop_create();
-    loop_catch_signals();
+    platform_signals_catch();
     raise(SIGTERM);
     TEST_EXPECT(!loop_wait(&l) && l.stop_signal == SIGTERM);
 

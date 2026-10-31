@@ -31,7 +31,6 @@ struct Loop
 
 u64 loop_now_ms(void);
 Loop loop_create(void);
-void loop_catch_signals(void);
 
 void loop_watch(Loop *l, int fd);
 void loop_unwatch(Loop *l, int fd);

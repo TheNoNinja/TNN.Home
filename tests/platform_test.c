@@ -43,3 +43,15 @@ void platform_test_socket_pair(void)
     platform_close(&ends[1]);
     platform_close(&ends[1]);
 }
+
+void platform_test_ticker(void)
+{
+    PlatformHandle ticker = {0};
+    TEST_EXPECT(platform_ticker_start(20 * TIME_NS_PER_MS, &ticker));
+    PlatformWatch watch = { .handle = ticker };
+    TEST_EXPECT(platform_wait(&watch, 1, 1000) && watch.is_readable);
+    u64 ticks = 0;
+    TEST_EXPECT(platform_ticker_take(ticker, &ticks) && ticks >= 1);
+    TEST_EXPECT(platform_ticker_take(ticker, &ticks) && ticks == 0);
+    platform_close(&ticker);
+}
