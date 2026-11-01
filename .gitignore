@@ -5,3 +5,5 @@ CMakeUserPresets.json
 crash-*
 leak-*
 timeout-*
+sdkconfig
+sdkconfig.old

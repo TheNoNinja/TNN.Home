@@ -7,6 +7,8 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 add_compile_options(-Wall -Wextra -Wshadow -Werror)
 
+include(cmake/tnn_modules.cmake)
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined)
@@ -17,72 +19,37 @@ endif()
 ###########
 
 add_library(tnn_base INTERFACE)
-target_sources(tnn_base INTERFACE
-    src/base/base_arena.c
-    src/base/base_assert.c
-    src/base/base_log.c
-    src/base/base_reader.c
-    src/base/base_str.c
-    src/base/base_writer.c
-)
+target_sources(tnn_base INTERFACE ${TNN_BASE_SOURCES})
 target_include_directories(tnn_base INTERFACE src)
 
 add_library(tnn_histogram INTERFACE)
-target_sources(tnn_histogram INTERFACE
-    src/histogram/histogram.c
-)
+target_sources(tnn_histogram INTERFACE ${TNN_HISTOGRAM_SOURCES})
 target_link_libraries(tnn_histogram INTERFACE tnn_base)
 
 add_library(tnn_homie INTERFACE)
-target_sources(tnn_homie INTERFACE
-    src/homie/homie_description.c
-    src/homie/homie_payload.c
-    src/homie/homie_topic.c
-)
+target_sources(tnn_homie INTERFACE ${TNN_HOMIE_SOURCES})
 target_link_libraries(tnn_homie INTERFACE tnn_json)
 
 add_library(tnn_http INTERFACE)
-target_sources(tnn_http INTERFACE
-    src/http/http_request.c
-    src/http/http_response.c
-)
+target_sources(tnn_http INTERFACE ${TNN_HTTP_SOURCES})
 target_link_libraries(tnn_http INTERFACE tnn_base)
 
 add_library(tnn_json INTERFACE)
-target_sources(tnn_json INTERFACE
-    src/json/json_reader.c
-    src/json/json_writer.c
-)
+target_sources(tnn_json INTERFACE ${TNN_JSON_SOURCES})
 target_link_libraries(tnn_json INTERFACE tnn_base)
 
 add_library(tnn_loop INTERFACE)
-target_sources(tnn_loop INTERFACE
-    src/loop/loop.c
-)
+target_sources(tnn_loop INTERFACE ${TNN_LOOP_SOURCES})
 target_link_libraries(tnn_loop INTERFACE tnn_platform)
 
 add_library(tnn_mqtt_core INTERFACE)
-target_sources(tnn_mqtt_core INTERFACE
-    src/mqtt/mqtt_connection.c
-    src/mqtt/mqtt_decode.c
-    src/mqtt/mqtt_encode.c
-    src/mqtt/mqtt_framer.c
-)
+target_sources(tnn_mqtt_core INTERFACE ${TNN_MQTT_CORE_SOUCES})
 target_link_libraries(tnn_mqtt_core INTERFACE tnn_base)
 
 add_library(tnn_mqtt INTERFACE)
-target_sources(tnn_mqtt INTERFACE
-    src/mqtt/mqtt_client.c
-)
+target_sources(tnn_mqtt INTERFACE ${TNN_MQTT_SOURCES})
 target_link_libraries(tnn_mqtt INTERFACE tnn_mqtt_core tnn_loop tnn_platform)
 
-set(TNN_PLATFORM_LINUX_SOURCES
-    src/platform/linux/platform_linux_network.c
-    src/platform/linux/platform_linux_signal.c
-    src/platform/linux/platform_linux_ticker.c
-    src/platform/linux/platform_linux_time.c
-    src/platform/linux/platform_linux_wait.c
-)
 add_library(tnn_platform INTERFACE)
 target_sources(tnn_platform INTERFACE ${TNN_PLATFORM_LINUX_SOURCES})
 target_link_libraries(tnn_platform INTERFACE tnn_base)
@@ -128,22 +95,9 @@ target_link_libraries(tnn_virtual_light PRIVATE tnn_homie tnn_json tnn_loop tnn_
 # Tests #
 #########
 
-add_executable(tnn_tests
-    tests/test_main.c
-    tests/base_test.c
-    tests/test.c
-    tests/histogram_test.c
-    tests/homie/homie_description_test.c
-    tests/homie/homie_payload_test.c
-    tests/homie/homie_topic_test.c
-    tests/http/http_test.c
-    tests/json_test.c
-    tests/loop_test.c
-    tests/mqtt/mqtt_client_test.c
-    tests/mqtt/mqtt_connection_test.c
-    tests/mqtt/mqtt_packet_test.c
-    tests/mqtt/mqtt_framer_test.c
-    tests/platform_test.c
+add_executable(tnn_tests 
+    ${TNN_TESTS_PURE_SOURCES}
+    ${TNN_TESTS_PLATFORM_SOURCES}    
 )
 target_include_directories(tnn_tests PRIVATE tests)
 target_link_libraries(tnn_tests PRIVATE tnn_histogram tnn_homie tnn_http tnn_loop tnn_mqtt tnn_platform)
