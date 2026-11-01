@@ -31,7 +31,7 @@ void platform_test_socket_pair(void)
 
     TEST_EXPECT(platform_send(ends[0], STR("abc")) == 3);
     PlatformWatch watch = { .handle = ends[1] };
-    TEST_EXPECT(platform_wait(&watch, 1, 1000) &watch.is_readable);
+    TEST_EXPECT(platform_wait(&watch, 1, 1000) && watch.is_readable);
     TEST_EXPECT(platform_receive(ends[1], space) == 3);
     const str got = { bytes, 3 };
     TEST_EXPECT_STR(got, STR("abc"));

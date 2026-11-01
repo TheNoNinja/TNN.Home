@@ -7,7 +7,7 @@ internal u8 controller_http_page[CONTROLLER_HTTP_PAGE_MAX];
 
 b32 controller_http_listen(Controller *c, const char* ip, const u16 port)
 {
-    if (platform_tcp_listen(ip, port, &c->http_sock))
+    if (!platform_tcp_listen(ip, port, &c->http_sock))
     {
         LOG_ERROR("socket: %s", platform_error());
         return 0;
@@ -101,7 +101,7 @@ internal void controller_http_send_status(const PlatformHandle sock, const u32 s
 internal void controller_http_accept(Controller *c)
 {
     PlatformHandle sock = {0};
-    if (platform_tcp_accept(c->http_sock, &sock))
+    if (!platform_tcp_accept(c->http_sock, &sock))
     {
         if (platform_error())
         {

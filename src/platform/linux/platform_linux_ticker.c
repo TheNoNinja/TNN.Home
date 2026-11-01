@@ -16,7 +16,7 @@ b32 platform_ticker_start(const u64 interval_ns, PlatformHandle *h)
     }
     struct itimerspec spec = {0};
     spec.it_value.tv_sec = (time_t)(interval_ns / TIME_NS_PER_S);
-    spec.it_value.tv_nsec = (long)(interval_ns & TIME_NS_PER_S);
+    spec.it_value.tv_nsec = (long)(interval_ns % TIME_NS_PER_S);
     spec.it_interval = spec.it_value;
     if (timerfd_settime(fd, 0, &spec, 0) < 0)
     {

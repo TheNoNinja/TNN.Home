@@ -3,15 +3,25 @@
 
 #include "base/base.h"
 
+typedef void TestFunction(void);
+typedef struct TestCase TestCase;
+struct TestCase
+{
+    const char *name;
+    TestFunction *function;
+};
+
 #define TEST_EXPECT(condition) test_expect((condition), #condition, __FILE__, __LINE__)
 #define TEST_EXPECT_BYTES(data, length, expected, expected_length) test_expect_bytes((data), (length), (expected), (expected_length), __FILE__, __LINE__)
 #define TEST_EXPECT_STR(actual, expected) test_expect_str((actual), (expected), #actual, __FILE__, __LINE__)
+#define TEST_CASE(function, name) { name, function },
 
 void test_expect(b32 ok, const char *condition, const char *file, int line);
 void test_expect_bytes(const u8 *data, u64 length, const u8 *expected, u64 expected_length, const char *file, int line);
 void test_expect_str(str actual, str expected, const char *text, const char *file, int line);
+u32 test_run(const TestCase *cases, u32 count);
 
-#define TEST_LIST(X) \
+#define TEST_LIST_PURE(X) \
     X(base_test_arena_push,        "base arena push") \
 	X(base_test_arena_full,        "base arena full") \
 	X(base_test_arena_pop,         "base arena pop") \
@@ -69,8 +79,9 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(json_test_read_booleans, "json read booleans") \
 	X(json_test_read_skip,     "json read skip") \
 	X(json_test_read_invalid,  "json read invalid") \
-\
-	X(loop_test_timeout,       "loop timeout") \
+
+#define TEST_LIST_PLATFORM(X) \
+    X(loop_test_timeout,       "loop timeout") \
 	X(loop_test_timer_fires,   "loop timer fires") \
 	X(loop_test_timer_repeats, "loop timer repeats") \
 	X(loop_test_pipe,          "loop pipe") \
@@ -112,6 +123,7 @@ void test_expect_str(str actual, str expected, const char *text, const char *fil
 	X(platform_test_socket_pair, "platform socket pair") \
 	X(platform_test_ticker,      "platform ticker") \
 
+#define TEST_LIST(X) TEST_LIST_PURE(X) TEST_LIST_PLATFORM(X)
 #define TEST_DECLARE(function, name) void function(void);
 TEST_LIST(TEST_DECLARE)
 

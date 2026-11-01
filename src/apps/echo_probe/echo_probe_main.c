@@ -86,7 +86,7 @@ internal b32 echo_probe_tick_start(EchoProbe *p)
 internal b32 echo_probe_tick(EchoProbe *p)
 {
     u64 ticks = 0;
-    if (platform_ticker_take(p->tick, &ticks))
+    if (!platform_ticker_take(p->tick, &ticks))
     {
         LOG_ERROR("read the tick: %s", platform_error());
         return 0;

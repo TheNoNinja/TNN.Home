@@ -73,7 +73,6 @@ void mqtt_test_client_drain(void)
 
     const str payload = STR("number of bytes of a value that must wait...");
     TEST_EXPECT(mqtt_client_publish(&c, STR("a/b"), payload, 0));
-    LOG_INFO("%ld", mqtt_connection_output(&c.connection).length);
     TEST_EXPECT(mqtt_connection_output(&c.connection).length == 51);
     TEST_EXPECT(!mqtt_client_publish(&c, STR("a/b"), payload, 0));
 

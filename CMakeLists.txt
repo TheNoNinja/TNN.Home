@@ -131,6 +131,7 @@ target_link_libraries(tnn_virtual_light PRIVATE tnn_homie tnn_json tnn_loop tnn_
 add_executable(tnn_tests
     tests/test_main.c
     tests/base_test.c
+    tests/test.c
     tests/histogram_test.c
     tests/homie/homie_description_test.c
     tests/homie/homie_payload_test.c
