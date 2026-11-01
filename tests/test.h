@@ -60,6 +60,8 @@ u32 test_run(const TestCase *cases, u32 count);
 	X(homie_test_payload_json,        "homie payload json") \
 	X(homie_test_format_range,        "homie format range") \
 	X(homie_test_format_invalid,      "homie format invalid") \
+	X(homie_test_format_integer,      "homie format integer") \
+	X(homie_test_format_float,        "homie format float") \
 \
 	X(http_test_request,         "http request") \
 	X(http_test_request_peices,  "http request peices") \

@@ -116,3 +116,50 @@ void homie_test_format_invalid(void)
     TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_STRING, (str){ many, HOMIE_FORMAT_MAX }, &f));
     TEST_EXPECT(!homie_format_parse(HOMIE_DATATYPE_STRING, (str){ many, sizeof(many) }, &f));
 }
+
+void homie_test_format_integer(void)
+{
+    HomieFormat f = {0};
+    i64 n = 0;
+    TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_INTEGER, STR("0:100:5"), &f));
+    TEST_EXPECT(homie_integer_parse(&f, STR("7"), &n) && n == 5);
+    TEST_EXPECT(homie_integer_parse(&f, STR("8"), &n) && n == 10);
+    TEST_EXPECT(homie_integer_parse(&f, STR("102"), &n) && n == 100);
+    TEST_EXPECT(homie_integer_parse(&f, STR("-2"), &n) && n == 0);
+    TEST_EXPECT(!homie_integer_parse(&f, STR("103"), &n));
+    TEST_EXPECT(!homie_integer_parse(&f, STR("-3"), &n));
+    TEST_EXPECT(!homie_integer_parse(&f, STR("7.5"), &n));
+
+    TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_INTEGER, STR("0:10:2"), &f));
+    TEST_EXPECT(homie_integer_parse(&f, STR("5"), &n) && n == 6);
+    TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_INTEGER, STR(":10:2"), &f));
+    TEST_EXPECT(homie_integer_parse(&f, STR("5"), &n) && n == 6);
+
+    TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_INTEGER, STR("::5"), &f));
+    TEST_EXPECT(homie_integer_parse(&f, STR("7"), &n) && n == 7);
+
+    TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_INTEGER, STR("-9223372036854775808::10"), &f));
+    TEST_EXPECT(homie_integer_parse(&f, STR("9223372036854775801"), &n) && n == 9223372036854775802);
+    TEST_EXPECT(!homie_integer_parse(&f, STR("9223372036854775807"), &n));
+}
+
+void homie_test_format_float(void)
+{
+    HomieFormat f = {0};
+    f64 n = 0;
+    TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_FLOAT, STR("0:1:0.5"), &f));
+    TEST_EXPECT(homie_float_parse(&f, STR("0.26"), &n) && n == 0.5);
+    TEST_EXPECT(homie_float_parse(&f, STR("0.24"), &n) && n == 0);
+    TEST_EXPECT(homie_float_parse(&f, STR("1.2"), &n) && n == 1);
+    TEST_EXPECT(!homie_float_parse(&f, STR("1.3"), &n));
+    TEST_EXPECT(!homie_float_parse(&f, STR("-0.3"), &n));
+
+    TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_FLOAT, STR("0:0.7:0.1"), &f));
+    TEST_EXPECT(homie_float_parse(&f, STR("0.7"), &n) && n > 0.69 && n < 0.71);
+
+    TEST_EXPECT(homie_format_parse(HOMIE_DATATYPE_FLOAT, STR_EMPTY, &f));
+    TEST_EXPECT(homie_float_parse(&f, STR("-1.5e3"), &n) && n == -1500);
+    TEST_EXPECT(!homie_float_parse(&f, STR("1e999"), &n));
+    TEST_EXPECT(!homie_float_parse(&f, STR("-1e999"), &n));
+    TEST_EXPECT(!homie_float_parse(&f, STR("NaN"), &n));
+}

@@ -171,6 +171,100 @@ str homie_format_str(const HomieFormat *f)
     return (str){ (u8 *)f->text, f->text_length };
 }
 
+internal b32 homie_integer_round(const i64 value, const i64 base, const i64 step, i64 *out)
+{
+    const u64 size = step;
+    if (value >= base)
+    {
+        const u64 distance = (u64)value - (u64)base;
+        u64 steps = distance / size;
+        if ((distance % size) * 2 >= size)
+        {
+            steps += 1;
+        } 
+        const u64 room = (u64)INT64_MAX - (u64)base;
+        if(steps > room / size)
+        {
+            return 0;
+        }
+        *out = (i64)((u64)base + steps * size);
+    }
+    else 
+    {
+        const u64 distance = (u64) base - (u64)value;
+        u64 steps = distance / size;
+        if ((distance % size) * 2 > size)
+        {
+            steps += 1;
+        }
+        const u64 room = (u64)base - (u64)INT64_MIN;
+        if (steps > room / size)
+        {
+            return 0;
+        }
+        *out = (i64)((u64)base - steps * size);
+    }
+    return 1;
+}
+
+b32 homie_integer_parse(const HomieFormat *f, const str value, i64 *out)
+{
+    i64 number = 0;
+    if (!str_to_i64(value, &number))
+    {
+        return 0;
+    }
+    if (f->has_step && (f->has_min || f->has_max))
+    {
+        const i64 base = f->has_min ? f->integer_min : f->integer_max;
+        if (!homie_integer_round(number, base, f->integer_step, &number))
+        {
+            return 0;
+        }
+    }
+    if ((f->has_min && number < f->integer_min) || (f->has_max && number > f->integer_max))
+    {
+        return 0;
+    }
+    *out = number;
+    return 1;
+}
+
+internal f64 homie_floor(const f64 x)
+{
+    if (x >= 4503599627370496.0 || x <= -4503599627370496.0)
+    {
+        return x;
+    }
+    const f64 cut = (f64)(i64)x;
+    return cut > x ? cut - 1 : cut;
+}
+
+b32 homie_float_parse(const HomieFormat *f, const str value, f64 *out)
+{
+    f64 number = 0;
+    if (!homie_float_read(value, &number))
+    {
+        return 0;
+    }
+    if (f->has_step && (f->has_min || f->has_max))
+    {
+        const f64 base = f->has_min ? f->float_min : f->float_max;
+        number = homie_floor((number - base) / f->float_step + 0.5) * f->float_step + base;
+        if (number > DBL_MAX || number < -DBL_MAX)
+        {
+            return 0;
+        }
+    }
+    const f64 slack = f->has_step ? f->float_step / 1000000 : 0;
+    if ((f->has_min && number < f->float_min - slack) || (f->has_max && number > f->float_max + slack))
+    {
+        return 0;
+    }
+    *out = number;
+    return 1;
+}
+
 b32 homie_payload_valid(const HomieDatatype datatype, const str value)
 {
     if (value.length == 0)

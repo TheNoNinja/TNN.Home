@@ -24,6 +24,8 @@ struct HomieFormat
 
 b32 homie_format_parse(HomieDatatype datatype, str text, HomieFormat *out);
 str homie_format_str(const HomieFormat *f);
+b32 homie_integer_parse(const HomieFormat *f, str value, i64 *out);
+b32 homie_float_parse(const HomieFormat *f, str value, f64 *out);
 
 b32 homie_payload_valid(HomieDatatype datatype, str value);
 
