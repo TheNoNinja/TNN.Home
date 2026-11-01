@@ -43,7 +43,7 @@ target_sources(tnn_loop INTERFACE ${TNN_LOOP_SOURCES})
 target_link_libraries(tnn_loop INTERFACE tnn_platform)
 
 add_library(tnn_mqtt_core INTERFACE)
-target_sources(tnn_mqtt_core INTERFACE ${TNN_MQTT_CORE_SOUCES})
+target_sources(tnn_mqtt_core INTERFACE ${TNN_MQTT_CORE_SOURCES})
 target_link_libraries(tnn_mqtt_core INTERFACE tnn_base)
 
 add_library(tnn_mqtt INTERFACE)
@@ -96,6 +96,7 @@ target_link_libraries(tnn_virtual_light PRIVATE tnn_homie tnn_json tnn_loop tnn_
 #########
 
 add_executable(tnn_tests 
+    tests/test_main.c
     ${TNN_TESTS_PURE_SOURCES}
     ${TNN_TESTS_PLATFORM_SOURCES}    
 )

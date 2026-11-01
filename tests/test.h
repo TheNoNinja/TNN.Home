@@ -58,6 +58,8 @@ u32 test_run(const TestCase *cases, u32 count);
 	X(homie_test_payload_integer,     "homie payload integer") \
 	X(homie_test_payload_float,       "homie payload float") \
 	X(homie_test_payload_json,        "homie payload json") \
+	X(homie_test_format_range,        "homie format range") \
+	X(homie_test_format_invalid,      "homie format invalid") \
 \
 	X(http_test_request,         "http request") \
 	X(http_test_request_peices,  "http request peices") \
@@ -79,17 +81,8 @@ u32 test_run(const TestCase *cases, u32 count);
 	X(json_test_read_booleans, "json read booleans") \
 	X(json_test_read_skip,     "json read skip") \
 	X(json_test_read_invalid,  "json read invalid") \
-
-#define TEST_LIST_PLATFORM(X) \
-    X(loop_test_timeout,       "loop timeout") \
-	X(loop_test_timer_fires,   "loop timer fires") \
-	X(loop_test_timer_repeats, "loop timer repeats") \
-	X(loop_test_pipe,          "loop pipe") \
-	X(loop_test_writable,      "loop writable") \
-	X(loop_test_signal,        "loop signal") \
-	X(loop_test_unwatch,       "loop unwatch") \
 \
-	X(mqtt_test_str,                    "mqtt str") \
+    X(mqtt_test_str,                    "mqtt str") \
 	X(mqtt_test_varint,                 "mqtt varint") \
 	X(mqtt_test_varint_too_big,         "mqtt var int too big") \
 	X(mqtt_test_connect,                "mqtt connect") \
@@ -114,9 +107,19 @@ u32 test_run(const TestCase *cases, u32 count);
 	X(mqtt_test_connection_next,        "mqtt connection next") \
 	X(mqtt_test_connection_refused,     "mqtt connection refused") \
 	X(mqtt_test_connection_unsubscribe, "mqtt connection unsubscribe") \
-	X(mqtt_test_connection_queue,       "mqtt connection queue") \
-	X(mqtt_test_client,                 "mqtt client") \
-	X(mqtt_test_client_drain,           "mqtt client drain") \
+	X(mqtt_test_connection_queue, "mqtt connection queue") \
+
+#define TEST_LIST_PLATFORM(X) \
+    X(loop_test_timeout,       "loop timeout") \
+	X(loop_test_timer_fires,   "loop timer fires") \
+	X(loop_test_timer_repeats, "loop timer repeats") \
+	X(loop_test_pipe,          "loop pipe") \
+	X(loop_test_writable,      "loop writable") \
+	X(loop_test_signal,        "loop signal") \
+	X(loop_test_unwatch,       "loop unwatch") \
+\
+	X(mqtt_test_client,       "mqtt client") \
+	X(mqtt_test_client_drain, "mqtt client drain") \
 \
 	X(platform_test_time,        "platform time") \
 	X(platform_test_time_mono,   "platform time mono") \

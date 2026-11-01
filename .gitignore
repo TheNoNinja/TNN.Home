@@ -7,3 +7,4 @@ leak-*
 timeout-*
 sdkconfig
 sdkconfig.old
+eim_config.toml

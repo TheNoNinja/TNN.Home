@@ -47,6 +47,5 @@ struct HomieValue
 
 b32 homie_value_set(HomieValue *v, str value);
 str homie_value_str(const HomieValue *v);
-b32 homie_payload_valid(HomieDatatype datatype, str value);
 
 #endif

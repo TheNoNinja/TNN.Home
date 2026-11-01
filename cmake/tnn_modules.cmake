@@ -17,6 +17,7 @@ set(TNN_HISTOGRAM_SOURCES
 
 set(TNN_HOMIE_SOURCES
     src/homie/homie_description.c
+    src/homie/homie_format.c
     src/homie/homie_payload.c
     src/homie/homie_topic.c
 )
@@ -35,7 +36,7 @@ set(TNN_LOOP_SOURCES
     src/loop/loop.c
 )
 
-set(TNN_MQTT_CORE_SOUCES
+set(TNN_MQTT_CORE_SOURCES
     src/mqtt/mqtt_connection.c
     src/mqtt/mqtt_decode.c
     src/mqtt/mqtt_encode.c
@@ -59,11 +60,11 @@ set(TNN_PLATFORM_LINUX_SOURCES
 #########
 
 set(TNN_TESTS_PURE_SOURCES
-    tests/test_main.c
     tests/base_test.c
     tests/test.c
     tests/histogram_test.c
     tests/homie/homie_description_test.c
+    tests/homie/homie_format_test.c
     tests/homie/homie_payload_test.c
     tests/homie/homie_topic_test.c
     tests/http/http_test.c
